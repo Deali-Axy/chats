@@ -10,6 +10,14 @@ import { SiteInfoConfig } from '@/types/config';
 import { LoginType } from '@/types/user';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import AccountLoginCard from '@/components/login/AccountLoginCard';
@@ -34,6 +42,7 @@ const LOGIN_SHOWCASE_IMAGES = [
 ];
 
 const LOGIN_SHOWCASE_INTERVAL = 5000;
+const PRODUCT_CONTACT_QR = '/images/wechat-offical-qrcode.webp';
 
 type LoginHeader = {
   [key in TabKeys]: { title: string; description: string };
@@ -292,6 +301,53 @@ export default function LoginPage() {
                         {hasLoginType(LoginType.Keycloak) && (
                           <KeyCloakLogin loading={loginLoading} />
                         )}
+                      </div>
+
+                      <div className="mx-auto mt-4 w-full max-w-md rounded-xl border border-border/70 bg-muted/30 px-4 py-3 text-left">
+                        <div className="space-y-1.5">
+                          <p className="text-sm font-medium leading-5">
+                            {t('Web chat and LLM API gateway, now in invite-only preview')}
+                          </p>
+                          <p className="text-xs leading-5 text-muted-foreground">
+                            {t(
+                              'Chats brings together a polished web chat experience and an LLM API gateway. The service is currently in invite-only preview. If you would like access, please contact the product team to get the QR code.',
+                            )}
+                          </p>
+                        </div>
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="link"
+                              className="mt-2 h-auto p-0 text-xs"
+                            >
+                              {t('Contact product team')}
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="max-w-sm">
+                            <DialogHeader>
+                              <DialogTitle>{t('Scan to get an invite code')}</DialogTitle>
+                              <DialogDescription>
+                                {t(
+                                  'Scan the official account QR code below, then leave a message with AyakaChat in the account chat to request your invite code.',
+                                )}
+                              </DialogDescription>
+                            </DialogHeader>
+                            <div className="flex flex-col items-center gap-3">
+                              <img
+                                src={PRODUCT_CONTACT_QR}
+                                alt={t('AyakaChat official account QR code')}
+                                className="h-64 w-64 rounded-lg border bg-white object-contain p-2"
+                                loading="lazy"
+                              />
+                              <p className="text-center text-xs leading-5 text-muted-foreground">
+                                {t(
+                                  'After scanning, leave a message with AyakaChat in the official account backend to get your invite code.',
+                                )}
+                              </p>
+                            </div>
+                          </DialogContent>
+                        </Dialog>
                       </div>
                     </div>
                   </div>
