@@ -1,4 +1,4 @@
-import { ComponentType, FC, ReactNode, useEffect, useState } from 'react';
+import { ComponentType, FC, ReactNode, createElement, useEffect, useState } from 'react';
 
 interface LoadComponentOnceOptions<TProps extends object> {
   cacheKey: string;
@@ -106,10 +106,8 @@ export const loadComponentOnce = <TProps extends object>({
       };
     }, [cacheKey, component, loader]);
 
-    const ResolvedComponent = component ?? getLoadedComponent<TProps>(cacheKey);
-
-    if (ResolvedComponent) {
-      return <ResolvedComponent {...props} />;
+    if (component) {
+      return createElement(component, props);
     }
 
     return <>{renderFallback?.(props) ?? null}</>;

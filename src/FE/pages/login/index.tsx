@@ -26,6 +26,15 @@ enum TabKeys {
   ACCOUNT = 'account',
 }
 
+const LOGIN_SHOWCASE_IMAGES = [
+  '/images/snapmixer/ayaka1.avif',
+  '/images/snapmixer/ayaka2.avif',
+  '/images/snapmixer/ayaka3.avif',
+  '/images/snapmixer/ayaka4.avif',
+];
+
+const LOGIN_SHOWCASE_INTERVAL = 5000;
+
 type LoginHeader = {
   [key in TabKeys]: { title: string; description: string };
 };
@@ -35,6 +44,7 @@ const getFeVersion = () => process.env.FE_VERSION || 'local';
 export default function LoginPage() {
   const { t } = useTranslation();
   const [isClient, setIsClient] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
   const [webSiteInfo, setWebSiteInfo] = useState<SiteInfoConfig>();
   const [feVersion, setFeVersion] = useState<string>(getFeVersion);
   const LoginHeaders: LoginHeader = {
@@ -94,6 +104,18 @@ export default function LoginPage() {
     setFeVersion(getFeVersion());
   }, []);
 
+  useEffect(() => {
+    if (LOGIN_SHOWCASE_IMAGES.length <= 1) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % LOGIN_SHOWCASE_IMAGES.length);
+    }, LOGIN_SHOWCASE_INTERVAL);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   const openLoading = () => setLoginLoading(true);
   const closeLoading = () => setTimeout(() => setLoginLoading(false), 600);
 
@@ -135,9 +157,29 @@ export default function LoginPage() {
     <>
       {!loading && isClient && (
         <div className="container relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-          <div className="relative hidden h-full flex-col  p-10 text-white dark:text-black lg:flex dark:border-r">
-            <div className="absolute inset-0 dark:bg-gray-50 bg-zinc-900 bg-[url('/images/login_bg.avif')] bg-cover" />
-            <div className="relative z-20 flex items-center text-lg font-medium text-white">
+          <div className="relative hidden h-full flex-col overflow-hidden p-10 text-white dark:text-black lg:flex dark:border-r">
+            <div className="absolute inset-0 bg-zinc-900 dark:bg-gray-50">
+              {LOGIN_SHOWCASE_IMAGES.map((src, index) => (
+                <div
+                  key={src}
+                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                    activeSlide === index ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    priority={index === 0}
+                    sizes="50vw"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+              <div className="absolute inset-0 bg-zinc-950/45 dark:bg-gray-50/30" />
+              <div className="absolute inset-x-0 bottom-0 top-1/3 bg-gradient-to-t from-zinc-950/70 via-zinc-950/15 to-transparent dark:from-gray-100/75 dark:via-gray-100/15 dark:to-transparent" />
+            </div>
+            <div className="relative z-20 flex items-center text-lg font-medium text-white dark:text-zinc-900">
               <Image
                 src="/icons/logo.png"
                 width={32}
@@ -147,6 +189,26 @@ export default function LoginPage() {
                 priority
               />
               Chats
+            </div>
+            <div className="relative z-20 mt-auto flex items-center justify-center gap-2">
+              {LOGIN_SHOWCASE_IMAGES.map((src, index) => {
+                const isActive = activeSlide === index;
+                return (
+                  <button
+                    key={`${src}-indicator`}
+                    type="button"
+                    aria-label={t('Go to slide {{index}}', { index: index + 1 })}
+                    aria-current={isActive ? 'true' : undefined}
+                    aria-pressed={isActive}
+                    className={`h-2.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-zinc-900/80 ${
+                      isActive
+                        ? 'w-8 bg-white dark:bg-zinc-900'
+                        : 'w-2.5 bg-white/50 hover:bg-white/75 dark:bg-zinc-900/45 dark:hover:bg-zinc-900/70'
+                    }`}
+                    onClick={() => setActiveSlide(index)}
+                  />
+                );
+              })}
             </div>
           </div>
           <div className="lg:px-8 lg:pt-8 pb-4 h-screen">
