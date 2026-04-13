@@ -253,7 +253,7 @@ export default function LoginPage() {
                   variant="link"
                   onClick={redirectToGithub}
                 >
-                  Sdcb Chats
+                  AyakaChat
                 </Button>
                 . All Rights Reserved.
               </div>
