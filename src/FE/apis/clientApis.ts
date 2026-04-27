@@ -51,6 +51,7 @@ import {
   TitleSummarySettingsDto,
   TitleSummaryDefaultTemplateDto,
   TitleSummaryConfig,
+  ChatTitleSummaryResult,
   UnassignedUserDto,
   AssignedUserDetailsDto,
   AssignedUserNameDto,
@@ -134,6 +135,13 @@ export const postChats = (params: PostChatParams): Promise<ChatResult> => {
 export const putChats = (chatId: string, params: PutChatParams) => {
   const fetchService = createFetchClient();
   return fetchService.put(`/api/user/chats/${chatId}`, { body: params });
+};
+
+export const summarizeChatTitle = (
+  chatId: string,
+): Promise<ChatTitleSummaryResult> => {
+  const fetchService = createFetchClient();
+  return fetchService.post(`/api/user/chats/${chatId}/title-summary`);
 };
 
 export const deleteChats = (id: string) => {

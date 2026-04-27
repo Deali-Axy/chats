@@ -4,6 +4,8 @@ using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.TitleSummary;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -309,6 +311,103 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             await db.SaveChangesAsync(cancellationToken);
         }
         return NoContent();
+    }
+
+    [HttpPost("{encryptedChatId}/title-summary")]
+    public async Task<ActionResult<ChatTitleSummaryResponseDto>> GenerateTitleSummary(
+        string encryptedChatId,
+        [FromServices] ChatTitleSummaryService chatTitleSummaryService,
+        [FromServices] UserModelManager userModelManager,
+        CancellationToken cancellationToken)
+    {
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+
+        Chat? chat = await db.Chats
+            .Include(x => x.ChatSpans)
+                .ThenInclude(x => x.ChatConfig)
+                    .ThenInclude(x => x.Model)
+            .Include(x => x.ChatTurns.Where(t => t.Steps.Any()))
+                .ThenInclude(x => x.Steps)
+                    .ThenInclude(x => x.StepContents)
+                        .ThenInclude(x => x.StepContentText)
+            .FirstOrDefaultAsync(x => x.Id == chatId && x.UserId == currentUser.Id, cancellationToken);
+        if (chat == null)
+        {
+            return NotFound();
+        }
+
+        ChatSpan? firstEnabledSpan = chat.ChatSpans
+            .Where(x => x.Enabled)
+            .OrderBy(x => x.SpanId)
+            .FirstOrDefault();
+        if (firstEnabledSpan == null)
+        {
+            return BadRequest("No enabled spans");
+        }
+
+        UserModel? userModel = await userModelManager.GetUserModel(currentUser.Id, firstEnabledSpan.ChatConfig.ModelId, cancellationToken);
+        if (userModel == null)
+        {
+            return BadRequest("Invalid model permission");
+        }
+
+        string chatHistory = BuildChatHistory(chat);
+        if (string.IsNullOrWhiteSpace(chatHistory))
+        {
+            return Ok(new ChatTitleSummaryResponseDto { Title = chat.Title });
+        }
+
+        string title = await chatTitleSummaryService.GenerateTitleAsync(
+            chat.Id,
+            firstEnabledSpan.ChatConfig.SystemPrompt,
+            userModel,
+            chatHistory,
+            cancellationToken);
+
+        if (!string.Equals(chat.Title, title, StringComparison.Ordinal))
+        {
+            chat.Title = title;
+            chat.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Ok(new ChatTitleSummaryResponseDto { Title = title });
+    }
+
+    private static string BuildChatHistory(Chat chat)
+    {
+        return string.Join(
+            "\n\n",
+            chat.ChatTurns
+                .Where(x => x.Steps.Count > 0)
+                .OrderBy(x => x.Steps.Min(s => s.CreatedAt))
+                .Select(BuildTurnHistoryLine)
+                .Where(x => !string.IsNullOrWhiteSpace(x))!);
+    }
+
+    private static string? BuildTurnHistoryLine(ChatTurn turn)
+    {
+        Step? latestStep = turn.Steps
+            .OrderBy(x => x.CreatedAt)
+            .LastOrDefault();
+        if (latestStep == null)
+        {
+            return null;
+        }
+
+        string text = string.Join(
+            "",
+            latestStep.StepContents
+                .Where(x => x.ContentTypeId == (byte)DBStepContentType.Text && x.StepContentText != null)
+                .Select(x => x.StepContentText!.Content))
+            .Trim();
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        return $"{(turn.IsUser ? "User" : "Assistant")}: {text}";
     }
 
     [HttpGet("{encryptedChatId}/share")]

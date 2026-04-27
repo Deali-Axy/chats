@@ -117,6 +117,10 @@ export interface TitleSummaryDefaultTemplateDto {
   promptTemplate: string;
 }
 
+export interface ChatTitleSummaryResult {
+  title: string;
+}
+
 export interface PostChatParams {
   title: string;
   groupId: string | null;

@@ -18,12 +18,53 @@ public sealed class ChatTitleSummaryService(
     ChatRunService chatRunService,
     ILogger<ChatTitleSummaryService> logger)
 {
+    public Task<string> GenerateTitleAsync(
+        int chatId,
+        string? systemPrompt,
+        UserModel currentSpanUserModel,
+        string userPrompt,
+        CancellationToken cancellationToken)
+    {
+        return GenerateTitleCoreAsync(
+            chatId,
+            systemPrompt,
+            currentSpanUserModel,
+            userPrompt,
+            writer: null,
+            cancellationToken);
+    }
+
     public async Task StreamTitleAsync(
         int chatId,
         string? systemPrompt,
         UserModel currentSpanUserModel,
         string userPrompt,
         ChannelWriter<SseResponseLine> writer,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            string finalTitle = await GenerateTitleCoreAsync(
+                chatId,
+                systemPrompt,
+                currentSpanUserModel,
+                userPrompt,
+                writer,
+                cancellationToken);
+            writer.TryWrite(new SetTitleInternal(finalTitle));
+        }
+        finally
+        {
+            writer.Complete();
+        }
+    }
+
+    private async Task<string> GenerateTitleCoreAsync(
+        int chatId,
+        string? systemPrompt,
+        UserModel currentSpanUserModel,
+        string userPrompt,
+        ChannelWriter<SseResponseLine>? writer,
         CancellationToken cancellationToken)
     {
         string fallbackTitle = GetFallbackTitle(userPrompt);
@@ -36,29 +77,17 @@ public sealed class ChatTitleSummaryService(
             TitleSummaryConfig? userConfig = await configService.GetUserConfig(userId, cancellationToken);
             ResolvedTitleSummaryConfig resolved = configService.Resolve(adminConfig, userConfig);
 
-            if (!resolved.Enabled)
+            if (!resolved.Enabled || resolved.ModelMode == TitleSummaryModelMode.Truncate)
             {
-                EmitFallback(fallbackTitle);
-                return;
-            }
-
-            if (resolved.ModelMode == TitleSummaryModelMode.Truncate)
-            {
-                EmitFallback(fallbackTitle);
-                return;
+                EmitFallback(writer, fallbackTitle);
+                return fallbackTitle;
             }
 
             UserModel? userModel = await SelectUserModel(userId, currentSpanUserModel, resolved, cancellationToken);
-            if (userModel == null)
+            if (userModel == null || userModel.Model.ApiType == DBApiType.OpenAIImageGeneration)
             {
-                EmitFallback(fallbackTitle);
-                return;
-            }
-
-            if (userModel.Model.ApiType == DBApiType.OpenAIImageGeneration)
-            {
-                EmitFallback(fallbackTitle);
-                return;
+                EmitFallback(writer, fallbackTitle);
+                return fallbackTitle;
             }
 
             string prompt = BuildPrompt(
@@ -100,11 +129,11 @@ public sealed class ChatTitleSummaryService(
                         if (!titleStarted)
                         {
                             titleStarted = true;
-                            writer.TryWrite(new UpdateTitleLine(""));
+                            writer?.TryWrite(new UpdateTitleLine(""));
                         }
 
                         titleBuilder.Append(textSegment.Text);
-                        writer.TryWrite(new TitleSegmentLine(textSegment.Text));
+                        writer?.TryWrite(new TitleSegmentLine(textSegment.Text));
                     }
 
                     await Task.CompletedTask;
@@ -114,27 +143,28 @@ public sealed class ChatTitleSummaryService(
             string finalTitle = NormalizeTitle(titleBuilder.ToString());
             if (result.Exception != null || string.IsNullOrWhiteSpace(finalTitle))
             {
-                EmitFallback(fallbackTitle);
-                return;
+                EmitFallback(writer, fallbackTitle);
+                return fallbackTitle;
             }
 
-            writer.TryWrite(new SetTitleInternal(finalTitle));
+            return finalTitle;
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Failed to generate chat title summary for chat {ChatId}", chatId);
-            EmitFallback(fallbackTitle);
+            EmitFallback(writer, fallbackTitle);
+            return fallbackTitle;
         }
-        finally
+    }
+
+    private static void EmitFallback(ChannelWriter<SseResponseLine>? writer, string title)
+    {
+        if (writer == null)
         {
-            writer.Complete();
+            return;
         }
 
-        void EmitFallback(string title)
-        {
-            writer.TryWrite(new UpdateTitleLine(title));
-            writer.TryWrite(new SetTitleInternal(title));
-        }
+        writer.TryWrite(new UpdateTitleLine(title));
     }
 
     private async Task<UserModel?> SelectUserModel(

@@ -22,6 +22,7 @@ import {
   IconCheck,
   IconDots,
   IconLoader,
+  IconNotes,
   IconPencil,
   IconPin,
   IconPinnedOff,
@@ -42,7 +43,7 @@ import HomeContext from '@/contexts/home.context';
 import SharedMessageModal from '../Chat/SharedMessageModal';
 import ChatbarContext from '../Chatbar/Chatbar.context';
 
-import { deleteChats, putChats } from '@/apis/clientApis';
+import { deleteChats, putChats, summarizeChatTitle } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -76,6 +77,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
   const [isShare, setIsShare] = useState(false);
   const [isArchive, setIsArchive] = useState(false);
   const [isConfirming, setIsConfirming] = useState(false);
+  const [isSummarizing, setIsSummarizing] = useState(false);
 
   const handleEnterDown = (e: KeyboardEvent<HTMLDivElement>) => {
     if (e.key === 'Enter') {
@@ -148,6 +150,22 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
   const handleOpenArchiveModal: MouseEventHandler<HTMLDivElement> = (e) => {
     e.stopPropagation();
     setIsArchive(true);
+  };
+
+  const handleSummarizeTitle: MouseEventHandler<HTMLDivElement> = async (e) => {
+    e.stopPropagation();
+    if (isSummarizing || chatting) {
+      return;
+    }
+
+    setIsSummarizing(true);
+    try {
+      const result = await summarizeChatTitle(chat.id);
+      handleUpdateChat(chats, chat.id, { title: result.title });
+      toast.success(t('Title summary generated'));
+    } finally {
+      setIsSummarizing(false);
+    }
   };
 
   const handleChangeChatPin = (chatId: string, isPin: boolean = false) => {
@@ -317,6 +335,18 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
               >
                 <IconPencil size={18} />
                 {t('Edit')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={isSummarizing}
+                className="flex justify-start gap-3"
+                onClick={handleSummarizeTitle}
+              >
+                {isSummarizing ? (
+                  <IconLoader size={18} className="animate-spin" />
+                ) : (
+                  <IconNotes size={18} />
+                )}
+                {t('Summarize Title')}
               </DropdownMenuItem>
               <DropdownMenuItem
                 className="flex justify-start gap-3"
