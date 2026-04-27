@@ -8,7 +8,7 @@ interface Props {
 }
 
 const CodeBlockFallback: FC<Props> = ({ language, value }) => (
-  <div className="codeblock relative font-sans text-base group mb-4 border rounded-md bg-muted overflow-hidden">
+  <div className="codeblock relative font-sans text-base group my-4 border rounded-md bg-muted overflow-hidden">
     <div className="flex items-center justify-between px-3 py-1.5 bg-muted-foreground/10 text-xs text-muted-foreground">
       <span className="font-mono lowercase">{language || 'text'}</span>
     </div>

@@ -68,7 +68,12 @@ export const markdownComponents = {
       </td>
     );
   },
-} as unknown as MarkdownComponents;
+
+    pre({ children }: ReactMarkdownProps) {
+      return <>{children}</>;
+    },
+  } as unknown as MarkdownComponents;
+
 
 export const MarkdownLoadingFallback = ({
   children,

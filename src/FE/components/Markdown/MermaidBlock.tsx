@@ -372,7 +372,7 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
 
   return (
     <>
-      <div className="codeblock relative font-sans text-base group mb-4 border rounded-md bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="codeblock relative font-sans text-base group my-4 border rounded-md bg-white dark:bg-gray-900 overflow-hidden">
         <div className="flex items-center justify-between px-4 py-1.5 bg-muted/60 text-xs text-muted-foreground border-b mb-2">
           <span className="font-mono uppercase tracking-wider text-[10px]">MERMAID</span>
           <div className="flex items-center gap-3">
