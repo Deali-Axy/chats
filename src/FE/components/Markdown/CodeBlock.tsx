@@ -8,13 +8,11 @@ interface Props {
 }
 
 const CodeBlockFallback: FC<Props> = ({ language, value }) => (
-  <div className="codeblock relative font-sans text-base group">
-    <div className="relative overflow-hidden border bg-muted">
-      {language ? (
-        <div className="absolute right-2 top-2 text-xs text-muted-foreground">
-          {language}
-        </div>
-      ) : null}
+  <div className="codeblock relative font-sans text-base group mb-4 border rounded-md bg-muted overflow-hidden">
+    <div className="flex items-center justify-between px-3 py-1.5 bg-muted-foreground/10 text-xs text-muted-foreground">
+      <span className="font-mono lowercase">{language || 'text'}</span>
+    </div>
+    <div className="p-0 overflow-x-auto">
       <pre className="m-0 overflow-x-auto p-3 text-sm leading-6">
         <code className="whitespace-pre font-mono">{value}</code>
       </pre>
