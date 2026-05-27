@@ -171,6 +171,35 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return (text, signature);
     }
 
+    /// <summary>
+    /// Returns the first choice object from an OpenAI-compatible payload when the shape is valid.
+    /// Some providers emit `choices` as null, non-array, or an empty array in usage-only/final chunks.
+    /// </summary>
+    private static bool TryGetFirstChoice(JsonElement payload, out JsonElement choice)
+    {
+        choice = default;
+        if (!payload.TryGetProperty("choices", out JsonElement choices) || choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0)
+        {
+            return false;
+        }
+
+        choice = choices[0];
+        return choice.ValueKind == JsonValueKind.Object;
+    }
+
+    /// <summary>
+    /// Returns a delta/message object only when the upstream payload really contains a JSON object.
+    /// This avoids InvalidOperationException for providers that omit the property or send null.
+    /// </summary>
+    private static bool TryGetObjectProperty(JsonElement element, string propertyName, out JsonElement value)
+    {
+        value = default;
+        return element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty(propertyName, out JsonElement propertyValue) &&
+            propertyValue.ValueKind == JsonValueKind.Object &&
+            (value = propertyValue).ValueKind == JsonValueKind.Object;
+    }
+
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
         if (!request.ChatConfig.Model.AllowStreaming || !request.Streamed)
@@ -222,7 +251,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             }
 
             // Parse choices
-            if (!json.TryGetProperty("choices", out JsonElement choices) || choices.GetArrayLength() == 0)
+            if (!TryGetFirstChoice(json, out JsonElement choice))
             {
                 if (json.TryGetProperty("usage", out JsonElement usageOnly))
                 {
@@ -238,18 +267,17 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 continue;
             }
 
-            JsonElement choice = choices[0];
-            JsonElement delta = choice.TryGetProperty("delta", out JsonElement d) ? d : default;
+            JsonElement delta = TryGetObjectProperty(choice, "delta", out JsonElement d) ? d : default;
 
             // Parse content
-            string? content = delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
+            string? content = delta.ValueKind == JsonValueKind.Object && delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
 
             // Parse reasoning content (for models like DeepSeek-R1)
-            (string? reasoningContent, string? reasoningSignature) = TryGetThinkingPayload(delta);
+            (string? reasoningContent, string? reasoningSignature) = delta.ValueKind == JsonValueKind.Object ? TryGetThinkingPayload(delta) : (null, null);
 
             // Parse tool calls
             List<ToolCallSegment> toolCallSegments = [];
-            if (delta.TryGetProperty("tool_calls", out JsonElement toolCalls) && toolCalls.ValueKind == JsonValueKind.Array)
+            if (delta.ValueKind == JsonValueKind.Object && delta.TryGetProperty("tool_calls", out JsonElement toolCalls) && toolCalls.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement tc in toolCalls.EnumerateArray())
                 {
@@ -418,10 +446,9 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         DBFinishReason? finishReason = null;
         ChatTokenUsage? usage = null;
 
-        if (root.TryGetProperty("choices", out JsonElement choices) && choices.GetArrayLength() > 0)
+        if (TryGetFirstChoice(root, out JsonElement choice))
         {
-            JsonElement choice = choices[0];
-            if (choice.TryGetProperty("message", out JsonElement message))
+            if (TryGetObjectProperty(choice, "message", out JsonElement message))
             {
                 // Content
                 if (message.TryGetProperty("content", out JsonElement content) && content.ValueKind == JsonValueKind.String)
