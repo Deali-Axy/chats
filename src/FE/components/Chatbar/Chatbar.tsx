@@ -132,22 +132,13 @@ const Chatbar = () => {
     });
   };
 
+  // 搜索逻辑已移至后端处理，支持搜索标题、标签和消息内容
   useEffect(() => {
-    if (searchTerm) {
-      dispatch({
-        field: 'filteredChats',
-        value: chats.filter((chat) => {
-          const searchable = chat.title.toLocaleLowerCase();
-          return searchable.toLowerCase().includes(searchTerm.toLowerCase());
-        }),
-      });
-    } else {
-      dispatch({
-        field: 'filteredChats',
-        value: chats,
-      });
-    }
-  }, [chats, dispatch, searchTerm]);
+    dispatch({
+      field: 'filteredChats',
+      value: chats,
+    });
+  }, [chats, dispatch]);
 
   return (
     <ChatbarContext.Provider

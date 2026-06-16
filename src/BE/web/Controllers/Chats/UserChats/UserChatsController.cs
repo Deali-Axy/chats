@@ -116,7 +116,19 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             .ThenByDescending(x => x.UpdatedAt);
         if (!string.IsNullOrWhiteSpace(request.Query))
         {
-            query = query.Where(x => x.Title.Contains(request.Query) || x.ChatTags.Any(t => t.Name == request.Query));
+            query = query.Where(x =>
+                x.Title.Contains(request.Query) ||
+                x.ChatTags.Any(t => t.Name == request.Query) ||
+                x.ChatTurns.Any(turn =>
+                    turn.Steps.Any(step =>
+                        step.StepContents.Any(content =>
+                            content.ContentTypeId == (byte)DBStepContentType.Text &&
+                            content.StepContentText != null &&
+                            content.StepContentText.Content.Contains(request.Query)
+                        )
+                    )
+                )
+            );
         }
 
         PagedResult<ChatsResponse> result = await PagedResult.FromQuery(query
