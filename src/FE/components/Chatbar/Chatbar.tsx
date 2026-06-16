@@ -145,6 +145,7 @@ const Chatbar = () => {
       value={{
         ...chatBarContextValue,
         handleDeleteChat,
+        searchTerm,
       }}
     >
       <Sidebar<ChatResult>
