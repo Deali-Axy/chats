@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "export": "next export",
-    "dev": "next dev",
+    "dev": "next dev --port 12836",
     "build": "next build --webpack",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",

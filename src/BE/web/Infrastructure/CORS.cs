@@ -11,6 +11,7 @@ internal static class CORS
             options.AddPolicy("FrontendCORS", policy =>
             {
                 policy.WithOrigins(frontendUrl, "http://localhost:3000")
+                      .WithOrigins(frontendUrl, "http://localhost:12836")
                       .AllowAnyMethod()
                       .AllowAnyHeader()
                       .AllowCredentials()
