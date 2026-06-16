@@ -34,6 +34,10 @@ public record ChatsResponse
     [JsonPropertyName("updatedAt")]
     public required DateTime UpdatedAt { get; init; }
 
+    [JsonPropertyName("matchedContent")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MatchedContent { get; init; }
+
     public ChatsResponseWithMessage WithMessages(TurnDto[] messages)
     {
         return new ChatsResponseWithMessage

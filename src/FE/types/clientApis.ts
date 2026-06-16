@@ -68,6 +68,7 @@ export interface ChatResult {
   isTopMost: boolean;
   groupId: string | null;
   tags: string[];
+  matchedContent?: string | null;
 }
 
 export interface ChatSpanMcp {

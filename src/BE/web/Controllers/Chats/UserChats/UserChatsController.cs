@@ -131,38 +131,64 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             );
         }
 
-        PagedResult<ChatsResponse> result = await PagedResult.FromQuery(query
-            .Select(x => new ChatsResponse()
+        // 获取匹配的会话列表（包含关联数据）
+        List<Chat> chatList = await query
+            .Include(x => x.ChatTags)
+            .Include(x => x.ChatSpans)
+                .ThenInclude(span => span.ChatConfig)
+                    .ThenInclude(config => config.Model)
+                        .ThenInclude(model => model.ModelKey)
+            .Include(x => x.ChatShares)
+            .Include(x => x.ChatTurns)
+                .ThenInclude(turn => turn.Steps)
+                    .ThenInclude(step => step.StepContents)
+                        .ThenInclude(content => content.StepContentText)
+            .ToListAsync(cancellationToken);
+
+        // 构建响应，包含匹配的内容片段
+        List<ChatsResponse> responses = new();
+        foreach (Chat chat in chatList)
+        {
+            string? matchedContent = null;
+            if (!string.IsNullOrWhiteSpace(request.Query))
             {
-                Id = idEncryption.EncryptChatId(x.Id),
-                Title = x.Title,
-                IsTopMost = x.IsTopMost,
-                IsShared = x.ChatShares.Count != 0,
-                GroupId = idEncryption.EncryptChatGroupId(x.ChatGroupId),
-                Tags = x.ChatTags.Select(x => x.Name).ToArray(),
-                Spans = x.ChatSpans.Select(span => new ChatSpanDto
-                {
-                    SpanId = span.SpanId,
-                    Enabled = span.Enabled,
-                    SystemPrompt = span.ChatConfig.SystemPrompt,
-                    ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.Name,
-                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
-                    Temperature = span.ChatConfig.Temperature,
-                    WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
-                    CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
-                    MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
-                    ImageSize = span.ChatConfig.ImageSize,
-                    ThinkingBudget = span.ChatConfig.ThinkingBudget,
-                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray()
-                }).ToArray(),
-                LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
-                UpdatedAt = x.UpdatedAt,
-            }),
-            request,
-            cancellationToken);
-        return result;
+                // 查找第一个匹配的内容片段
+                matchedContent = chat.ChatTurns
+                    .SelectMany(turn => turn.Steps)
+                    .SelectMany(step => step.StepContents)
+                    .Where(content =>
+                        content.ContentTypeId == (byte)DBStepContentType.Text &&
+                        content.StepContentText != null &&
+                        content.StepContentText.Content.Contains(request.Query))
+                    .Select(content => content.StepContentText!.Content)
+                    .FirstOrDefault();
+            }
+
+            responses.Add(new ChatsResponse()
+            {
+                Id = idEncryption.EncryptChatId(chat.Id),
+                Title = chat.Title,
+                IsTopMost = chat.IsTopMost,
+                IsShared = chat.ChatShares.Any(),
+                GroupId = idEncryption.EncryptChatGroupId(chat.ChatGroupId),
+                Tags = chat.ChatTags.Select(x => x.Name).ToArray(),
+                Spans = chat.ChatSpans.Select(span => ChatSpanDto.FromDB(span)).ToArray(),
+                LeafTurnId = idEncryption.EncryptTurnId(chat.LeafTurnId),
+                UpdatedAt = chat.UpdatedAt,
+                MatchedContent = matchedContent,
+            });
+        }
+
+        // 应用分页
+        int totalCount = responses.Count;
+        int skip = request.Skip;
+        ChatsResponse[] pagedResponses = responses.Skip(skip).Take(request.PageSize).ToArray();
+
+        return new PagedResult<ChatsResponse>
+        {
+            Rows = pagedResponses,
+            Count = totalCount,
+        };
     }
 
     [HttpPost]
