@@ -13,10 +13,9 @@ tasks:
       - task --list
 
   dev:
-    desc: 同时启动前端和后端开发服务器
+    desc: 同时启动前端和后端开发服务器 (使用 goreman)
     cmds:
-      - task: dev:be
-      - task: dev:fe
+      - goreman -f Procfile start
 
   dev:fe:
     desc: 启动前端开发服务器 (Next.js)
