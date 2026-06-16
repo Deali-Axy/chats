@@ -1,0 +1,81 @@
+# https://taskfile.dev
+version: '3'
+
+vars:
+  FE_DIR: ./src/FE
+  BE_DIR: ./src/BE/web
+  BE_PROJECT: Chats.BE.csproj
+
+tasks:
+  default:
+    desc: 显示所有可用任务
+    cmds:
+      - task --list
+
+  dev:
+    desc: 同时启动前端和后端开发服务器
+    cmds:
+      - task: dev:be
+      - task: dev:fe
+
+  dev:fe:
+    desc: 启动前端开发服务器 (Next.js)
+    dir: '{{.FE_DIR}}'
+    cmds:
+      - npm run dev
+
+  dev:be:
+    desc: 启动后端开发服务器 (ASP.NET Core)
+    dir: '{{.BE_DIR}}'
+    cmds:
+      - dotnet run --project {{.BE_PROJECT}}
+
+  build:
+    desc: 构建前端和后端项目
+    cmds:
+      - task: build:fe
+      - task: build:be
+
+  build:fe:
+    desc: 构建前端项目
+    dir: '{{.FE_DIR}}'
+    cmds:
+      - npm run build
+
+  build:be:
+    desc: 构建后端项目
+    dir: '{{.BE_DIR}}'
+    cmds:
+      - dotnet build {{.BE_PROJECT}}
+
+  test:
+    desc: 运行所有测试
+    cmds:
+      - task: test:be
+
+  test:be:
+    desc: 运行后端单元测试
+    cmds:
+      - dotnet test src/BE/tests/Chats.BE.UnitTest/Chats.BE.UnitTest.csproj
+
+  clean:
+    desc: 清理构建产物
+    cmds:
+      - task: clean:fe
+      - task: clean:be
+
+  clean:fe:
+    desc: 清理前端构建产物
+    dir: '{{.FE_DIR}}'
+    cmds:
+      - rm -rf .next out node_modules
+
+  clean:be:
+    desc: 清理后端构建产物
+    cmds:
+      - dotnet clean
+
+  deploy:
+    desc: 构建并部署到服务器 (调用 scripts/build_push.py)
+    cmds:
+      - python scripts/build_push.py
