@@ -143,15 +143,16 @@ const Chatbar = () => {
     }
   };
 
-  const handleSearch = (value: string) => {
+  const handleSearch = async (value: string) => {
     setSearchTerm(value);
     if (value.trim()) {
-      getChats(value);
+      await getChats(value);
       setSearchResults(chats);
       setIsSearchResultsOpen(true);
     } else {
       setIsSearchResultsOpen(false);
       setSearchResults([]);
+      await getChats();
     }
   };
 

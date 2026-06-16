@@ -102,7 +102,7 @@ export interface HomeContextProps {
     id: string,
     params: HandleUpdateChatParams,
   ) => void;
-  getChats: (query: string) => void;
+  getChats: (query?: string) => Promise<void>;
   getChatsByGroup: (params: GetChatsParams) => void;
   handleStopChats: () => void;
 }
