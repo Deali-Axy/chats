@@ -23,7 +23,7 @@ const NoChat = () => {
         {/* 欢迎标题 */}
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">
-            {t('Welcome to Sdcb Chats')}
+            {t('Welcome to Ayaka Chats')}
           </h1>
           <p className="text-muted-foreground">
             {t('Start a conversation with AI assistant')}

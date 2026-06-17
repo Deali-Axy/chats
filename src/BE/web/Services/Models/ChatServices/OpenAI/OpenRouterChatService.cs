@@ -8,7 +8,7 @@ public class OpenRouterChatService(IHttpClientFactory httpClientFactory, HostUrl
     protected override void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
     {
         base.AddAuthorizationHeader(request, modelKey);
-        request.Headers.Add("X-Title", "Sdcb Chats");
+        request.Headers.Add("X-Title", "Ayaka Chats");
         request.Headers.Add("HTTP-Referer", hostUrlService.GetFEUrl());
     }
 

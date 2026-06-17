@@ -52,7 +52,7 @@ public class Program
         {
             builder.Services.AddHttpClient(clientName, httpClient =>
             {
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Ayaka-Chats/{CurrentVersion}");
             })
             .AddHttpMessageHandler(() => new HttpClientNameStampHandler(clientName))
             .AddHttpMessageHandler<OutboundRequestTraceHandler>();

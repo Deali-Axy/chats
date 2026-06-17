@@ -1,10 +1,10 @@
-# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE)
+# Ayaka Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE)
 
 **English** | [简体中文](README.md)
 
-Sdcb Chats is a powerful and flexible frontend for large language models, supporting 21+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
+Ayaka Chats is a powerful and flexible frontend for large language models, supporting 21+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Ayaka Chats can meet your needs.
 
-## ✨ Why Choose Sdcb Chats
+## ✨ Why Choose Ayaka Chats
 
 - 🚀 **All-in-One**: One hub for 21+ AI model providers
 - 🎯 **Ready in Minutes**: One-command Docker deploy, plus native executables for 8 platforms

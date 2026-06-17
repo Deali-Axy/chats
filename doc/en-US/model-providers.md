@@ -2,7 +2,7 @@
 
 **English** | [简体中文](../zh-CN/model-providers.md)
 
-Sdcb Chats supports 21+ mainstream AI model providers. Here is the complete list:
+Ayaka Chats supports 21+ mainstream AI model providers. Here is the complete list:
 
 | Id  | Name             | Added                                                       | Interleaved Thinking |
 | --- | ---------------- | ----------------------------------------------------------- | -------------------- |
