@@ -19,6 +19,7 @@ import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import Tips from '@/components/Tips/Tips';
 import {
   IconArchive,
+  IconBolt,
   IconCheck,
   IconDots,
   IconLoader,
@@ -43,7 +44,7 @@ import HomeContext from '@/contexts/home.context';
 import SharedMessageModal from '../Chat/SharedMessageModal';
 import ChatbarContext from '../Chatbar/Chatbar.context';
 
-import { deleteChats, putChats, summarizeChatTitle } from '@/apis/clientApis';
+import { deleteChats, deleteTempChats, putChats, summarizeChatTitle } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -106,7 +107,11 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
     setIsConfirming(true);
     try {
       if (isDeleting) {
-        await deleteChats(chat.id);
+        if (chat.isTemp) {
+          await deleteTempChats(chat.id);
+        } else {
+          await deleteChats(chat.id);
+        }
         handleDeleteChat([chat.id]);
       } else if (isChanging) {
         handleChangeTitle(chat.id);
@@ -277,6 +282,12 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
               selectChatId === chat.id ? 'pr-12' : 'pr-1'
             }`}
           >
+            {chat.isTemp && (
+              <IconBolt
+                size={14}
+                className="inline-block mr-1 text-amber-500 -mt-0.5"
+              />
+            )}
             {chat.title}
           </div>
         </a>

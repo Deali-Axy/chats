@@ -291,12 +291,16 @@ const HomeContent = () => {
   };
 
   const handleSelectChat = (chat: IChat) => {
-    // 如果当前有临时聊天且切换到其他聊天，删除临时聊天
-    if (tempChatIdRef.current && chat.id !== tempChatIdRef.current) {
-      const oldTempId = tempChatIdRef.current;
-      tempChatIdRef.current = null;
-      setTempChat(null);
-      deleteTempChats(oldTempId).catch(() => {});
+    // 如果选中的是临时聊天，设置 tempChat 状态
+    if (chat.isTemp) {
+      tempChatIdRef.current = chat.id;
+      setTempChat(chat as IChat);
+    } else {
+      // 切换到普通聊天时，清除临时聊天引用（但不删除）
+      if (tempChatIdRef.current) {
+        tempChatIdRef.current = null;
+        setTempChat(null);
+      }
     }
 
     chatDispatch(setSelectedChatId(chat.id));
