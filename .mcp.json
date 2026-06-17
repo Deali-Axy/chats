@@ -1,0 +1,19 @@
+{
+  "mcpServers": {
+    "shadcn": {
+      "command": "bunx",
+      "args": [
+        "shadcn@latest",
+        "mcp"
+      ]
+    },
+    "shadcnspace-mcp": {
+      "type": "stdio",
+      "command": "npx",
+      "args": [
+        "shadcnspace-mcp@latest"
+      ],
+      "env": {}
+    }
+  }
+}
