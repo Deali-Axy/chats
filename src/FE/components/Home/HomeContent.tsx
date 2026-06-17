@@ -132,21 +132,18 @@ const HomeContent = () => {
     return chats.find((chat) => chat.id === selectedChatId);
   }, [chats, selectedChatId]);
 
-  // 当 chats 就绪且还未选中任何聊天时，依据 URL 或默认规则初始化 selectedChatId
+  // 当 chats 就绪且还未选中任何聊天时，仅在 URL 中有 chatId 时才初始化 selectedChatId
   useEffect(() => {
     if (!chats.length) return;
     if (selectedChatId) return; // 已有选中，无需初始化
 
-    // 优先 URL 中的 chatId，其次未分组的第一个，最后列表第一个
+    // 仅当 URL 中有 chatId 时才自动选择，否则显示空界面（类似 ChatGPT）
     const urlChatId = getHashChatId();
-    const targetFromUrl = urlChatId
-      ? chats.find((c) => c.id === urlChatId)
-      : undefined;
-    const target =
-      targetFromUrl || chats.find((c) => c.groupId === null) || chats[0];
-    if (target) {
-      // 使用既有的选择逻辑，确保同步加载消息与选中路径
-      selectChat(chats, target.id);
+    if (urlChatId) {
+      const targetFromUrl = chats.find((c) => c.id === urlChatId);
+      if (targetFromUrl) {
+        selectChat(chats, targetFromUrl.id);
+      }
     }
   }, [chats, selectedChatId, router.asPath, chatDispatch]);
 
