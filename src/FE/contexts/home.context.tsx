@@ -95,6 +95,8 @@ export interface HomeContextProps {
 
   hasModel: () => boolean;
   handleNewChat: (groupId?: string | null) => void;
+  /** 创建临时聊天 */
+  handleNewTempChat: () => void;
   handleDeleteChat: (ids: string[]) => void;
   handleSelectChat: (chat: IChat) => void;
   handleUpdateChat: (

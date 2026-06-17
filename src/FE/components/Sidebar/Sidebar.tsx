@@ -16,6 +16,7 @@ import {
   IconLoader,
   IconSearch,
   IconSquarePlus,
+  IconBolt,
 } from '@/components/Icons/index';
 import Search from '@/components/Search/Search';
 import Tips from '@/components/Tips/Tips';
@@ -29,6 +30,8 @@ interface Props<T> {
   showOpenButton?: boolean;
   isOpen: boolean;
   addItemButtonTitle: string;
+  /** 临时聊天按钮标题 */
+  addTempItemButtonTitle?: string;
   side: 'left' | 'right';
   items: T[];
   itemComponent?: ReactNode;
@@ -41,6 +44,8 @@ interface Props<T> {
   handleSearchTerm: (searchTerm: string) => void;
   toggleOpen: () => void;
   handleCreateItem: () => void | Promise<void>;
+  /** 创建临时聊天的处理函数 */
+  handleCreateTempItem?: () => void | Promise<void>;
   hasModel: () => boolean;
   resizable?: boolean;
   desktopWidth?: number;
@@ -57,6 +62,7 @@ const Sidebar = <T,>({
   showOpenButton = true,
   isOpen,
   addItemButtonTitle,
+  addTempItemButtonTitle,
   side,
   items,
   itemComponent,
@@ -69,6 +75,7 @@ const Sidebar = <T,>({
   handleSearchTerm,
   toggleOpen,
   handleCreateItem,
+  handleCreateTempItem,
   hasModel,
   resizable = false,
   desktopWidth,
@@ -79,6 +86,7 @@ const Sidebar = <T,>({
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingTemp, setIsCreatingTemp] = useState(false);
   const latestWidthRef = useRef<number>(desktopWidth ?? desktopMinWidth);
   const dragCleanupRef = useRef<(() => void) | null>(null);
 
@@ -92,6 +100,16 @@ const Sidebar = <T,>({
     } finally {
       setIsCreating(false);
       console.log('isCreating set to false');
+    }
+  };
+
+  const handleCreateTemp = async () => {
+    if (!handleCreateTempItem) return;
+    setIsCreatingTemp(true);
+    try {
+      await handleCreateTempItem();
+    } finally {
+      setIsCreatingTemp(false);
     }
   };
 
@@ -219,6 +237,28 @@ const Sidebar = <T,>({
     />
   );
 
+  const createTempItemButton = hasModel() && handleCreateTempItem && (
+    <Tips
+      trigger={
+        <Button
+          onClick={() => {
+            handleCreateTemp();
+          }}
+          disabled={messageIsStreaming || isCreatingTemp}
+          variant="ghost"
+          className="p-1 m-0 h-auto"
+        >
+          {isCreatingTemp ? (
+            <IconLoader size={26} className="animate-spin" />
+          ) : (
+            <IconBolt size={26} />
+          )}
+        </Button>
+      }
+      content={addTempItemButtonTitle || t('Temporary Chat')}
+    />
+  );
+
   return (
     <>
       {isOpen && (
@@ -237,7 +277,10 @@ const Sidebar = <T,>({
               )}
             >
               {sidebarToggleButton}
-              {createItemButton}
+              <div className="flex items-center gap-1">
+                {createTempItemButton}
+                {createItemButton}
+              </div>
             </div>
             <div className="mt-3">
               <Search
@@ -296,7 +339,10 @@ const Sidebar = <T,>({
           style={{ top: '8px' }}
         >
           {sidebarToggleButton}
-          {createItemButton}
+          <div className="flex items-center gap-1">
+            {createTempItemButton}
+            {createItemButton}
+          </div>
         </div>
       )}
     </>

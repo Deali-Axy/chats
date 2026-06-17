@@ -26,6 +26,11 @@ public partial class Chat
 
     public bool IsTopMost { get; set; }
 
+    /// <summary>
+    /// 标记是否为临时聊天，临时聊天在用户切换离开时自动删除
+    /// </summary>
+    public bool IsTemp { get; set; }
+
     public long? LeafTurnId { get; set; }
 
     public DateTime CreatedAt { get; set; }

@@ -9,7 +9,7 @@ import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
+import { IconBolt, IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -231,6 +231,18 @@ const ChatHeader = () => {
                   !showChatBar && 'pl-16',
                 )}
               >
+                {/* 临时聊天标识 */}
+                {selectedChat.isTemp && (
+                  <Tips
+                    trigger={
+                      <div className="flex items-center gap-1 mr-2 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+                        <IconBolt size={16} />
+                        <span className="text-xs font-medium">{t('Temporary')}</span>
+                      </div>
+                    }
+                    content={t('This chat will not be saved')}
+                  />
+                )}
                 <div
                   className={cn(
                     'flex gap-1 items-center',

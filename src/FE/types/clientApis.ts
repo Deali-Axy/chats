@@ -69,6 +69,8 @@ export interface ChatResult {
   groupId: string | null;
   tags: string[];
   matchedContent?: string | null;
+  /** 是否为临时聊天 */
+  isTemp?: boolean;
 }
 
 export interface ChatSpanMcp {
@@ -125,6 +127,8 @@ export interface ChatTitleSummaryResult {
 export interface PostChatParams {
   title: string;
   groupId: string | null;
+  /** 是否为临时聊天 */
+  isTemp?: boolean;
 }
 
 export interface PutChatParams {
@@ -199,6 +203,8 @@ interface GetUserChatResult {
   groupId: string | null;
   tags: string[];
   updatedAt: string;
+  /** 是否为临时聊天 */
+  isTemp?: boolean;
 }
 
 export interface GetUserChatGroupWithMessagesResult {

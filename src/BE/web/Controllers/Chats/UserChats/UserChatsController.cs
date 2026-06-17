@@ -52,6 +52,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
+                IsTemp = x.IsTemp,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -102,6 +103,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
+                IsTemp = x.IsTemp,
             })
             .OrderByDescending(x => x.Id), request, cancellationToken);
         return Ok(result);
@@ -111,7 +113,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
     {
         int? chatGroupId = request.GroupId != null ? idEncryption.DecryptChatGroupId(request.GroupId) : null;
         IQueryable<Chat> query = db.Chats
-            .Where(x => x.UserId == currentUser.Id && !x.IsArchived && x.ChatGroupId == chatGroupId)
+            .Where(x => x.UserId == currentUser.Id && !x.IsArchived && !x.IsTemp && x.ChatGroupId == chatGroupId)
             .OrderByDescending(x => x.IsTopMost)
             .ThenByDescending(x => x.UpdatedAt);
         if (!string.IsNullOrWhiteSpace(request.Query))
@@ -175,6 +177,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 Spans = chat.ChatSpans.Select(span => ChatSpanDto.FromDB(span)).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(chat.LeafTurnId),
                 UpdatedAt = chat.UpdatedAt,
+                IsTemp = chat.IsTemp,
                 MatchedContent = matchedContent,
             });
         }
@@ -221,6 +224,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             CreatedAt = DateTime.UtcNow,
             IsArchived = false,
             UpdatedAt = DateTime.UtcNow,
+            IsTemp = request.IsTemp,
         };
 
         Chat? lastChat = await db.Chats
@@ -280,6 +284,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             Spans = [.. chat.ChatSpans.Select(ChatSpanDto.FromDB)],
             LeafTurnId = idEncryption.EncryptTurnId(chat.LeafTurnId),
             UpdatedAt = chat.UpdatedAt,
+            IsTemp = chat.IsTemp,
         });
     }
 
@@ -314,6 +319,37 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 .Where(x => x.Id == chatId)
                 .ExecuteUpdateAsync(x => x.SetProperty(p => p.IsArchived, true), cancellationToken);
         }
+
+        return NoContent();
+    }
+
+    /// <summary>
+    /// 删除临时聊天（硬删除，不归档）
+    /// </summary>
+    [HttpDelete("{encryptedChatId}/temp")]
+    public async Task<IActionResult> DeleteTempChat(string encryptedChatId, CancellationToken cancellationToken)
+    {
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+
+        // 验证是临时聊天且属于当前用户
+        bool isTempChat = await db.Chats.AnyAsync(x => x.Id == chatId && x.UserId == currentUser.Id && x.IsTemp, cancellationToken);
+        if (!isTempChat)
+        {
+            return NotFound();
+        }
+
+        // Deassociate docker sessions before deleting chat
+        await db.ChatDockerSessions
+            .Where(x => x.OwnerChatId == chatId)
+            .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerChatId, (int?)null), cancellationToken);
+
+        await db.ChatDockerSessions
+            .Where(x => x.OwnerTurn!.ChatId == chatId)
+            .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerTurnId, (int?)null), cancellationToken);
+
+        await db.Chats
+            .Where(x => x.Id == chatId)
+            .ExecuteDeleteAsync(cancellationToken);
 
         return NoContent();
     }

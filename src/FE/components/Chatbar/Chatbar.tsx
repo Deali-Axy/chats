@@ -55,6 +55,7 @@ const Chatbar = () => {
     settingDispatch,
     handleDeleteChat,
     handleNewChat,
+    handleNewTempChat,
     handleSelectChat,
     hasModel,
     getChats,
@@ -183,6 +184,7 @@ const Chatbar = () => {
         desktopMaxWidth={chatBarMaxWidth}
         onDesktopWidthChange={handleDesktopWidthChange}
         addItemButtonTitle={t('New chat')}
+        addTempItemButtonTitle={t('Temporary Chat')}
         hasModel={hasModel}
         folderComponent={<ChatGroups onShowMore={handleShowMore} />}
         actionComponent={
@@ -211,6 +213,7 @@ const Chatbar = () => {
         handleSearchTerm={handleSearch}
         toggleOpen={handleToggleChatbar}
         handleCreateItem={handleNewChat}
+        handleCreateTempItem={handleNewTempChat}
         footerComponent={<ChatBarSettings />}
       />
 

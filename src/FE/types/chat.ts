@@ -153,6 +153,8 @@ export interface IChat {
   tags: string[];
   updatedAt: string;
   selected?: boolean;
+  /** 是否为临时聊天，临时聊天在用户切换离开时自动删除 */
+  isTemp?: boolean;
 }
 
 export interface IGroupedChat {

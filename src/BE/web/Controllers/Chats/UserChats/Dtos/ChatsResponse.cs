@@ -34,6 +34,12 @@ public record ChatsResponse
     [JsonPropertyName("updatedAt")]
     public required DateTime UpdatedAt { get; init; }
 
+    /// <summary>
+    /// 是否为临时聊天
+    /// </summary>
+    [JsonPropertyName("isTemp")]
+    public bool IsTemp { get; init; }
+
     [JsonPropertyName("matchedContent")]
     [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
     public string? MatchedContent { get; init; }
@@ -51,6 +57,7 @@ public record ChatsResponse
             Tags = Tags,
             LeafTurnId = LeafTurnId,
             UpdatedAt = UpdatedAt,
+            IsTemp = IsTemp,
             Messages = messages,
         };
     }

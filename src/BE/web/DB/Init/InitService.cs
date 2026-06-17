@@ -121,6 +121,30 @@ public class InitService(IServiceScopeFactory scopeFactory)
             {
                 Console.WriteLine($"Backfilled UserModelUsage.SourceId for {totalBackfilled} historical records.");
             }
+
+            // 检查 Chat 表是否有 IsTemp 列（临时聊天功能）
+            bool hasIsTemp = false;
+            await using (DbCommand command = connection.CreateCommand())
+            {
+                command.CommandText = "PRAGMA table_info(\"Chat\");";
+                await using DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
+                while (await reader.ReadAsync(cancellationToken))
+                {
+                    if (string.Equals(reader.GetString(1), "IsTemp", StringComparison.OrdinalIgnoreCase))
+                    {
+                        hasIsTemp = true;
+                        break;
+                    }
+                }
+            }
+
+            if (!hasIsTemp)
+            {
+                await db.Database.ExecuteSqlRawAsync(
+                    "ALTER TABLE \"Chat\" ADD COLUMN \"IsTemp\" INTEGER NOT NULL DEFAULT 0;",
+                    cancellationToken);
+                Console.WriteLine("Applied SQLite compatibility schema update: added Chat.IsTemp.");
+            }
         }
         finally
         {

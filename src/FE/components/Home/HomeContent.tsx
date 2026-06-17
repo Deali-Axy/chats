@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useState, useMemo } from 'react';
+import { useEffect, useReducer, useRef, useState, useMemo } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -59,6 +59,7 @@ import Chat from '../Chat/ChatView';
 import Chatbar from '../Chatbar/Chatbar';
 
 import {
+  deleteChats,
   getChatsByPaging,
   getDefaultPrompt,
   getUserChatGroupWithMessages,
@@ -247,11 +248,51 @@ const HomeContent = () => {
     });
   };
 
+  /** 记录当前临时聊天ID，用于切换时删除 */
+  const tempChatIdRef = useRef<string | null>(null);
+
+  /**
+   * 创建临时聊天
+   * 临时聊天不会出现在聊天列表中，切换离开时自动删除
+   */
+  const handleNewTempChat = () => {
+    // 如果已有临时聊天，先删除
+    const deletePrev = tempChatIdRef.current
+      ? deleteChats(tempChatIdRef.current).catch(() => {})
+      : Promise.resolve();
+
+    return deletePrev.then(() => {
+      return postChats({
+        title: t('Temporary Chat'),
+        groupId: null,
+        isTemp: true,
+      }).then((data) => {
+        const chat = supplyChatProperty(data);
+        chat.isTemp = true;
+        tempChatIdRef.current = chat.id;
+
+        // 临时聊天不加入列表，只设置选中状态
+        chatDispatch(setSelectedChatId(chat.id));
+        messageDispatch(setMessages([]));
+        messageDispatch(setSelectedMessages([]));
+
+        router.push('#/' + chat.id);
+      });
+    });
+  };
+
   const hasModel = () => {
     return models?.length > 0;
   };
 
   const handleSelectChat = (chat: IChat) => {
+    // 如果当前有临时聊天且切换到其他聊天，删除临时聊天
+    if (tempChatIdRef.current && chat.id !== tempChatIdRef.current) {
+      const oldTempId = tempChatIdRef.current;
+      tempChatIdRef.current = null;
+      deleteChats(oldTempId).catch(() => {});
+    }
+
     chatDispatch(setSelectedChatId(chat.id));
     chatDispatch(setIsMessagesLoading(true));
     messageDispatch(setMessages([]));
@@ -490,6 +531,7 @@ const HomeContent = () => {
         promptDispatch: promptDispatch,
 
         handleNewChat,
+        handleNewTempChat,
         handleStopChats,
         handleSelectChat,
         handleUpdateChat,
