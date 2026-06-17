@@ -68,6 +68,7 @@ import { ChatMessage } from '@/components/ChatMessage';
 import ChatMessagesSkeleton from './ChatMessagesSkeleton';
 import NoChat from './NoChat';
 import NoModel from './NoModel';
+import { IconBolt } from '@/components/Icons';
 
 import {
   deleteMessage,
@@ -97,6 +98,8 @@ const ChatView = memo(() => {
     hasModel,
     chatDispatch,
     messageDispatch,
+    tempChat,
+    setTempChat,
   } = useContext(HomeContext);
   const chatsRef = useRef<IChat[]>(chats);
   useEffect(() => {
@@ -433,6 +436,15 @@ const ChatView = memo(() => {
     (title: string, append: boolean = false) => {
       if (!selectedChat) return;
 
+      // 临时对话需要更新 tempChat 而非 chats 数组
+      if (selectedChat.isTemp && tempChat) {
+        const nextTitle = append
+          ? `${tempChat.title ?? ''}${title}`
+          : title;
+        setTempChat({ ...tempChat, title: nextTitle } as IChat);
+        return;
+      }
+
       updateChatsState((prevChats) =>
         prevChats.map((chat) => {
           if (chat.id !== selectedChat.id) {
@@ -447,12 +459,18 @@ const ChatView = memo(() => {
         }),
       );
     },
-    [selectedChat, updateChatsState],
+    [selectedChat, updateChatsState, tempChat, setTempChat],
   );
 
   const changeSelectedChatStatus = useCallback(
     (status: ChatStatus) => {
       if (!selectedChat) return;
+
+      // 临时对话不在 chats 数组中，需要单独更新 tempChat 状态
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, status } as IChat);
+        return;
+      }
 
       updateChatsState((prevChats) =>
         prevChats.map((chat) =>
@@ -460,7 +478,7 @@ const ChatView = memo(() => {
         ),
       );
     },
-    [selectedChat, updateChatsState],
+    [selectedChat, updateChatsState, tempChat, setTempChat],
   );
 
   const startChat = useCallback(() => {
@@ -1238,13 +1256,18 @@ const ChatView = memo(() => {
       );
 
       const updatedAt = currentISODateString();
-      updateChatsState((prevChats) =>
-        prevChats.map((x) =>
-          x.id === selectedChat.id
-            ? { ...x, leafMessageId, updatedAt }
-            : x,
-        ),
-      );
+      // 临时对话需要更新 tempChat 而非 chats 数组
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((x) =>
+            x.id === selectedChat.id
+              ? { ...x, leafMessageId, updatedAt }
+              : x,
+          ),
+        );
+      }
       messageDispatch(setSelectedMessages(selectedMsgs));
       messageDispatch(setMessages(messageList));
       changeSelectedChatStatus(ChatStatus.None);
@@ -1282,17 +1305,21 @@ const ChatView = memo(() => {
 
     const updatedAt = currentISODateString();
     // 更新selectedChat的leafMessageId
-    updateChatsState((prevChats) =>
-      prevChats.map((x) =>
-        x.id === selectedChat.id
-          ? {
-            ...x,
-            leafMessageId: leafId,
-            updatedAt,
-          }
-          : x,
-      ),
-    );
+    if (selectedChat.isTemp && tempChat) {
+      setTempChat({ ...tempChat, leafMessageId: leafId, updatedAt } as IChat);
+    } else {
+      updateChatsState((prevChats) =>
+        prevChats.map((x) =>
+          x.id === selectedChat.id
+            ? {
+              ...x,
+              leafMessageId: leafId,
+              updatedAt,
+            }
+            : x,
+        ),
+      );
+    }
 
     putChats(selectedChat.id, {
       setsLeafMessageId: true,
@@ -1410,13 +1437,17 @@ const ChatView = memo(() => {
 
       const updatedAt = currentISODateString();
       // 更新chats中的leafMessageId
-      updateChatsState((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === selectedChat.id
-            ? { ...chat, leafMessageId: copyMsg!.id, updatedAt }
-            : chat,
-        ),
-      );
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId: copyMsg!.id, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((chat) =>
+            chat.id === selectedChat.id
+              ? { ...chat, leafMessageId: copyMsg!.id, updatedAt }
+              : chat,
+          ),
+        );
+      }
     }
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -1538,13 +1569,17 @@ const ChatView = memo(() => {
     // 更新chats中的leafMessageId
     if (selectedChat && leafId) {
       const updatedAt = currentISODateString();
-      updateChatsState((prevChats) =>
-        prevChats.map((x) =>
-          x.id === selectedChat.id
-            ? { ...x, leafMessageId: leafId, updatedAt }
-            : x,
-        ),
-      );
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId: leafId, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((x) =>
+            x.id === selectedChat.id
+              ? { ...x, leafMessageId: leafId, updatedAt }
+              : x,
+          ),
+        );
+      }
     }
 
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -1668,6 +1703,30 @@ const ChatView = memo(() => {
               <ChatMessagesSkeleton selectedChat={selectedChat} />
             ) : (
               <>
+                {/* 临时对话横幅 */}
+                {selectedChat.isTemp && (
+                  <div
+                    className="sm:w-full"
+                    style={{
+                      width: `calc(100vw - ${showChatBar ? effectiveChatBarWidth : 0}px)`,
+                    }}
+                  >
+                    <div className="mx-auto max-w-3xl px-4 pt-4">
+                      <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
+                        <IconBolt size={20} className="shrink-0 text-amber-500" />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                            {t('Temporary Chat')}
+                          </p>
+                          <p className="text-xs text-amber-600 dark:text-amber-400">
+                            {t('This is a temporary chat. Messages will be deleted when you end it.')}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 <div
                   className="sm:w-full chat-container"
                   style={{

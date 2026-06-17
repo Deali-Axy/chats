@@ -65,6 +65,8 @@
   "Temporary Chat": "临时聊天",
   "Temporary": "临时",
   "This chat will not be saved": "此聊天不会被保存",
+  "End Temporary Chat": "结束临时对话",
+  "This is a temporary chat. Messages will be deleted when you end it.": "这是临时对话，结束时消息将被删除。",
   "Add another model": "添加另一个模型",
   "Remove": "移除",
   "Type a message or type \"/\" to select a prompt...": "输入一条消息或键入 \"/\" 以选择提示...",

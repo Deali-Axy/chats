@@ -149,6 +149,12 @@ export const deleteChats = (id: string) => {
   return fetchService.delete(`/api/user/chats/${id}`);
 };
 
+/** 删除临时聊天（硬删除，不归档） */
+export const deleteTempChats = (id: string) => {
+  const fetchService = createFetchClient();
+  return fetchService.delete(`/api/user/chats/${id}/temp`);
+};
+
 export const stopChat = (id: string) => {
   const fetchService = createFetchClient();
   return fetchService.post(`/api/chats/stop/${id}`);

@@ -60,6 +60,7 @@ import Chatbar from '../Chatbar/Chatbar';
 
 import {
   deleteChats,
+  deleteTempChats,
   getChatsByPaging,
   getDefaultPrompt,
   getUserChatGroupWithMessages,
@@ -118,6 +119,11 @@ const HomeContent = () => {
     [chatBarWidth, isMobile, showChatBar, viewportWidth],
   );
 
+  /** 记录当前临时聊天ID，用于切换时删除 */
+  const tempChatIdRef = useRef<string | null>(null);
+  /** 持有临时聊天对象，让 selectedChat 能正确返回 */
+  const [tempChat, setTempChat] = useState<IChat | null>(null);
+
   // 解析 hash 中的 chatId，例如 "#/abc" -> "abc"
   const getHashChatId = (): string | undefined => {
     if (typeof window === 'undefined') return undefined;
@@ -129,8 +135,10 @@ const HomeContent = () => {
   // 根据 selectedChatId 纯计算 selectedChat（无副作用）
   const selectedChat = useMemo(() => {
     if (!selectedChatId) return undefined;
+    // 优先检查临时聊天
+    if (tempChat && tempChat.id === selectedChatId) return tempChat;
     return chats.find((chat) => chat.id === selectedChatId);
-  }, [chats, selectedChatId]);
+  }, [chats, selectedChatId, tempChat]);
 
   // 当 chats 就绪且还未选中任何聊天时，仅在 URL 中有 chatId 时才初始化 selectedChatId
   useEffect(() => {
@@ -148,9 +156,11 @@ const HomeContent = () => {
   }, [chats, selectedChatId, router.asPath, chatDispatch]);
 
   // 当 selectedChatId 无效（对应的 chat 不在列表中）时，自动回退到有效的聊天
+  // 但如果当前选中的是临时对话，则不回退
   useEffect(() => {
     if (!chats.length) return;
     if (!selectedChatId) return;
+    if (tempChatIdRef.current && selectedChatId === tempChatIdRef.current) return;
     const exists = chats.some((c) => c.id === selectedChatId);
     if (exists) return;
 
@@ -245,9 +255,6 @@ const HomeContent = () => {
     });
   };
 
-  /** 记录当前临时聊天ID，用于切换时删除 */
-  const tempChatIdRef = useRef<string | null>(null);
-
   /**
    * 创建临时聊天
    * 临时聊天不会出现在聊天列表中，切换离开时自动删除
@@ -255,7 +262,7 @@ const HomeContent = () => {
   const handleNewTempChat = () => {
     // 如果已有临时聊天，先删除
     const deletePrev = tempChatIdRef.current
-      ? deleteChats(tempChatIdRef.current).catch(() => {})
+      ? deleteTempChats(tempChatIdRef.current).catch(() => {})
       : Promise.resolve();
 
     return deletePrev.then(() => {
@@ -267,6 +274,7 @@ const HomeContent = () => {
         const chat = supplyChatProperty(data);
         chat.isTemp = true;
         tempChatIdRef.current = chat.id;
+        setTempChat(chat);
 
         // 临时聊天不加入列表，只设置选中状态
         chatDispatch(setSelectedChatId(chat.id));
@@ -287,7 +295,8 @@ const HomeContent = () => {
     if (tempChatIdRef.current && chat.id !== tempChatIdRef.current) {
       const oldTempId = tempChatIdRef.current;
       tempChatIdRef.current = null;
-      deleteChats(oldTempId).catch(() => {});
+      setTempChat(null);
+      deleteTempChats(oldTempId).catch(() => {});
     }
 
     chatDispatch(setSelectedChatId(chat.id));
@@ -306,6 +315,19 @@ const HomeContent = () => {
       chatDispatch(setIsMessagesLoading(false));
     });
     router.push('#/' + chat.id);
+  };
+
+  /** 结束临时对话：删除临时聊天并回到欢迎页面 */
+  const handleEndTempChat = () => {
+    if (!tempChatIdRef.current) return;
+    const tempId = tempChatIdRef.current;
+    tempChatIdRef.current = null;
+    setTempChat(null);
+    deleteTempChats(tempId).catch(() => {});
+    chatDispatch(setSelectedChatId(undefined));
+    messageDispatch(setMessages([]));
+    messageDispatch(setSelectedMessages([]));
+    router.push('#/');
   };
 
   const handleUpdateChat = (
@@ -529,6 +551,9 @@ const HomeContent = () => {
 
         handleNewChat,
         handleNewTempChat,
+        handleEndTempChat,
+        tempChat,
+        setTempChat,
         handleStopChats,
         handleSelectChat,
         handleUpdateChat,

@@ -40,6 +40,7 @@ const ChatHeader = () => {
     state: { models, defaultPrompt, showChatBar, chats },
     selectedChat,
     chatDispatch,
+    handleEndTempChat,
   } = useContext(HomeContext);
 
   const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
@@ -233,15 +234,26 @@ const ChatHeader = () => {
               >
                 {/* 临时聊天标识 */}
                 {selectedChat.isTemp && (
-                  <Tips
-                    trigger={
-                      <div className="flex items-center gap-1 mr-2 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
-                        <IconBolt size={16} />
-                        <span className="text-xs font-medium">{t('Temporary')}</span>
-                      </div>
-                    }
-                    content={t('This chat will not be saved')}
-                  />
+                  <>
+                    <Tips
+                      trigger={
+                        <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+                          <IconBolt size={16} />
+                          <span className="text-xs font-medium">{t('Temporary')}</span>
+                        </div>
+                      }
+                      content={t('This chat will not be saved')}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 hover:bg-yellow-500/10"
+                      onClick={handleEndTempChat}
+                    >
+                      <IconX size={14} className="mr-1" />
+                      {t('End Temporary Chat')}
+                    </Button>
+                  </>
                 )}
                 <div
                   className={cn(
