@@ -282,17 +282,16 @@ const Sidebar = <T,>({
                 {createItemButton}
               </div>
             </div>
-            <div className="mt-3">
+            <div className="mt-3 flex items-center gap-1">
               <Search
+                containerClassName="flex-1 min-w-0"
                 placeholder={t('Search...') || ''}
                 searchTerm={searchTerm}
                 onSearch={handleSearchTerm}
               />
               {!searchTerm && actionComponent && (
-                <div className="relative">
-                  <div className="absolute right-1 bottom-2">
-                    {actionComponent}
-                  </div>
+                <div className="flex-shrink-0">
+                  {actionComponent}
                 </div>
               )}
             </div>
