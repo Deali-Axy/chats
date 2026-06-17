@@ -2,7 +2,7 @@ import { useContext } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import { IconBolt, IconMessagePlus } from '@/components/Icons';
+import { IconBolt, IconMessages } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
@@ -39,7 +39,7 @@ const NoChat = () => {
             <CardHeader className="space-y-1">
               <div className="flex items-center gap-2">
                 <div className="p-2 rounded-lg bg-primary/10">
-                  <IconMessagePlus size={24} className="text-primary" />
+                  <IconMessages size={24} className="text-primary" />
                 </div>
                 <CardTitle className="text-lg">{t('New Chat')}</CardTitle>
               </div>
