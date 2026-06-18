@@ -260,12 +260,21 @@ const HomeContent = () => {
    * 临时聊天不会出现在聊天列表中，切换离开时自动删除
    */
   const handleNewTempChat = () => {
-    // 如果已有临时聊天，先删除
-    const deletePrev = tempChatIdRef.current
-      ? deleteTempChats(tempChatIdRef.current).catch(() => {})
+    // 如果已有临时聊天，先删除（兼容 ref 丢失的情况）
+    const prevId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
+    const deletePrev = prevId
+      ? deleteTempChats(prevId).catch(() => {})
       : Promise.resolve();
 
     return deletePrev.then(() => {
+      // 从 chats 数组中清理旧的临时聊天
+      if (prevId) {
+        const cleaned = chats.filter((c) => c.id !== prevId);
+        if (cleaned.length !== chats.length) {
+          chatDispatch(setChats(cleaned));
+        }
+      }
+
       return postChats({
         title: t('Temporary Chat'),
         groupId: null,

@@ -5,7 +5,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { isMobile } from '@/utils/common';
 
-import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
+import { ChatStatus, IChat, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
@@ -41,6 +41,8 @@ const ChatHeader = () => {
     selectedChat,
     chatDispatch,
     handleEndTempChat,
+    tempChat,
+    setTempChat,
   } = useContext(HomeContext);
 
   const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
@@ -55,7 +57,12 @@ const ChatHeader = () => {
     selectedChat.spans.filter((x) => x.enabled).length === 1;
 
   // 直接修改chats数组中的chat数据的辅助函数
+  // 临时聊天不在 chats 数组中，需要更新 tempChat 状态
   const updateChatInChats = (updatedChat: typeof selectedChat) => {
+    if (selectedChat.isTemp && tempChat) {
+      setTempChat(updatedChat as IChat);
+      return;
+    }
     const updatedChats = chats.map((chat) =>
       chat.id === selectedChat.id ? updatedChat : chat
     );
