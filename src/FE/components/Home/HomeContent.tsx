@@ -285,7 +285,8 @@ const HomeContent = () => {
         tempChatIdRef.current = chat.id;
         setTempChat(chat);
 
-        // 临时聊天不加入列表，只设置选中状态
+        // 临时聊天加入列表，使其立即显示在侧边栏
+        chatDispatch(setChats([chat, ...chats]));
         chatDispatch(setSelectedChatId(chat.id));
         messageDispatch(setMessages([]));
         messageDispatch(setSelectedMessages([]));
