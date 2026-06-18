@@ -68,7 +68,6 @@ import { ChatMessage } from '@/components/ChatMessage';
 import ChatMessagesSkeleton from './ChatMessagesSkeleton';
 import NoChat from './NoChat';
 import NoModel from './NoModel';
-import { IconBolt } from '@/components/Icons';
 
 import {
   deleteMessage,
@@ -1690,7 +1689,7 @@ const ChatView = memo(() => {
   }
 
   return (
-    <div className="relative flex-1">
+    <div className={`relative flex-1${selectedChat.isTemp ? ' bg-amber-50/40 dark:bg-amber-950/15' : ''}`}>
       <div className="flex flex-col">
         <div className="relative h-16"><ChatHeader /></div>
         <div className="relative h-[calc(100vh-64px)] w-0 min-w-full">
@@ -1703,30 +1702,6 @@ const ChatView = memo(() => {
               <ChatMessagesSkeleton selectedChat={selectedChat} />
             ) : (
               <>
-                {/* 临时对话横幅 */}
-                {selectedChat.isTemp && (
-                  <div
-                    className="sm:w-full"
-                    style={{
-                      width: `calc(100vw - ${showChatBar ? effectiveChatBarWidth : 0}px)`,
-                    }}
-                  >
-                    <div className="mx-auto max-w-3xl px-4 pt-4">
-                      <div className="flex items-center gap-3 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 dark:border-amber-800 dark:bg-amber-950/30">
-                        <IconBolt size={20} className="shrink-0 text-amber-500" />
-                        <div className="flex-1">
-                          <p className="text-sm font-medium text-amber-800 dark:text-amber-200">
-                            {t('Temporary Chat')}
-                          </p>
-                          <p className="text-xs text-amber-600 dark:text-amber-400">
-                            {t('This is a temporary chat. Messages will be deleted when you end it.')}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
                 <div
                   className="sm:w-full chat-container"
                   style={{
