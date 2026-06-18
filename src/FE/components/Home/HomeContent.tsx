@@ -123,6 +123,22 @@ const HomeContent = () => {
   const tempChatIdRef = useRef<string | null>(null);
   /** 持有临时聊天对象，让 selectedChat 能正确返回 */
   const [tempChat, setTempChat] = useState<IChat | null>(null);
+  /** 使用 ref 持有最新 chats，避免异步回调闭包拿到旧值 */
+  const chatsRef = useRef<IChat[]>(chats);
+  /** 使用 ref 持有最新 selectedChatId，供异步消息加载校验 */
+  const selectedChatIdRef = useRef<string | undefined>(selectedChatId);
+  /** 消息加载请求版本号，用于丢弃过期响应 */
+  const messageLoadRequestRef = useRef(0);
+  /** 防止临时聊天被并发创建 */
+  const creatingTempChatRef = useRef(false);
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
 
   // 解析 hash 中的 chatId，例如 "#/abc" -> "abc"
   const getHashChatId = (): string | undefined => {
@@ -139,6 +155,38 @@ const HomeContent = () => {
     if (tempChat && tempChat.id === selectedChatId) return tempChat;
     return chats.find((chat) => chat.id === selectedChatId);
   }, [chats, selectedChatId, tempChat]);
+
+  const invalidatePendingMessageLoad = () => {
+    messageLoadRequestRef.current += 1;
+  };
+
+  const loadMessagesForChat = (chatId: string, leafMessageId?: string) => {
+    const requestVersion = ++messageLoadRequestRef.current;
+    chatDispatch(setIsMessagesLoading(true));
+    messageDispatch(setMessages([]));
+    messageDispatch(setSelectedMessages([]));
+
+    getUserMessages(chatId)
+      .then((data) => {
+        const isLatestRequest = requestVersion === messageLoadRequestRef.current;
+        const isStillSelected = selectedChatIdRef.current === chatId;
+        if (!isLatestRequest || !isStillSelected) return;
+
+        if (data.length > 0) {
+          selectChatMessage(data, leafMessageId);
+        } else {
+          messageDispatch(setMessages([]));
+          messageDispatch(setSelectedMessages([]));
+        }
+        chatDispatch(setIsMessagesLoading(false));
+      })
+      .catch(() => {
+        const isLatestRequest = requestVersion === messageLoadRequestRef.current;
+        const isStillSelected = selectedChatIdRef.current === chatId;
+        if (!isLatestRequest || !isStillSelected) return;
+        chatDispatch(setIsMessagesLoading(false));
+      });
+  };
 
   // 当 chats 就绪且还未选中任何聊天时，仅在 URL 中有 chatId 时才初始化 selectedChatId
   useEffect(() => {
@@ -217,22 +265,9 @@ const HomeContent = () => {
   function selectChat(chatList: IChat[], chatId?: string) {
     const chat = findChat(chatList, chatId);
     if (chat) {
+      selectedChatIdRef.current = chat.id;
       chatDispatch(setSelectedChatId(chat.id));
-      chatDispatch(setIsMessagesLoading(true));
-      messageDispatch(setMessages([]));
-      messageDispatch(setSelectedMessages([]));
-
-      getUserMessages(chat.id).then((data) => {
-        if (data.length > 0) {
-          selectChatMessage(data, chat.leafMessageId);
-        } else {
-          messageDispatch(setMessages([]));
-          messageDispatch(setSelectedMessages([]));
-        }
-        chatDispatch(setIsMessagesLoading(false));
-      }).catch(() => {
-        chatDispatch(setIsMessagesLoading(false));
-      });
+      loadMessagesForChat(chat.id, chat.leafMessageId);
     }
     return chat;
   }
@@ -244,9 +279,11 @@ const HomeContent = () => {
     }).then((data) => {
       const chat = supplyChatProperty(data);
       chat.groupId = groupId;
-      const chatList = [chat, ...chats];
+      const chatList = [chat, ...chatsRef.current];
       chatDispatch(setChats(chatList));
+      selectedChatIdRef.current = chat.id;
       chatDispatch(setSelectedChatId(chat.id));
+      invalidatePendingMessageLoad();
       messageDispatch(setMessages([]));
       messageDispatch(setSelectedMessages([]));
 
@@ -260,6 +297,9 @@ const HomeContent = () => {
    * 临时聊天不会出现在聊天列表中，切换离开时自动删除
    */
   const handleNewTempChat = () => {
+    if (creatingTempChatRef.current) return Promise.resolve();
+    creatingTempChatRef.current = true;
+
     // 如果已有临时聊天，先删除（兼容 ref 丢失的情况）
     const prevId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
     const deletePrev = prevId
@@ -269,8 +309,9 @@ const HomeContent = () => {
     return deletePrev.then(() => {
       // 从 chats 数组中清理旧的临时聊天
       if (prevId) {
-        const cleaned = chats.filter((c) => c.id !== prevId);
-        if (cleaned.length !== chats.length) {
+        const cleaned = chatsRef.current.filter((c) => c.id !== prevId);
+        if (cleaned.length !== chatsRef.current.length) {
+          chatsRef.current = cleaned;
           chatDispatch(setChats(cleaned));
         }
       }
@@ -286,13 +327,19 @@ const HomeContent = () => {
         setTempChat(chat);
 
         // 临时聊天加入列表，使其立即显示在侧边栏
-        chatDispatch(setChats([chat, ...chats]));
+        const nextChats = [chat, ...chatsRef.current.filter((c) => c.id !== chat.id)];
+        chatsRef.current = nextChats;
+        chatDispatch(setChats(nextChats));
+        selectedChatIdRef.current = chat.id;
         chatDispatch(setSelectedChatId(chat.id));
+        invalidatePendingMessageLoad();
         messageDispatch(setMessages([]));
         messageDispatch(setSelectedMessages([]));
 
         router.push('#/' + chat.id);
       });
+    }).finally(() => {
+      creatingTempChatRef.current = false;
     });
   };
 
@@ -305,29 +352,11 @@ const HomeContent = () => {
     if (chat.isTemp) {
       tempChatIdRef.current = chat.id;
       setTempChat(chat as IChat);
-    } else {
-      // 切换到普通聊天时，清除临时聊天引用（但不删除）
-      if (tempChatIdRef.current) {
-        tempChatIdRef.current = null;
-        setTempChat(null);
-      }
     }
 
+    selectedChatIdRef.current = chat.id;
     chatDispatch(setSelectedChatId(chat.id));
-    chatDispatch(setIsMessagesLoading(true));
-    messageDispatch(setMessages([]));
-    messageDispatch(setSelectedMessages([]));
-    getUserMessages(chat.id).then((data) => {
-      if (data.length > 0) {
-        selectChatMessage(data, chat.leafMessageId);
-      } else {
-        messageDispatch(setMessages([]));
-        messageDispatch(setSelectedMessages([]));
-      }
-      chatDispatch(setIsMessagesLoading(false));
-    }).catch(() => {
-      chatDispatch(setIsMessagesLoading(false));
-    });
+    loadMessagesForChat(chat.id, chat.leafMessageId);
     router.push('#/' + chat.id);
   };
 
@@ -342,12 +371,15 @@ const HomeContent = () => {
     deleteTempChats(tempId).catch(() => {});
 
     // 从 chats 数组中移除临时聊天，防止被 useEffect 重新选中
-    const chatList = chats.filter((c) => c.id !== tempId);
-    if (chatList.length !== chats.length) {
+    const chatList = chatsRef.current.filter((c) => c.id !== tempId);
+    if (chatList.length !== chatsRef.current.length) {
+      chatsRef.current = chatList;
       chatDispatch(setChats(chatList));
     }
 
+    selectedChatIdRef.current = undefined;
     chatDispatch(setSelectedChatId(undefined));
+    invalidatePendingMessageLoad();
     messageDispatch(setMessages([]));
     messageDispatch(setSelectedMessages([]));
     router.push('#/');
@@ -452,7 +484,11 @@ const HomeContent = () => {
         chatList.push(...d.chats.rows);
       });
       
-      chatDispatch(setChats(chatList));
+      const mergedChats = tempChat
+        ? [tempChat, ...chatList.filter((c) => c.id !== tempChat.id)]
+        : chatList;
+      chatsRef.current = mergedChats;
+      chatDispatch(setChats(mergedChats));
       chatDispatch(setChatGroup(chatGroupList));
       chatDispatch(setChatPaging(chatPagingList));
     };
@@ -475,7 +511,11 @@ const HomeContent = () => {
       const mapRows = rows.map(
         (x) => ({ ...x, status: ChatStatus.None } as IChat),
       );
-      let chatList = chats.concat(mapRows);
+      let chatList = chatsRef.current.concat(mapRows);
+      if (tempChat) {
+        chatList = [tempChat, ...chatList.filter((c) => c.id !== tempChat.id)];
+      }
+      chatsRef.current = chatList;
       chatDispatch(setChats(chatList));
       const chatPagingList = chatPaging.map((x) =>
         x.groupId === groupId ? { ...x, page } : x,
