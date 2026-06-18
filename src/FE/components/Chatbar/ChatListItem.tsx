@@ -209,7 +209,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
   return (
     <SidebarMenuItem>
       {isChanging && selectChatId === chat.id ? (
-        <div className="flex w-full items-center gap-2 rounded-md bg-background px-2 py-1.5">
+        <div className="flex w-full items-center gap-2 rounded-lg bg-background px-3 py-2 border border-input">
           <input
             className="flex-1 overflow-hidden overflow-ellipsis bg-transparent text-left text-sm outline-none text-foreground"
             type="text"
@@ -224,8 +224,9 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
           asChild
           isActive={selectChatId === chat.id}
           className={cn(
-            'h-auto min-h-8 py-1.5',
+            'h-auto min-h-9 py-2 px-3 rounded-lg transition-all duration-200',
             chatting && 'pointer-events-none opacity-60',
+            selectChatId === chat.id && 'bg-sidebar-accent shadow-sm',
           )}
         >
           <a

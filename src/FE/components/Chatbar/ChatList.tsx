@@ -51,12 +51,12 @@ const ChatList = ({
     <>
       {chatGroups.size > 0 &&
         [...chatGroups.entries()].map(([group, items]) => (
-          <SidebarGroup key={group} className="py-1">
-            <SidebarGroupLabel className="text-xs text-sidebar-foreground/60 font-medium">
+          <SidebarGroup key={group} className="py-1.5">
+            <SidebarGroupLabel className="text-xs text-sidebar-foreground/60 font-medium px-3 py-1.5">
               {t(group)}
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu>
+              <SidebarMenu className="gap-0.5">
                 {items.map((chat, index) => (
                   <div
                     className={cn(!isUnGroupChat(groupId) && 'ml-1')}
@@ -73,7 +73,7 @@ const ChatList = ({
           </SidebarGroup>
         ))}
       {hasMore && (
-        <Button onClick={handleShowMore} className="text-xs mx-2" variant="link">
+        <Button onClick={handleShowMore} className="text-xs mx-3 my-1" variant="link">
           {t('Show more')}
         </Button>
       )}

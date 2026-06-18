@@ -182,10 +182,9 @@ const BuildLayout = ({
         </Sidebar>
         <div className="w-full flex flex-col">
           <div className="flex p-3 items-center border-b">
-            <SidebarTrigger
-              className="mr-2"
-              icon={<IconLayoutSidebar size={26} strokeWidth={1} />}
-            />
+            <SidebarTrigger className="mr-2">
+              <IconLayoutSidebar size={26} strokeWidth={1} />
+            </SidebarTrigger>
             <h1 className="font-medium">
               {selectedMenu?.title || t('Chats Build')}
             </h1>

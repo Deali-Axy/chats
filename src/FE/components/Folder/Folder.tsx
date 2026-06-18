@@ -101,9 +101,9 @@ const Folder = ({
 
   return (
     <>
-      <div className="relative flex items-center">
+      <div className="relative flex items-center group/folder">
         {isRenaming ? (
-          <div className="flex w-full items-center gap-2 rounded-md bg-background px-2 py-1.5">
+          <div className="flex w-full items-center gap-2 rounded-lg bg-background px-3 py-2 border border-input">
             <Input
               className="flex-1 overflow-hidden overflow-ellipsis bg-transparent text-left text-sm outline-none border-none text-foreground"
               type="text"
@@ -118,7 +118,7 @@ const Folder = ({
             draggable
             onDragStart={(e) => handleDragStart(e)}
             onClick={handleClickFolder}
-            className="font-medium text-sidebar-foreground/70"
+            className="font-medium text-sidebar-foreground/70 rounded-lg px-3 py-2 h-9 transition-colors hover:bg-sidebar-accent"
           >
             <div
               className="transition-transform duration-200 ease-in-out shrink-0"

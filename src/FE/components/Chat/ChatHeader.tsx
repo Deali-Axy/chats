@@ -220,14 +220,14 @@ const ChatHeader = () => {
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full border-transparent bg-background">
+      <div className="sticky top-0 left-0 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
         <div
           className={cn(
-            'stretch mt-2 flex flex-row mx-4 rounded-md',
+            'stretch flex flex-row mx-4 rounded-lg',
             !showChatBar && 'mx-2',
           )}
         >
-          <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] overflow-hidden">
+          <div className="relative flex w-full flex-grow flex-col rounded-lg bg-card shadow-sm overflow-hidden">
             <div
               className={cn(
                 'flex justify-between select-none items-center scroller overflow-x-auto px-3',

@@ -1689,10 +1689,10 @@ const ChatView = memo(() => {
   }
 
   return (
-    <div className={`relative flex-1${selectedChat.isTemp ? ' bg-amber-50/40 dark:bg-amber-950/15' : ''}`}>
-      <div className="flex flex-col">
-        <div className="relative h-16"><ChatHeader /></div>
-        <div className="relative h-[calc(100vh-64px)] w-0 min-w-full">
+    <div className={`relative flex-1 min-w-0${selectedChat.isTemp ? ' bg-amber-50/40 dark:bg-amber-950/15' : ''}`}>
+      <div className="flex flex-col h-full">
+        <div className="sticky top-0 z-10"><ChatHeader /></div>
+        <div className="relative flex-1 min-h-0">
           <div
             className="h-full overflow-x-hidden scroll-container"
             ref={chatContainerRef}
@@ -1702,12 +1702,7 @@ const ChatView = memo(() => {
               <ChatMessagesSkeleton selectedChat={selectedChat} />
             ) : (
               <>
-                <div
-                  className="sm:w-full chat-container"
-                  style={{
-                    width: `calc(100vw - ${showChatBar ? effectiveChatBarWidth : 0}px)`,
-                  }}
-                >
+                <div className="sm:w-full chat-container w-full">
                   {selectedMessages.length === 0 && <ChatPresetList />}
                 </div>
 

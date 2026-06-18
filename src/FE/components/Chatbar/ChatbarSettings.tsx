@@ -26,9 +26,11 @@ const ChatBarSettings = () => {
           <UserMenuPopover
             pageType={PageType.Chat}
             trigger={
-              <SidebarMenuButton className="capitalize">
-                <IconUser size={18} />
-                <span>{user?.username}</span>
+              <SidebarMenuButton className="capitalize rounded-lg px-3 py-2 h-9 transition-colors hover:bg-sidebar-accent">
+                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-sidebar-accent">
+                  <IconUser size={16} />
+                </div>
+                <span className="flex-1 truncate">{user?.username}</span>
               </SidebarMenuButton>
             }
             onOpen={handleClickUserMore}

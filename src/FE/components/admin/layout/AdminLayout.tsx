@@ -101,10 +101,9 @@ const AdminHeaderBar = ({
 }) => {
   return (
     <div className="flex p-3 items-center border-b">
-      <SidebarTrigger
-        className="mr-2"
-        icon={<IconLayoutSidebar size={26} strokeWidth={1} />}
-      />
+      <SidebarTrigger className="mr-2">
+        <IconLayoutSidebar size={26} strokeWidth={1} />
+      </SidebarTrigger>
       <h1 className="font-medium">
         {selectedMenu?.headerTitle || selectedMenu?.title || t('Chats Admin Panel')}
       </h1>
