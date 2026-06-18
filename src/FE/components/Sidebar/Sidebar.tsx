@@ -22,6 +22,14 @@ import Search from '@/components/Search/Search';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarProvider,
+  SidebarSeparator,
+} from '@/components/ui/sidebar';
 
 import { cn } from '@/lib/utils';
 
@@ -202,13 +210,13 @@ const Sidebar = <T,>({
       trigger={
         <Button
           variant="ghost"
-          className="p-1 m-0 h-auto"
+          className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
           onClick={toggleOpen}
         >
           {side === 'right' ? (
-            <IconLayoutSidebarRight size={26} />
+            <IconLayoutSidebarRight size={18} />
           ) : (
-            <IconLayoutSidebar size={26} />
+            <IconLayoutSidebar size={18} />
           )}
         </Button>
       }
@@ -224,12 +232,12 @@ const Sidebar = <T,>({
           }}
           disabled={messageIsStreaming || isCreating}
           variant="ghost"
-          className="p-1 m-0 h-auto"
+          className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
           {isCreating ? (
-            <IconLoader size={26} className="animate-spin" />
+            <IconLoader size={18} className="animate-spin" />
           ) : (
-            <IconSquarePlus size={26} />
+            <IconSquarePlus size={18} />
           )}
         </Button>
       }
@@ -246,12 +254,12 @@ const Sidebar = <T,>({
           }}
           disabled={messageIsStreaming || isCreatingTemp}
           variant="ghost"
-          className="p-1 m-0 h-auto"
+          className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
         >
           {isCreatingTemp ? (
-            <IconLoader size={26} className="animate-spin" />
+            <IconLoader size={18} className="animate-spin" />
           ) : (
-            <IconBolt size={26} />
+            <IconBolt size={18} />
           )}
         </Button>
       }
@@ -260,29 +268,29 @@ const Sidebar = <T,>({
   );
 
   return (
-    <>
+    <SidebarProvider open={isOpen} onOpenChange={() => toggleOpen()} defaultOpen={true}>
       {isOpen && (
         <div
           className={cn(
-            'fixed top-0 z-40 flex h-full w-full flex-none flex-col bg-card p-2 text-[14px] shadow-md sm:relative sm:top-0 sm:w-auto',
-            side === 'right' ? 'right-0' : 'left-0',
+            'fixed top-0 z-40 flex h-full w-full flex-none flex-col bg-sidebar text-sidebar-foreground border-r shadow-md sm:relative sm:top-0 sm:w-auto',
+            side === 'right' ? 'right-0 border-r-0 border-l' : 'left-0',
           )}
           style={!isMobile ? { width: `${desktopSidebarWidth}px` } : undefined}
         >
-          <div className="sticky mt-2">
+          <SidebarHeader>
             <div
               className={cn(
-                'flex items-center pr-1 justify-between',
+                'flex items-center justify-between',
                 side === 'right' && 'flex-row-reverse',
               )}
             >
               {sidebarToggleButton}
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
                 {createTempItemButton}
                 {createItemButton}
               </div>
             </div>
-            <div className="mt-3 flex items-center gap-1">
+            <div className="flex items-center gap-1.5">
               <Search
                 containerClassName="flex-1 min-w-0"
                 placeholder={t('Search...') || ''}
@@ -296,23 +304,39 @@ const Sidebar = <T,>({
               )}
             </div>
             {actionConfirmComponent}
-          </div>
+          </SidebarHeader>
 
-          {isLoading && (
-            <div className="h-screen flex flex-col space-y-2 py-2">
-              <Skeleton className="h-11 w-full" />
-              <Skeleton className="h-11 w-full" />
-              <Skeleton className="h-11 w-full" />
-            </div>
+          <SidebarSeparator />
+
+          <SidebarContent>
+            {isLoading && (
+              <SidebarGroup>
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-8 w-full rounded-md" />
+                  <Skeleton className="h-8 w-full rounded-md" />
+                  <Skeleton className="h-8 w-full rounded-md" />
+                  <Skeleton className="h-8 w-[80%] rounded-md" />
+                  <Skeleton className="h-8 w-full rounded-md" />
+                </div>
+              </SidebarGroup>
+            )}
+
+            {!isLoading && (
+              <>
+                {folderComponent}
+                {items?.length > 0 && <div>{itemComponent}</div>}
+                {NoDataRender()}
+              </>
+            )}
+          </SidebarContent>
+
+          {footerComponent && (
+            <>
+              <SidebarSeparator />
+              <SidebarFooter>{footerComponent}</SidebarFooter>
+            </>
           )}
 
-          <div className="flex-grow overflow-hidden overflow-y-scroll scroll-container">
-            <div className="flex">{folderComponent}</div>
-
-            {items?.length > 0 && !isLoading && <div>{itemComponent}</div>}
-            {NoDataRender()}
-          </div>
-          {footerComponent}
           {showResizeRail && (
             <div
               aria-hidden="true"
@@ -324,7 +348,7 @@ const Sidebar = <T,>({
               )}
               onPointerDown={handleResizeStart}
             >
-              <div className="mx-auto h-full w-[2px] bg-transparent transition-colors hover:bg-border" />
+              <div className="mx-auto h-full w-[2px] bg-transparent transition-colors hover:bg-sidebar-border" />
             </div>
           )}
         </div>
@@ -332,19 +356,20 @@ const Sidebar = <T,>({
 
       {!isOpen && showOpenButton && (
         <div
-          className={`group fixed overflow-hidden bg-card pt-2 z-20 h-12 rounded-sm ${
-            side === 'right' ? 'right-2' : 'left-2'
-          }`}
+          className={cn(
+            'group fixed overflow-hidden bg-sidebar text-sidebar-foreground pt-2 z-20 h-12 rounded-md border shadow-sm',
+            side === 'right' ? 'right-2' : 'left-2',
+          )}
           style={{ top: '8px' }}
         >
           {sidebarToggleButton}
-          <div className="flex items-center gap-1">
+          <div className="flex items-center gap-0.5">
             {createTempItemButton}
             {createItemButton}
           </div>
         </div>
       )}
-    </>
+    </SidebarProvider>
   );
 };
 
