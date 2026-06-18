@@ -3,6 +3,7 @@ import {
   ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -24,10 +25,10 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import {
   SidebarContent,
+  SidebarContext,
   SidebarFooter,
   SidebarGroup,
   SidebarHeader,
-  SidebarProvider,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
 
@@ -267,8 +268,21 @@ const Sidebar = <T,>({
     />
   );
 
+  const sidebarContextValue = useMemo(
+    () => ({
+      state: (isOpen ? 'expanded' : 'collapsed') as 'expanded' | 'collapsed',
+      open: isOpen,
+      setOpen: () => toggleOpen(),
+      openMobile: false,
+      setOpenMobile: () => {},
+      isMobile,
+      toggleSidebar: toggleOpen,
+    }),
+    [isOpen, isMobile, toggleOpen],
+  );
+
   return (
-    <SidebarProvider open={isOpen} onOpenChange={() => toggleOpen()} defaultOpen={true}>
+    <SidebarContext.Provider value={sidebarContextValue}>
       {isOpen && (
         <div
           className={cn(
@@ -369,7 +383,7 @@ const Sidebar = <T,>({
           </div>
         </div>
       )}
-    </SidebarProvider>
+    </SidebarContext.Provider>
   );
 };
 
