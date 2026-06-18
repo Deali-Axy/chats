@@ -323,11 +323,20 @@ const HomeContent = () => {
 
   /** 结束临时对话：删除临时聊天并回到欢迎页面 */
   const handleEndTempChat = () => {
-    if (!tempChatIdRef.current) return;
-    const tempId = tempChatIdRef.current;
+    // 兼容 tempChatIdRef 为空的情况（如页面刷新后 ref 丢失）
+    const tempId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
+    if (!tempId) return;
+
     tempChatIdRef.current = null;
     setTempChat(null);
     deleteTempChats(tempId).catch(() => {});
+
+    // 从 chats 数组中移除临时聊天，防止被 useEffect 重新选中
+    const chatList = chats.filter((c) => c.id !== tempId);
+    if (chatList.length !== chats.length) {
+      chatDispatch(setChats(chatList));
+    }
+
     chatDispatch(setSelectedChatId(undefined));
     messageDispatch(setMessages([]));
     messageDispatch(setSelectedMessages([]));
