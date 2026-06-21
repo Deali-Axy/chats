@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from 'react';
-import { useForm } from 'react-hook-form';
+import { Control, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
@@ -752,11 +752,11 @@ const ModelModal = (props: IProps) => {
               
               {/* ========== 3. API 类型特定配置 ========== */}
               {(apiType === 0 || apiType === 1 || apiType === 3) && (
-                <ChatResponseConfig control={form.control} setValue={form.setValue} watch={form.watch} apiType={apiType} modelProviderId={currentModelProviderId} />
+                <ChatResponseConfig control={form.control as unknown as Control<any>} setValue={form.setValue as any} watch={form.watch as any} apiType={apiType} modelProviderId={currentModelProviderId} />
               )}
-              
+
               {apiType === 2 && (
-                <ImageGenerationConfig control={form.control} />
+                <ImageGenerationConfig control={form.control as unknown as Control<any>} />
               )}
             </div>
             
