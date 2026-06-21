@@ -154,10 +154,10 @@ def build_backend(dist_dir: Path, version: str) -> None:
 
 def build_frontend(dist_dir: Path, version: str) -> None:
     fe_dir = Path(str(get_config("FRONTEND_DIR"))).resolve()
-    run_cmd("npm install", cwd=fe_dir)
+    run_cmd("pnpm install", cwd=fe_dir)
     # 构建前端时，明确设置 API_URL="" 以覆盖 .env.local 中的本地开发地址
     # 前后端同源部署时，前端直接访问 / 前缀的后端 API
-    run_cmd("npm run build", cwd=fe_dir, extra_env={"FE_VERSION": version, "API_URL": ""})
+    run_cmd("pnpm run build", cwd=fe_dir, extra_env={"FE_VERSION": version, "API_URL": ""})
 
     fe_out = fe_dir / "out"
     if not fe_out.exists():
