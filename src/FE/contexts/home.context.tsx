@@ -1,4 +1,4 @@
-import { Dispatch, createContext } from 'react';
+import { Dispatch, SetStateAction, createContext } from 'react';
 
 import { ActionType } from '@/hooks/useCreateReducer';
 
@@ -97,6 +97,12 @@ export interface HomeContextProps {
   handleNewChat: (groupId?: string | null) => void;
   /** 创建临时聊天 */
   handleNewTempChat: () => void;
+  /** 结束临时对话 */
+  handleEndTempChat: () => void;
+  /** 临时聊天对象 */
+  tempChat: IChat | null;
+  /** 更新临时聊天对象 */
+  setTempChat: Dispatch<SetStateAction<IChat | null>>;
   handleDeleteChat: (ids: string[]) => void;
   handleSelectChat: (chat: IChat) => void;
   handleUpdateChat: (

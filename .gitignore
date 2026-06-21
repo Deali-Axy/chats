@@ -1,3 +1,8 @@
+<<<<<<< HEAD
+=======
+.next
+scripts
+>>>>>>> 7d9c2268db35eb10d842fe95edea4e27fe132a9b
 dist
 dist-docker
 .github/copilot-instructions.md
@@ -64,8 +69,10 @@ logs.txt
 /**/chats.db-wal
 /Publish
 /src/BE/web/AppData/*
-/AzureFileMigrator/bin
-/AzureFileMigrator/obj
+/eng/**/bin
+/eng/**/obj
 .claude
-
 .fake
+eng/Chats.Capture/.state
+eng/Chats.Capture/State/StatePreparationService.cs
+eng/Chats.Capture/Output/*

@@ -3,6 +3,7 @@ import {
   ReactNode,
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from 'react';
@@ -22,6 +23,16 @@ import Search from '@/components/Search/Search';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import {
+  SidebarContent,
+  SidebarContext,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarHeader,
+  SidebarMenu,
+  SidebarMenuItem,
+  SidebarSeparator,
+} from '@/components/ui/sidebar';
 
 import { cn } from '@/lib/utils';
 
@@ -91,15 +102,11 @@ const Sidebar = <T,>({
   const dragCleanupRef = useRef<(() => void) | null>(null);
 
   const handleCreate = async () => {
-    console.log('handleCreate called, isCreating before:', isCreating);
     setIsCreating(true);
-    console.log('isCreating set to true');
     try {
       await handleCreateItem();
-      console.log('handleCreateItem completed');
     } finally {
       setIsCreating(false);
-      console.log('isCreating set to false');
     }
   };
 
@@ -197,123 +204,222 @@ const Sidebar = <T,>({
 
   const desktopSidebarWidth = clampDesktopWidth(desktopWidth ?? desktopMinWidth);
   const showResizeRail = resizable && isOpen && !isMobile;
-  const sidebarToggleButton = (
-    <Tips
-      trigger={
-        <Button
-          variant="ghost"
-          className="p-1 m-0 h-auto"
-          onClick={toggleOpen}
-        >
-          {side === 'right' ? (
-            <IconLayoutSidebarRight size={26} />
-          ) : (
-            <IconLayoutSidebar size={26} />
-          )}
-        </Button>
-      }
-    />
+
+  const sidebarContextValue = useMemo(
+    () => ({
+      state: (isOpen ? 'expanded' : 'collapsed') as 'expanded' | 'collapsed',
+      open: isOpen,
+      setOpen: () => toggleOpen(),
+      openMobile: false,
+      setOpenMobile: () => {},
+      isMobile,
+      toggleSidebar: toggleOpen,
+    }),
+    [isOpen, isMobile, toggleOpen],
   );
 
-  const createItemButton = hasModel() && (
-    <Tips
-      trigger={
-        <Button
-          onClick={() => {
-            handleCreate();
-          }}
-          disabled={messageIsStreaming || isCreating}
-          variant="ghost"
-          className="p-1 m-0 h-auto"
-        >
-          {isCreating ? (
-            <IconLoader size={26} className="animate-spin" />
-          ) : (
-            <IconSquarePlus size={26} />
+  // 折叠状态下的图标按钮组
+  const collapsedIconButtons = (
+    <div className="flex flex-col items-center gap-1 py-2">
+      <Tips
+        trigger={
+          <Button
+            variant="ghost"
+            className="h-9 w-9 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+            onClick={toggleOpen}
+          >
+            {side === 'right' ? (
+              <IconLayoutSidebarRight size={18} />
+            ) : (
+              <IconLayoutSidebar size={18} />
+            )}
+          </Button>
+        }
+      />
+      {hasModel() && (
+        <>
+          <Tips
+            trigger={
+              <Button
+                onClick={() => handleCreate()}
+                disabled={messageIsStreaming || isCreating}
+                variant="ghost"
+                className="h-9 w-9 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+              >
+                {isCreating ? (
+                  <IconLoader size={18} className="animate-spin" />
+                ) : (
+                  <IconSquarePlus size={18} />
+                )}
+              </Button>
+            }
+            content={addItemButtonTitle}
+          />
+          {handleCreateTempItem && (
+            <Tips
+              trigger={
+                <Button
+                  onClick={() => handleCreateTemp()}
+                  disabled={messageIsStreaming || isCreatingTemp}
+                  variant="ghost"
+                  className="h-9 w-9 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                >
+                  {isCreatingTemp ? (
+                    <IconLoader size={18} className="animate-spin" />
+                  ) : (
+                    <IconBolt size={18} />
+                  )}
+                </Button>
+              }
+              content={addTempItemButtonTitle || t('Temporary Chat')}
+            />
           )}
-        </Button>
-      }
-      content={addItemButtonTitle}
-    />
-  );
-
-  const createTempItemButton = hasModel() && handleCreateTempItem && (
-    <Tips
-      trigger={
-        <Button
-          onClick={() => {
-            handleCreateTemp();
-          }}
-          disabled={messageIsStreaming || isCreatingTemp}
-          variant="ghost"
-          className="p-1 m-0 h-auto"
-        >
-          {isCreatingTemp ? (
-            <IconLoader size={26} className="animate-spin" />
-          ) : (
-            <IconBolt size={26} />
-          )}
-        </Button>
-      }
-      content={addTempItemButtonTitle || t('Temporary Chat')}
-    />
+        </>
+      )}
+    </div>
   );
 
   return (
-    <>
+    <SidebarContext.Provider value={sidebarContextValue}>
+      {/* 折叠状态：显示图标按钮组 */}
+      {!isOpen && showOpenButton && (
+        <div
+          className={cn(
+            'flex flex-col items-center bg-sidebar text-sidebar-foreground border-r shadow-sm z-20',
+            'transition-all duration-200 ease-in-out',
+          )}
+          style={{ width: '48px' }}
+        >
+          {collapsedIconButtons}
+        </div>
+      )}
+
+      {/* 展开状态：完整侧边栏 */}
       {isOpen && (
         <div
           className={cn(
-            'fixed top-0 z-40 flex h-full w-full flex-none flex-col bg-card p-2 text-[14px] shadow-md sm:relative sm:top-0 sm:w-auto',
-            side === 'right' ? 'right-0' : 'left-0',
+            'fixed top-0 z-40 flex h-full w-full flex-none flex-col bg-sidebar text-sidebar-foreground border-r shadow-md sm:relative sm:top-0 sm:w-auto',
+            side === 'right' ? 'right-0 border-r-0 border-l' : 'left-0',
+            'transition-all duration-200 ease-in-out',
           )}
           style={!isMobile ? { width: `${desktopSidebarWidth}px` } : undefined}
         >
-          <div className="sticky mt-2">
+          {/* Header */}
+          <SidebarHeader className="px-3 py-2">
             <div
               className={cn(
-                'flex items-center pr-1 justify-between',
+                'flex items-center justify-between',
                 side === 'right' && 'flex-row-reverse',
               )}
             >
-              {sidebarToggleButton}
               <div className="flex items-center gap-1">
-                {createTempItemButton}
-                {createItemButton}
+                <Tips
+                  trigger={
+                    <Button
+                      variant="ghost"
+                      className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                      onClick={toggleOpen}
+                    >
+                      {side === 'right' ? (
+                        <IconLayoutSidebarRight size={18} />
+                      ) : (
+                        <IconLayoutSidebar size={18} />
+                      )}
+                    </Button>
+                  }
+                />
+              </div>
+              <div className="flex items-center gap-0.5">
+                {hasModel() && handleCreateTempItem && (
+                  <Tips
+                    trigger={
+                      <Button
+                        onClick={() => handleCreateTemp()}
+                        disabled={messageIsStreaming || isCreatingTemp}
+                        variant="ghost"
+                        className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                      >
+                        {isCreatingTemp ? (
+                          <IconLoader size={18} className="animate-spin" />
+                        ) : (
+                          <IconBolt size={18} />
+                        )}
+                      </Button>
+                    }
+                    content={addTempItemButtonTitle || t('Temporary Chat')}
+                  />
+                )}
+                {hasModel() && (
+                  <Tips
+                    trigger={
+                      <Button
+                        onClick={() => handleCreate()}
+                        disabled={messageIsStreaming || isCreating}
+                        variant="ghost"
+                        className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                      >
+                        {isCreating ? (
+                          <IconLoader size={18} className="animate-spin" />
+                        ) : (
+                          <IconSquarePlus size={18} />
+                        )}
+                      </Button>
+                    }
+                    content={addItemButtonTitle}
+                  />
+                )}
               </div>
             </div>
-            <div className="mt-3">
+            <div className="flex items-center gap-1.5">
               <Search
+                containerClassName="flex-1 min-w-0"
                 placeholder={t('Search...') || ''}
                 searchTerm={searchTerm}
                 onSearch={handleSearchTerm}
               />
               {!searchTerm && actionComponent && (
-                <div className="relative">
-                  <div className="absolute right-1 bottom-2">
-                    {actionComponent}
-                  </div>
+                <div className="flex-shrink-0">
+                  {actionComponent}
                 </div>
               )}
             </div>
             {actionConfirmComponent}
-          </div>
+          </SidebarHeader>
 
-          {isLoading && (
-            <div className="h-screen flex flex-col space-y-2 py-2">
-              <Skeleton className="h-11 w-full" />
-              <Skeleton className="h-11 w-full" />
-              <Skeleton className="h-11 w-full" />
-            </div>
+          <SidebarSeparator className="mx-3" />
+
+          {/* Content */}
+          <SidebarContent className="px-3 py-2">
+            {isLoading && (
+              <SidebarGroup>
+                <div className="flex flex-col gap-1.5">
+                  <Skeleton className="h-8 w-full rounded-md" />
+                  <Skeleton className="h-8 w-full rounded-md" />
+                  <Skeleton className="h-8 w-full rounded-md" />
+                  <Skeleton className="h-8 w-[80%] rounded-md" />
+                  <Skeleton className="h-8 w-full rounded-md" />
+                </div>
+              </SidebarGroup>
+            )}
+
+            {!isLoading && (
+              <>
+                {folderComponent}
+                {items?.length > 0 && <div>{itemComponent}</div>}
+                {NoDataRender()}
+              </>
+            )}
+          </SidebarContent>
+
+          {/* Footer */}
+          {footerComponent && (
+            <>
+              <SidebarSeparator className="mx-3" />
+              <SidebarFooter className="px-3 py-2">{footerComponent}</SidebarFooter>
+            </>
           )}
 
-          <div className="flex-grow overflow-hidden overflow-y-scroll scroll-container">
-            <div className="flex">{folderComponent}</div>
-
-            {items?.length > 0 && !isLoading && <div>{itemComponent}</div>}
-            {NoDataRender()}
-          </div>
-          {footerComponent}
+          {/* Resize Rail */}
           {showResizeRail && (
             <div
               aria-hidden="true"
@@ -325,27 +431,12 @@ const Sidebar = <T,>({
               )}
               onPointerDown={handleResizeStart}
             >
-              <div className="mx-auto h-full w-[2px] bg-transparent transition-colors hover:bg-border" />
+              <div className="mx-auto h-full w-[2px] bg-transparent transition-colors hover:bg-sidebar-border" />
             </div>
           )}
         </div>
       )}
-
-      {!isOpen && showOpenButton && (
-        <div
-          className={`group fixed overflow-hidden bg-card pt-2 z-20 h-12 rounded-sm ${
-            side === 'right' ? 'right-2' : 'left-2'
-          }`}
-          style={{ top: '8px' }}
-        >
-          {sidebarToggleButton}
-          <div className="flex items-center gap-1">
-            {createTempItemButton}
-            {createItemButton}
-          </div>
-        </div>
-      )}
-    </>
+    </SidebarContext.Provider>
   );
 };
 

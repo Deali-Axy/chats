@@ -19,6 +19,7 @@ import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import Tips from '@/components/Tips/Tips';
 import {
   IconArchive,
+  IconBolt,
   IconCheck,
   IconDots,
   IconLoader,
@@ -37,13 +38,18 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  SidebarMenuAction,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar';
 
 import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
 import SharedMessageModal from '../Chat/SharedMessageModal';
 import ChatbarContext from '../Chatbar/Chatbar.context';
 
-import { deleteChats, putChats, summarizeChatTitle } from '@/apis/clientApis';
+import { deleteChats, deleteTempChats, putChats, summarizeChatTitle } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -106,7 +112,11 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
     setIsConfirming(true);
     try {
       if (isDeleting) {
-        await deleteChats(chat.id);
+        if (chat.isTemp) {
+          await deleteTempChats(chat.id);
+        } else {
+          await deleteChats(chat.id);
+        }
         handleDeleteChat([chat.id]);
       } else if (isChanging) {
         handleChangeTitle(chat.id);
@@ -197,11 +207,11 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
   }, [isChanging, isDeleting]);
 
   return (
-    <div className="relative flex items-center rounded-lg">
+    <SidebarMenuItem>
       {isChanging && selectChatId === chat.id ? (
-        <div className="flex w-full h-11 items-center gap-2 rounded-lg bg-background p-3">
+        <div className="flex w-full items-center gap-2 rounded-lg bg-background px-3 py-2 border border-input">
           <input
-            className="mr-12 flex-1 overflow-hidden overflow-ellipsis border-neutral-400 bg-transparent text-left text-[12.5px] leading-3 outline-none text-black dark:text-white"
+            className="flex-1 overflow-hidden overflow-ellipsis bg-transparent text-left text-sm outline-none text-foreground"
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
@@ -210,80 +220,90 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
           />
         </div>
       ) : (
-        <a
-          href={`#/${chat.id}`}
-          className={`flex w-full h-11 cursor-pointer items-center gap-2 rounded-lg px-2 transition-colors duration-200 hover:bg-muted no-underline ${
-            chatting ? 'pointer-events-none cursor-not-allowed opacity-60' : ''
-          } ${selectChatId === chat.id ? 'bg-muted' : ''}`}
-          onClick={(e) => {
-            if (chatting) {
-              e.preventDefault();
-              return;
-            }
-            e.preventDefault();
-            handleSelectChat(chat);
-          }}
-          draggable
-          onDragStart={(e) => handleDragStart(e, chat)}
+        <SidebarMenuButton
+          asChild
+          isActive={selectChatId === chat.id}
+          className={cn(
+            'h-auto min-h-9 py-2 px-3 rounded-lg transition-all duration-200',
+            chatting && 'pointer-events-none opacity-60',
+            selectChatId === chat.id && 'bg-sidebar-accent shadow-sm',
+          )}
         >
-          <div
-            className={cn(
-              'group relative overflow-hidden transition-all duration-300 max-w-[20px] hover:max-w-[240px]',
-              chatsSelectType !== CHATS_SELECT_TYPE.NONE && 'max-w-[20px]'
-            )}
+          <a
+            href={`#/${chat.id}`}
+            className="no-underline"
+            onClick={(e) => {
+              if (chatting) {
+                e.preventDefault();
+                return;
+              }
+              e.preventDefault();
+              handleSelectChat(chat);
+            }}
+            draggable
+            onDragStart={(e) => handleDragStart(e, chat)}
           >
-            <div className="flex overflow-hidden">
-              {chatsSelectType !== CHATS_SELECT_TYPE.NONE ? (
-                <Checkbox
-                  key={'chats-batch-delete-' + chat.id}
-                  defaultChecked={!!chat?.selected}
-                  onCheckedChange={(checked: boolean) => {
-                    handleSelectByDeleteChat(checked);
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                  }}
-                />
-              ) : (
-                chat.spans.map((span, index) => (
-                  <div
-                    key={'chat-icon-wrapper-' + span.spanId}
-                    className={cn(
-                      "flex-shrink-0 relative transition-opacity duration-200",
-                      index > 0 && "-ml-2.5 group-hover:ml-[2px] opacity-0 group-hover:opacity-100"
-                    )}
-                    style={{ zIndex: chat.spans.length - index }}
-                  >
-                    <Tips
-                      trigger={
-                        <div>
-                          <ModelProviderIcon
-                            key={'chat-icon-' + span.spanId}
-                            providerId={span.modelProviderId}
-                          />
-                        </div>
-                      }
-                      side="bottom"
-                      content={span.modelName}
-                    />
-                  </div>
-                ))
+            <div
+              className={cn(
+                'group/icon relative overflow-hidden transition-all duration-300 max-w-[20px] shrink-0 hover:max-w-[240px]',
+                chatsSelectType !== CHATS_SELECT_TYPE.NONE && 'max-w-[20px]',
               )}
+            >
+              <div className="flex overflow-hidden">
+                {chatsSelectType !== CHATS_SELECT_TYPE.NONE ? (
+                  <Checkbox
+                    key={'chats-batch-delete-' + chat.id}
+                    defaultChecked={!!chat?.selected}
+                    onCheckedChange={(checked: boolean) => {
+                      handleSelectByDeleteChat(checked);
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                    }}
+                  />
+                ) : (
+                  chat.spans.map((span, index) => (
+                    <div
+                      key={'chat-icon-wrapper-' + span.spanId}
+                      className={cn(
+                        'flex-shrink-0 relative transition-all duration-200',
+                        index > 0 && '-ml-2.5 group-hover/icon:ml-[2px] opacity-0 group-hover/icon:opacity-100',
+                      )}
+                      style={{ zIndex: chat.spans.length - index }}
+                    >
+                      <Tips
+                        trigger={
+                          <div>
+                            <ModelProviderIcon
+                              key={'chat-icon-' + span.spanId}
+                              providerId={span.modelProviderId}
+                            />
+                          </div>
+                        }
+                        side="bottom"
+                        content={span.modelName}
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
 
-          <div
-            className={`relative max-h-5 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm break-all text-left text-[12.5px] leading-4 ${
-              selectChatId === chat.id ? 'pr-12' : 'pr-1'
-            }`}
-          >
-            {chat.title}
-          </div>
-        </a>
+            <span className="flex-1 truncate text-[12.5px]">
+              {chat.isTemp && (
+                <IconBolt
+                  size={14}
+                  className="inline-block mr-1 text-amber-500 -mt-0.5"
+                />
+              )}
+              {chat.title}
+            </span>
+          </a>
+        </SidebarMenuButton>
       )}
 
       {(isDeleting || isChanging || isArchive) && selectChatId === chat.id && (
-        <div className="absolute right-1 z-10 flex text-gray-300">
+        <div className="absolute right-1 z-10 flex text-muted-foreground">
           <SidebarActionButton handleClick={handleConfirm} disabled={isConfirming}>
             {isConfirming ? (
               <IconLoader size={18} className="animate-spin" />
@@ -298,80 +318,73 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
       )}
 
       {selectChatId === chat.id && !isDeleting && !isChanging && !isArchive && (
-        <div className="absolute right-[0.6rem] z-10 flex text-gray-300">
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              disabled={chatting}
-              className="focus:outline-none p-[6px]"
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild disabled={chatting}>
+            <SidebarMenuAction showOnHover>
+              <IconDots size={16} />
+            </SidebarMenuAction>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            className="w-48"
+            side="right"
+            align="start"
+          >
+            {chat.isTopMost ? (
+              <DropdownMenuItem
+                className="flex justify-start gap-3"
+                onClick={() => {
+                  handleChangeChatPin(chat.id);
+                }}
+              >
+                <IconPinnedOff size={18} />
+                {t('UnPin')}
+              </DropdownMenuItem>
+            ) : (
+              <DropdownMenuItem
+                className="flex justify-start gap-3"
+                onClick={() => {
+                  handleChangeChatPin(chat.id, true);
+                }}
+              >
+                <IconPin size={18} />
+                {t('Pin')}
+              </DropdownMenuItem>
+            )}
+            <DropdownMenuItem
+              className="flex justify-start gap-3"
+              onClick={handleOpenChangeTitleModal}
             >
-              <IconDots className="hover:opacity-50" size={16} />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent className="w-42 border-none">
-              {chat.isTopMost ? (
-                <DropdownMenuItem
-                  className="flex justify-start gap-3"
-                  onClick={() => {
-                    handleChangeChatPin(chat.id);
-                  }}
-                >
-                  <IconPinnedOff size={18} />
-                  {t('UnPin')}
-                </DropdownMenuItem>
+              <IconPencil size={18} />
+              {t('Edit')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              disabled={isSummarizing}
+              className="flex justify-start gap-3"
+              onClick={handleSummarizeTitle}
+            >
+              {isSummarizing ? (
+                <IconLoader size={18} className="animate-spin" />
               ) : (
-                <DropdownMenuItem
-                  hidden={chat.isTopMost}
-                  className="flex justify-start gap-3"
-                  onClick={() => {
-                    handleChangeChatPin(chat.id, true);
-                  }}
-                >
-                  <IconPin size={18} />
-                  {t('Pin')}
-                </DropdownMenuItem>
+                <IconNotes size={18} />
               )}
-              <DropdownMenuItem
-                className="flex justify-start gap-3"
-                onClick={handleOpenChangeTitleModal}
-              >
-                <IconPencil size={18} />
-                {t('Edit')}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={isSummarizing}
-                className="flex justify-start gap-3"
-                onClick={handleSummarizeTitle}
-              >
-                {isSummarizing ? (
-                  <IconLoader size={18} className="animate-spin" />
-                ) : (
-                  <IconNotes size={18} />
-                )}
-                {t('Summarize Title')}
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                className="flex justify-start gap-3"
-                onClick={handleOpenShareModal}
-              >
-                <IconShare size={18} />
-                {t('Share')}
-              </DropdownMenuItem>
-              {/* <DropdownMenuItem
-                className="flex justify-start gap-3"
-                onClick={handleOpenArchiveModal}
-              >
-                <IconArchive size={18} />
-                {t('Archive')}
-              </DropdownMenuItem> */}
-              <DropdownMenuItem
-                className="flex justify-start gap-3"
-                onClick={handleOpenDeleteModal}
-              >
-                <IconTrash size={18} />
-                {t('Delete')}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
+              {t('Summarize Title')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="flex justify-start gap-3"
+              onClick={handleOpenShareModal}
+            >
+              <IconShare size={18} />
+              {t('Share')}
+            </DropdownMenuItem>
+            <DropdownMenuItem
+              className="flex justify-start gap-3"
+              onClick={handleOpenDeleteModal}
+            >
+              <IconTrash size={18} />
+              {t('Delete')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       )}
 
       {isShare && (
@@ -384,7 +397,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
           onShareChange={handleSharedMessage}
         />
       )}
-    </div>
+    </SidebarMenuItem>
   );
 };
 

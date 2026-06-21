@@ -113,7 +113,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
     {
         int? chatGroupId = request.GroupId != null ? idEncryption.DecryptChatGroupId(request.GroupId) : null;
         IQueryable<Chat> query = db.Chats
-            .Where(x => x.UserId == currentUser.Id && !x.IsArchived && !x.IsTemp && x.ChatGroupId == chatGroupId)
+            .Where(x => x.UserId == currentUser.Id && !x.IsArchived && x.ChatGroupId == chatGroupId)
             .OrderByDescending(x => x.IsTopMost)
             .ThenByDescending(x => x.UpdatedAt);
         if (!string.IsNullOrWhiteSpace(request.Query))

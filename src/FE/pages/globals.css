@@ -125,21 +125,30 @@ html {
   display: none;
 }
 
-.custom-scrollbar::-webkit-scrollbar {
+.scroller {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--muted-foreground) / 0.45) transparent;
+}
+
+.scroller::-webkit-scrollbar {
   background-color: var(--scrollbar);
   border-radius   : 10px;
-  width           : 6px;
-  height          : 6px;
+  width           : 8px;
+  height          : 8px;
 }
 
-.custom-scrollbar::-webkit-scrollbar-track {
+.scroller::-webkit-scrollbar-track {
   border-radius: 10px;
-  background   : var(--scrollbar);
+  background   : transparent;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 10px;
-  background   : hsl(var(--muted));
+.scroller::-webkit-scrollbar-thumb {
+  border-radius: 9999px;
+  background: hsl(var(--muted-foreground) / 0.35);
+}
+
+.scroller::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.55);
 }
 
 @layer utilities {
@@ -258,4 +267,53 @@ div {
   --rdp-accent-color: hsl(var(--primary));
   --rdp-background-color: hsl(var(--background));
   --rdp-accent-color-dark: hsl(var(--primary-foreground));
+}
+
+/* Modern sidebar transitions */
+.sidebar-transition {
+  transition: width 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Smooth backdrop blur for headers */
+.backdrop-blur-header {
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+/* Modern card hover effect */
+.card-hover-effect {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover-effect:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Smooth focus transitions */
+.smooth-focus {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.smooth-focus:focus {
+  box-shadow: 0 0 0 2px hsl(var(--ring));
+}
+
+/* Modern scrollbar styling */
+.modern-scrollbar::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--muted-foreground) / 0.2);
+  border-radius: 3px;
+}
+
+.modern-scrollbar::-webkit-scrollbar-thumb:hover {
+  background-color: hsl(var(--muted-foreground) / 0.4);
 }

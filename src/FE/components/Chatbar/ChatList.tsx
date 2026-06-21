@@ -7,6 +7,12 @@ import { isUnGroupChat } from '@/utils/chats';
 import { IChat } from '@/types/chat';
 
 import { Button } from '@/components/ui/button';
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+} from '@/components/ui/sidebar';
 
 import HomeContext from '@/contexts/home.context';
 import ChatListItem from './ChatListItem';
@@ -42,32 +48,36 @@ const ChatList = ({
   };
 
   return (
-    <div className="flex w-full flex-col gap-1">
+    <>
       {chatGroups.size > 0 &&
         [...chatGroups.entries()].map(([group, items]) => (
-          <div key={group}>
-            <div className="w-full pl-2.5 text-xs text-gray-500 font-medium my-1">
+          <SidebarGroup key={group} className="py-1.5">
+            <SidebarGroupLabel className="text-xs text-sidebar-foreground/60 font-medium px-3 py-1.5">
               {t(group)}
-            </div>
-            {items.map((chat, index) => (
-              <div
-                className={cn(!isUnGroupChat(groupId) && 'ml-1')}
-                key={'conversation-' + index}
-              >
-                <ChatListItem
-                  onDragItemStart={onDragItemStart}
-                  chat={chat}
-                />
-              </div>
-            ))}
-          </div>
+            </SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu className="gap-0.5">
+                {items.map((chat, index) => (
+                  <div
+                    className={cn(!isUnGroupChat(groupId) && 'ml-1')}
+                    key={'conversation-' + index}
+                  >
+                    <ChatListItem
+                      onDragItemStart={onDragItemStart}
+                      chat={chat}
+                    />
+                  </div>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
         ))}
       {hasMore && (
-        <Button onClick={handleShowMore} className="text-xs" variant="link">
+        <Button onClick={handleShowMore} className="text-xs mx-3 my-1" variant="link">
           {t('Show more')}
         </Button>
       )}
-    </div>
+    </>
   );
 };
 export default ChatList;

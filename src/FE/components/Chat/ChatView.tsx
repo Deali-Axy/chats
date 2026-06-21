@@ -97,6 +97,8 @@ const ChatView = memo(() => {
     hasModel,
     chatDispatch,
     messageDispatch,
+    tempChat,
+    setTempChat,
   } = useContext(HomeContext);
   const chatsRef = useRef<IChat[]>(chats);
   useEffect(() => {
@@ -433,6 +435,15 @@ const ChatView = memo(() => {
     (title: string, append: boolean = false) => {
       if (!selectedChat) return;
 
+      // 临时对话需要更新 tempChat 而非 chats 数组
+      if (selectedChat.isTemp && tempChat) {
+        const nextTitle = append
+          ? `${tempChat.title ?? ''}${title}`
+          : title;
+        setTempChat({ ...tempChat, title: nextTitle } as IChat);
+        return;
+      }
+
       updateChatsState((prevChats) =>
         prevChats.map((chat) => {
           if (chat.id !== selectedChat.id) {
@@ -447,12 +458,18 @@ const ChatView = memo(() => {
         }),
       );
     },
-    [selectedChat, updateChatsState],
+    [selectedChat, updateChatsState, tempChat, setTempChat],
   );
 
   const changeSelectedChatStatus = useCallback(
     (status: ChatStatus) => {
       if (!selectedChat) return;
+
+      // 临时对话不在 chats 数组中，需要单独更新 tempChat 状态
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, status } as IChat);
+        return;
+      }
 
       updateChatsState((prevChats) =>
         prevChats.map((chat) =>
@@ -460,7 +477,7 @@ const ChatView = memo(() => {
         ),
       );
     },
-    [selectedChat, updateChatsState],
+    [selectedChat, updateChatsState, tempChat, setTempChat],
   );
 
   const startChat = useCallback(() => {
@@ -1238,13 +1255,18 @@ const ChatView = memo(() => {
       );
 
       const updatedAt = currentISODateString();
-      updateChatsState((prevChats) =>
-        prevChats.map((x) =>
-          x.id === selectedChat.id
-            ? { ...x, leafMessageId, updatedAt }
-            : x,
-        ),
-      );
+      // 临时对话需要更新 tempChat 而非 chats 数组
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((x) =>
+            x.id === selectedChat.id
+              ? { ...x, leafMessageId, updatedAt }
+              : x,
+          ),
+        );
+      }
       messageDispatch(setSelectedMessages(selectedMsgs));
       messageDispatch(setMessages(messageList));
       changeSelectedChatStatus(ChatStatus.None);
@@ -1282,17 +1304,21 @@ const ChatView = memo(() => {
 
     const updatedAt = currentISODateString();
     // 更新selectedChat的leafMessageId
-    updateChatsState((prevChats) =>
-      prevChats.map((x) =>
-        x.id === selectedChat.id
-          ? {
-            ...x,
-            leafMessageId: leafId,
-            updatedAt,
-          }
-          : x,
-      ),
-    );
+    if (selectedChat.isTemp && tempChat) {
+      setTempChat({ ...tempChat, leafMessageId: leafId, updatedAt } as IChat);
+    } else {
+      updateChatsState((prevChats) =>
+        prevChats.map((x) =>
+          x.id === selectedChat.id
+            ? {
+              ...x,
+              leafMessageId: leafId,
+              updatedAt,
+            }
+            : x,
+        ),
+      );
+    }
 
     putChats(selectedChat.id, {
       setsLeafMessageId: true,
@@ -1410,13 +1436,17 @@ const ChatView = memo(() => {
 
       const updatedAt = currentISODateString();
       // 更新chats中的leafMessageId
-      updateChatsState((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === selectedChat.id
-            ? { ...chat, leafMessageId: copyMsg!.id, updatedAt }
-            : chat,
-        ),
-      );
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId: copyMsg!.id, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((chat) =>
+            chat.id === selectedChat.id
+              ? { ...chat, leafMessageId: copyMsg!.id, updatedAt }
+              : chat,
+          ),
+        );
+      }
     }
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -1538,13 +1568,17 @@ const ChatView = memo(() => {
     // 更新chats中的leafMessageId
     if (selectedChat && leafId) {
       const updatedAt = currentISODateString();
-      updateChatsState((prevChats) =>
-        prevChats.map((x) =>
-          x.id === selectedChat.id
-            ? { ...x, leafMessageId: leafId, updatedAt }
-            : x,
-        ),
-      );
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId: leafId, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((x) =>
+            x.id === selectedChat.id
+              ? { ...x, leafMessageId: leafId, updatedAt }
+              : x,
+          ),
+        );
+      }
     }
 
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -1655,10 +1689,10 @@ const ChatView = memo(() => {
   }
 
   return (
-    <div className="relative flex-1">
-      <div className="flex flex-col">
-        <div className="relative h-16"><ChatHeader /></div>
-        <div className="relative h-[calc(100vh-64px)] w-0 min-w-full">
+    <div className={`relative flex-1 min-w-0${selectedChat.isTemp ? ' bg-amber-50/40 dark:bg-amber-950/15' : ''}`}>
+      <div className="flex flex-col h-full">
+        <div className="sticky top-0 z-10"><ChatHeader /></div>
+        <div className="relative flex-1 min-h-0">
           <div
             className="h-full overflow-x-hidden scroll-container"
             ref={chatContainerRef}
@@ -1668,12 +1702,7 @@ const ChatView = memo(() => {
               <ChatMessagesSkeleton selectedChat={selectedChat} />
             ) : (
               <>
-                <div
-                  className="sm:w-full chat-container"
-                  style={{
-                    width: `calc(100vw - ${showChatBar ? effectiveChatBarWidth : 0}px)`,
-                  }}
-                >
+                <div className="sm:w-full chat-container w-full">
                   {selectedMessages.length === 0 && <ChatPresetList />}
                 </div>
 

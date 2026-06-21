@@ -150,7 +150,7 @@ const ModelPricesPage = () => {
   }, [t]);
 
   return (
-    <div className="container max-w-screen-xl mx-auto py-6 px-4 sm:px-6 h-screen flex flex-col">
+    <div className="w-full h-screen flex flex-col py-6 px-4 sm:px-6">
       <h1 className="text-2xl font-bold mb-6 flex items-center gap-2">
         <Link
           href="/"
