@@ -1,8 +1,3 @@
-<<<<<<< HEAD
-=======
-.next
-scripts
->>>>>>> 7d9c2268db35eb10d842fe95edea4e27fe132a9b
 dist
 dist-docker
 .github/copilot-instructions.md
