@@ -54,14 +54,14 @@ export default function PosterPage() {
           </div>
         </div>
 
-        {/* 下载按钮 */}
+        {/* 操作按钮 */}
         <div className="container mx-auto text-center">
           <PosterDownloadButton
             targetId="release-poster"
             filename="ayaka-chats-v1.13.0-release.png"
           />
           <p className="mt-4 text-sm text-gray-500">
-            点击按钮生成高清海报图片并自动下载
+            复制图片可直接粘贴到聊天窗口，下载海报保存到本地
           </p>
         </div>
 
@@ -72,19 +72,19 @@ export default function PosterPage() {
             <ul className="space-y-3 text-sm text-gray-300">
               <li className="flex items-start gap-2">
                 <span className="mt-1 text-purple-400">1.</span>
-                <span>点击上方「下载海报」按钮</span>
+                <span><strong>复制图片</strong>：点击「复制图片」按钮，然后直接在微信/QQ 聊天窗口中粘贴（Ctrl+V）</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 text-purple-400">2.</span>
-                <span>系统将自动生成高清 PNG 图片并下载到本地</span>
+                <span><strong>下载海报</strong>：点击「下载海报」按钮，图片将保存到本地，可手动发送</span>
               </li>
               <li className="flex items-start gap-2">
                 <span className="mt-1 text-purple-400">3.</span>
-                <span>将下载的图片直接发送到微信群、QQ 群等社交平台</span>
+                <span>海报尺寸为 1080px 宽，适合手机竖屏查看</span>
               </li>
               <li className="flex items-start gap-2">
-                <span className="mt-1 text-purple-400">4.</span>
-                <span>海报尺寸为 1080px 宽，适合手机竖屏查看</span>
+                <span className="mt-1 text-purple-400">💡</span>
+                <span>推荐使用「复制图片」功能，操作更快捷</span>
               </li>
             </ul>
           </div>
