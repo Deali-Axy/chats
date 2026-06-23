@@ -25,6 +25,7 @@ import {
   IconUserCog,
   IconUsers,
 } from '@/components/Icons/index';
+import { FileText } from 'lucide-react';
 import UserMenuPopover, { PageType } from '@/components/UserMenuPopover/UserMenuPopover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -222,6 +223,13 @@ const AdminLayout = ({
         <IconIdBadge strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Invitation Code Management'),
+    },
+    {
+      url: '/admin/changelog',
+      icon: (stroke?: string) => (
+        <FileText strokeWidth={1.2} stroke={stroke} className="h-5 w-5" />
+      ),
+      title: t('Changelog'),
     },
   ];
 
