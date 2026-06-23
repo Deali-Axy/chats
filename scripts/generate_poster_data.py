@@ -311,7 +311,7 @@ def categorize_commits(commits: list[dict]) -> dict:
 def main():
     parser = argparse.ArgumentParser(description="从 git 历史生成海报数据")
     parser.add_argument("version", nargs="?", help="版本号（如 1.13.1），不传则自动检测")
-    parser.add_argument("--output", "-o", default="src/FE/data/release-poster.json", help="输出文件路径")
+    parser.add_argument("--output", "-o", default="src/FE/data/changelog.json", help="输出文件路径")
     parser.add_argument("--tagline", default="全新功能与体验优化", help="版本标语")
     args = parser.parse_args()
 
