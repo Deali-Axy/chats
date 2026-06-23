@@ -75,23 +75,76 @@ def run_git(*args: str) -> str:
     return (result.stdout or "").strip()
 
 
-def get_latest_tag() -> str:
-    """获取最新的 git tag。"""
-    return run_git("tag", "--sort=-creatordate", "--sort=-v:refname", "-l").split("\n")[0]
+def get_all_tags() -> list[str]:
+    """获取所有 tag，按版本号降序排列。"""
+    output = run_git("tag", "--sort=-v:refname", "-l")
+    return [t for t in output.split("\n") if t.strip()]
 
 
-def get_previous_tag(current: str) -> str:
-    """获取当前 tag 之前的上一个 tag。"""
-    tags = run_git("tag", "--sort=-creatordate", "--sort=-v:refname", "-l").split("\n")
+def parse_version(tag: str) -> tuple[int, int, int]:
+    """解析 tag 为 (major, minor, patch)。"""
+    v = tag.lstrip("v")
+    parts = v.split(".")
+    major = int(parts[0]) if len(parts) > 0 else 0
+    minor = int(parts[1]) if len(parts) > 1 else 0
+    patch = int(parts[2]) if len(parts) > 2 else 0
+    return major, minor, patch
+
+
+def get_major_minor(version: str) -> str:
+    """提取 major.minor 字符串，如 '1.13.1' → '1.13'。"""
+    v = version.lstrip("v")
+    parts = v.split(".")
+    return f"{parts[0]}.{parts[1]}"
+
+
+def find_latest_tag_for_major_minor(major_minor: str) -> str | None:
+    """找到指定 major.minor 下的最新 tag（最大 patch 版本）。"""
+    all_tags = get_all_tags()
+    best = None
+    best_patch = -1
+    for tag in all_tags:
+        try:
+            mm = get_major_minor(tag)
+            if mm == major_minor:
+                _, _, patch = parse_version(tag)
+                if patch > best_patch:
+                    best_patch = patch
+                    best = tag
+        except (ValueError, IndexError):
+            continue
+    return best
+
+
+def find_previous_major_minor_tag(current_major_minor: str) -> str | None:
+    """找到上一个大版本的最新 tag。如 current='1.13' → 返回 '1.12.x' 的最新 tag。"""
+    all_tags = get_all_tags()
+    major, minor = current_major_minor.split(".")
+    major, minor = int(major), int(minor)
+
+    # 收集所有不同的 major.minor，降序排列
+    seen = set()
+    ordered_mm = []
+    for tag in all_tags:
+        try:
+            mm = get_major_minor(tag)
+            if mm not in seen:
+                seen.add(mm)
+                ordered_mm.append(mm)
+        except (ValueError, IndexError):
+            continue
+
+    # 找到 current_major_minor 之后的下一个
     found = False
-    for tag in tags:
-        if tag == current:
+    for mm in ordered_mm:
+        if mm == current_major_minor:
             found = True
             continue
-        if found and tag:
-            return tag
-    # fallback: 用当前 tag 之前的第一个 commit
-    return run_git("rev-list", "--max-parents=0", "HEAD")
+        if found:
+            # 找到上一个大版本，返回其最新 tag
+            return find_latest_tag_for_major_minor(mm)
+
+    return None
 
 
 def get_tag_date(tag: str) -> str:
@@ -257,31 +310,41 @@ def categorize_commits(commits: list[dict]) -> dict:
 
 def main():
     parser = argparse.ArgumentParser(description="从 git 历史生成海报数据")
-    parser.add_argument("version", nargs="?", help="版本号（如 1.13.0），不传则自动检测")
+    parser.add_argument("version", nargs="?", help="版本号（如 1.13.1），不传则自动检测")
     parser.add_argument("--output", "-o", default="src/FE/data/release-poster.json", help="输出文件路径")
     parser.add_argument("--tagline", default="全新功能与体验优化", help="版本标语")
     args = parser.parse_args()
 
-    # 确定版本
+    # 确定版本号
     if args.version:
         version = args.version.lstrip("v")
-        tag = args.version if args.version.startswith("v") else args.version
     else:
-        tag = get_latest_tag()
-        version = tag.lstrip("v")
+        latest_tag = get_all_tags()[0] if get_all_tags() else "0.0.0"
+        version = latest_tag.lstrip("v")
 
-    print(f"📌 版本: v{version} (tag: {tag})")
+    # 提取 major.minor，找到当前大版本的最新 tag
+    major_minor = get_major_minor(version)
+    current_tag = find_latest_tag_for_major_minor(major_minor)
+    if not current_tag:
+        print(f"❌ 找不到 {major_minor}.x 的 tag")
+        sys.exit(1)
 
-    # 获取上一个 tag
-    prev_tag = get_previous_tag(tag)
-    print(f"📎 上一个 tag: {prev_tag}")
+    # 找到上一个大版本的最新 tag
+    prev_tag = find_previous_major_minor_tag(major_minor)
+    if not prev_tag:
+        print(f"❌ 找不到 {major_minor} 之前的大版本 tag")
+        sys.exit(1)
+
+    print(f"📌 当前大版本: v{major_minor}.x → 最新 tag: {current_tag}")
+    print(f"📎 上一个大版本: 最新 tag: {prev_tag}")
+    print(f"📊 计算范围: {prev_tag}..{current_tag}")
 
     # 获取日期
-    date = get_tag_date(tag)
+    date = get_tag_date(current_tag)
     print(f"📅 日期: {date}")
 
     # 获取提交
-    commits = get_commits(prev_tag, tag)
+    commits = get_commits(prev_tag, current_tag)
     print(f"📝 提交数量: {len(commits)}")
 
     if not commits:
