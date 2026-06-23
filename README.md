@@ -1,10 +1,37 @@
-# Ayaka Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE)
+# Ayaka Chats [![License](https://img.shields.io/github/license/Deali-Axy/chats)](LICENSE)
 
-[English](README_EN.md) | **简体中文** 
+[English](README_EN.md) | **简体中文**
 
-Ayaka Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流 AI 模型服务商。无论您是希望统一管理多种模型接口，还是需要一个简单易用的部署方案，Ayaka Chats 都能满足您的需求。
+> 基于 [sdcb/chats](https://github.com/sdcb/chats) 的社区 Fork 版本。
 
-## ✨ 为什么选择 Ayaka Chats
+Ayaka Chats 是一个强大灵活的大语言模型统一前端，支持 22+ 主流 AI 模型服务商。在上游版本的基础上，Ayaka Chats 侧重于 **UI/UX 体验优化**、**开发工具链改进** 以及 **独立版本迭代**。
+
+## 🌸 Fork 特色
+
+在继承上游全部功能的前提下，Ayaka Chats 做了以下改进：
+
+### 🎨 UI/UX 重构
+
+- **全新侧边栏**：基于 shadcn/ui `sidebar-01` block 重新设计聊天侧边栏，视觉风格更现代、交互更流畅
+- **首页框架升级**：使用 `SidebarProvider` 重构首页布局，解决了搜索栏与菜单按钮互相遮挡等交互问题
+- **临时聊天优化**：支持临时聊天在侧边栏中持久显示、切换时不再自动删除；修复了临时聊天的模型修改、重复创建、结束按钮无效等多个问题；用背景色区分替代横幅，视觉更简洁
+- **模型定价页改进**：重构为本地组件，改为全宽展示，体验更好
+
+### 🛠️ 开发工具链
+
+- **pnpm 包管理**：前端从 npm 迁移到 pnpm，依赖安装更快、磁盘占用更小
+- **自动化脚本**：新增构建、打包、推送、部署一体化脚本，简化 CI/CD 流程
+- **goreman 并发启动**：通过 `Procfile` + `Taskfile` 一键启动前后端开发环境
+
+### 📢 独立版本功能
+
+- **版本更新海报**：自动生成 v1.13.0 版本更新海报，支持一键复制图片分享
+
+---
+
+## ✨ 核心功能
+
+继承自上游的全部能力：
 
 - 🚀 **一站式**：22+ 模型服务商，一个入口
 - 🎯 **分钟级上手**：一条命令 Docker 部署，8 平台原生可执行
@@ -17,18 +44,6 @@ Ayaka Chats 是一个强大且灵活的大语言模型前端，支持 22+ 主流
 - 🔐 **企业级安全**：完善的用户权限管理和账户余额控制，限流审计日志，支持 Keycloak SSO 与短信验证码登录
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
-
-## 🆕 最新版本（1.11.0）
-
-- 📅 发布日期：2026-04-07
-- 🧠 智能标题摘要：新增首轮 AI 自动命名，支持管理员全局配置、个人覆盖、指定模型与 Prompt Template，并将标题生成单独记为 `Summary` 来源
-- 💵 模型定价页：新增模型价格总览页，支持按提供商、API 类型、免费模型和关键字筛选，并展示上下文窗口与多种价格口径
-- 📊 用量来源细分：`UserModelUsage` 新增 `SourceId`，支持 `WebChat` / `Api` / `Summary` 分类筛选和后台来源统计
-- 🆕 新模型提供商：新增第 22 个模型提供商 Novita AI，支持思考信息回传
-- ↔️ 体验与性能：桌面聊天侧边栏支持拖拽调宽并持久化，Markdown/KaTeX/图表延迟加载，聊天页初始负载约从 3.5MB/3.6MB 降到 1.7MB
-- 🛠️ 升级重点：迁移脚本会删除 `TransactionType` 表、回填 `UserModelUsage.SourceId`，并新增 `UserConfig` 表承载用户级配置
-
-👉 [查看 1.11.0 发布说明](./doc/zh-CN/release-notes/1.11.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
@@ -46,49 +61,41 @@ mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped
 
 ## 📚 文档中心
 
-Chats 使用 `C#`/`TypeScript` 开发，以下是完整的文档资源：
-
 - [🚀 快速开始](./doc/zh-CN/quick-start.md) - 部署指南、Docker 配置、数据库设置
 - [💾 下载地址](./doc/zh-CN/downloads.md) - Docker 镜像和可执行文件下载
 - [🤖 支持的模型提供商](./doc/zh-CN/model-providers.md) - 22+ 模型服务商列表及支持情况
 - [🛠️ 开发指南](./doc/zh-CN/build.md) - 如何编译和开发 Chats
 - [⚙️ 配置说明](./doc/zh-CN/configuration.md) - 详细配置参数说明
 - [📝 更新日志](./doc/zh-CN/release-notes/README.md) - 版本更新记录
-- [🔍 问 DeepWiki](https://deepwiki.com/sdcb/chats) - AI 驱动的项目知识库
 - [❓ 常见问题](./doc/zh-CN/faq.md) - 部署和使用中的常见问题解答
 
 ---
 
-## 贡献指南
+## 技术栈
 
-我们欢迎各种形式的贡献，包括但不限于：
-
-- 🐛 报告 Bug
-- 💡 提出新功能建议
-- 📝 改进文档
-- 🔧 提交代码
-
-请通过 [GitHub Issues](https://github.com/sdcb/chats/issues) 提交问题或建议。
+| 层级 | 技术 |
+|------|------|
+| 后端 | C# / .NET 10.0 / ASP.NET Core / Entity Framework Core |
+| 前端 | TypeScript / Next.js 16 / React 19 / Tailwind CSS / shadcn/ui |
+| 数据库 | SQLite / SQL Server / PostgreSQL |
+| 存储 | 本地文件系统 / AWS S3 / 阿里云 OSS / Azure Blob / MinIO |
+| 包管理 | pnpm (前端) / NuGet (后端) |
+| 容器 | Docker / Docker Compose |
 
 ---
 
-## 联系方式
+## 与上游的关系
 
-- **GitHub Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
-- **QQ 群**：498452653 [![加入QQ群](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **微信群** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0406) 如果微信群已满，请加 QQ 群获取临时入群二维码。
+本项目 Fork 自 [sdcb/chats](https://github.com/sdcb/chats)，持续关注并合并上游的重要更新。Ayaka Chats 的定位是在上游稳定功能的基础上，探索 UI/UX 改进和开发体验优化。
+
+- **上游仓库**：[github.com/sdcb/chats](https://github.com/sdcb/chats)
+- **上游文档**：[DeepWiki](https://deepwiki.com/sdcb/chats)
 
 ---
 
 ## 许可证
 
 本项目采用 [Apache 2.0](LICENSE) 开源许可证。
-
----
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=sdcb/chats&type=Date)](https://star-history.com/#sdcb/chats&Date)
 
 ---
 

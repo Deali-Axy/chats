@@ -1,10 +1,37 @@
-# Ayaka Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE)
+# Ayaka Chats [![License](https://img.shields.io/github/license/Deali-Axy/chats)](LICENSE)
 
 **English** | [简体中文](README.md)
 
-Ayaka Chats is a powerful and flexible frontend for large language models, supporting 22+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Ayaka Chats can meet your needs.
+> A community fork of [sdcb/chats](https://github.com/sdcb/chats).
 
-## ✨ Why Choose Ayaka Chats
+Ayaka Chats is a powerful and flexible unified frontend for large language models, supporting 22+ mainstream AI model providers. Building on top of the upstream project, Ayaka Chats focuses on **UI/UX improvements**, **developer toolchain enhancements**, and **independent feature iteration**.
+
+## 🌸 Fork Highlights
+
+While inheriting all upstream capabilities, Ayaka Chats introduces the following improvements:
+
+### 🎨 UI/UX Overhaul
+
+- **Redesigned Sidebar**: Rebuilt the chat sidebar using the shadcn/ui `sidebar-01` block for a more modern look and smoother interactions
+- **Homepage Layout Upgrade**: Refactored the homepage layout with `SidebarProvider`, fixing issues like the search bar and menu button overlapping each other
+- **Temporary Chat Improvements**: Temporary chats now persist in the sidebar and survive tab switching; fixed multiple issues including model editing, duplicate creation, and the end-chat button not working; replaced banners with subtle background colors for a cleaner look
+- **Model Pricing Page**: Refactored into a local component with full-width display for a better experience
+
+### 🛠️ Developer Toolchain
+
+- **pnpm Package Manager**: Migrated the frontend from npm to pnpm for faster installs and smaller disk footprint
+- **Automation Scripts**: Added unified build, package, push, and deploy scripts to streamline CI/CD
+- **goreman Concurrent Startup**: One-command dev environment via `Procfile` + `Taskfile` running both frontend and backend
+
+### 📢 Independent Features
+
+- **Release Poster**: Auto-generated v1.13.0 release poster with one-click image copy for sharing
+
+---
+
+## ✨ Core Features
+
+All capabilities inherited from upstream:
 
 - 🚀 **All-in-One**: One hub for 22+ AI model providers
 - 🎯 **Ready in Minutes**: One-command Docker deploy, plus native executables for 8 platforms
@@ -16,18 +43,7 @@ Ayaka Chats is a powerful and flexible frontend for large language models, suppo
 - 💾 **Storage Freedom**: SQLite/SQL Server/PostgreSQL, plus Local/S3/OSS/Azure Blob
 - 🔐 **Enterprise Security**: Permissions & balance control, rate limiting & audit logs, Keycloak SSO & SMS login
 
-<img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
-
-## 🆕 Latest Release (1.11.0)
-
-- 📅 Release Date: 2026-04-07
-- 🧠 Smart title summary: adds first-turn AI-generated chat titles with admin defaults, per-user overrides, dedicated model modes, and separate `Summary` usage billing
-- 💵 Model pricing page: adds a searchable `/model-prices` overview with provider, API type, free-model filters, context windows, and multiple price dimensions
-- 📊 Usage source breakdown: adds `SourceId` on `UserModelUsage` to distinguish `WebChat`, `Api`, and `Summary` in both user exports and admin statistics
-- 🆕 New model provider: adds Novita AI as the 22nd provider, with reasoning information round-tripping support
-- ↔️ UX and performance: adds resizable desktop sidebar and lazy-loads Markdown, KaTeX, charts, and session UI, cutting initial chat payload to around 1.7MB
-
-👉 [View 1.11.0 Release Notes](./doc/en-US/release-notes/1.11.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+<img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
 ## Quick Start
 
@@ -45,49 +61,41 @@ After startup, visit `http://localhost:8080` and log in with the default account
 
 ## 📚 Documentation
 
-Chats is developed using `C#`/`TypeScript`. Here are the complete documentation resources:
-
 - [🚀 Quick Start](./doc/en-US/quick-start.md) - Deployment guide, Docker configuration, database setup
 - [💾 Downloads](./doc/en-US/downloads.md) - Docker images and executable file downloads
 - [🤖 Supported Model Providers](./doc/en-US/model-providers.md) - 22+ model providers list and support status
 - [🛠️ Development Guide](./doc/en-US/build.md) - How to compile and develop Chats
 - [⚙️ Configuration Guide](./doc/en-US/configuration.md) - Detailed configuration parameters
 - [📝 Release Notes](./doc/en-US/release-notes/README.md) - Version update history
-- [🔍 Ask DeepWiki](https://deepwiki.com/sdcb/chats) - AI-powered project knowledge base
 - [❓ FAQ](./doc/en-US/faq.md) - Common questions about deployment and usage
 
 ---
 
-## Contributing
+## Tech Stack
 
-We welcome contributions of all kinds, including but not limited to:
-
-- 🐛 Report bugs
-- 💡 Suggest new features
-- 📝 Improve documentation
-- 🔧 Submit code
-
-Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/chats/issues).
+| Layer | Technology |
+|-------|-----------|
+| Backend | C# / .NET 10.0 / ASP.NET Core / Entity Framework Core |
+| Frontend | TypeScript / Next.js 16 / React 19 / Tailwind CSS / shadcn/ui |
+| Database | SQLite / SQL Server / PostgreSQL |
+| Storage | Local filesystem / AWS S3 / Aliyun OSS / Azure Blob / MinIO |
+| Package Manager | pnpm (frontend) / NuGet (backend) |
+| Container | Docker / Docker Compose |
 
 ---
 
-## Contact
+## Relationship with Upstream
 
-- **GitHub Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
-- **QQ Group**: 498452653 [![Join QQ Group](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0406) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
+This project is forked from [sdcb/chats](https://github.com/sdcb/chats) and continuously tracks and merges important upstream updates. Ayaka Chats aims to explore UI/UX improvements and developer experience enhancements on top of the upstream's stable feature set.
+
+- **Upstream Repository**: [github.com/sdcb/chats](https://github.com/sdcb/chats)
+- **Upstream Documentation**: [DeepWiki](https://deepwiki.com/sdcb/chats)
 
 ---
 
 ## License
 
 This project is licensed under the [Apache 2.0](LICENSE).
-
----
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=sdcb/chats&type=Date)](https://star-history.com/#sdcb/chats&Date)
 
 ---
 
