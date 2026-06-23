@@ -3,6 +3,8 @@ import Head from 'next/head';
 import dynamic from 'next/dynamic';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
+import posterData from '@/data/release-poster.json';
+import type { PosterData } from '@/components/Poster/ReleasePoster';
 
 // 动态导入海报组件，避免 SSR 问题
 const ReleasePoster = dynamic(() => import('@/components/Poster/ReleasePoster'), {
@@ -19,12 +21,14 @@ const PosterDownloadButton = dynamic(
   { ssr: false }
 );
 
+const data = posterData as PosterData;
+
 export default function PosterPage() {
   return (
     <>
       <Head>
-        <title>v1.13.0 更新海报 | Ayaka Chats</title>
-        <meta name="description" content="Ayaka Chats v1.13.0 版本更新内容海报" />
+        <title>v{data.version} 更新海报 | Ayaka Chats</title>
+        <meta name="description" content={`Ayaka Chats v${data.version} 版本更新内容海报`} />
       </Head>
 
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8">
@@ -41,7 +45,7 @@ export default function PosterPage() {
 
         {/* 页面标题 */}
         <div className="container mx-auto mb-8 text-center">
-          <h1 className="mb-3 text-4xl font-bold text-white">v1.13.0 版本更新海报</h1>
+          <h1 className="mb-3 text-4xl font-bold text-white">v{data.version} 版本更新海报</h1>
           <p className="text-lg text-gray-400">
             下方海报可直接保存分享到群聊
           </p>
@@ -50,7 +54,7 @@ export default function PosterPage() {
         {/* 海报展示区域 */}
         <div className="container mx-auto mb-8 flex justify-center px-4">
           <div className="overflow-hidden rounded-2xl shadow-2xl shadow-purple-500/10">
-            <ReleasePoster />
+            <ReleasePoster data={data} />
           </div>
         </div>
 
@@ -58,7 +62,7 @@ export default function PosterPage() {
         <div className="container mx-auto text-center">
           <PosterDownloadButton
             targetId="release-poster"
-            filename="ayaka-chats-v1.13.0-release.png"
+            filename={`ayaka-chats-v${data.version}-release.png`}
           />
           <p className="mt-4 text-sm text-gray-500">
             复制图片可直接粘贴到聊天窗口，下载海报保存到本地

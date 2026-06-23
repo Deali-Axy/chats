@@ -1,0 +1,4007 @@
+{
+  "version": "r-694",
+  "date": "2026-06-19",
+  "tagline": "全新功能与体验优化",
+  "features": [
+    {
+      "title": "临时聊天",
+      "description": "添加临时聊天功能"
+    },
+    {
+      "title": "搜索功能",
+      "description": "添加搜索结果弹窗，支持内容高亮"
+    },
+    {
+      "title": "代码块",
+      "description": "enhance CodeBlock and CodeBlockCore components with copy to clipboard functionality and expand/collapse feature"
+    },
+    {
+      "title": "登录",
+      "description": "在登录页添加邀请制内测提示与扫码对话框"
+    },
+    {
+      "title": "模型定价",
+      "description": "添加模型定价页面"
+    },
+    {
+      "title": "侧边栏",
+      "description": "add resizable desktop chat sidebar with persisted width sync"
+    },
+    {
+      "title": "添加前端 CORS 策略以支持新端口",
+      "description": "添加前端 CORS 策略以支持新端口"
+    },
+    {
+      "title": "添加 Azure AI Foundry ...",
+      "description": "添加 Azure AI Foundry 聊天服务的单元测试"
+    },
+    {
+      "title": "center single-span c...",
+      "description": "center single-span chat layout on desktop"
+    },
+    {
+      "title": "添加聊天标题总结功能",
+      "description": "添加聊天标题总结功能"
+    },
+    {
+      "title": "update README and mo...",
+      "description": "update README and model provider documentation for version 1.11.0, add Novita AI support and enhance pricing transparency"
+    },
+    {
+      "title": "添加用户配置表的兼容性处理",
+      "description": "添加用户配置表的兼容性处理"
+    },
+    {
+      "title": "添加API类型映射和表格列显示",
+      "description": "添加API类型映射和表格列显示"
+    },
+    {
+      "title": "优化模型价格页面的表格样式和滚动条",
+      "description": "优化模型价格页面的表格样式和滚动条"
+    },
+    {
+      "title": "更新模型价格页面的图标和表格结构",
+      "description": "更新模型价格页面的图标和表格结构"
+    },
+    {
+      "title": "添加模型价格页面的排序功能",
+      "description": "添加模型价格页面的排序功能"
+    },
+    {
+      "title": "添加历史记录的 SourceId 回填功...",
+      "description": "添加历史记录的 SourceId 回填功能"
+    },
+    {
+      "title": "添加SQLite兼容性架构更新",
+      "description": "添加SQLite兼容性架构更新"
+    },
+    {
+      "title": "添加仅显示免费模型的过滤功能",
+      "description": "添加仅显示免费模型的过滤功能"
+    },
+    {
+      "title": "refactor admin user-...",
+      "description": "refactor admin user-model also using same unified-table"
+    },
+    {
+      "title": "implement debounce t...",
+      "description": "implement debounce to all tables text input criterias"
+    },
+    {
+      "title": "unify paginated tabl...",
+      "description": "unify paginated tables on request-trace style and upgrade users management table"
+    },
+    {
+      "title": "update project versi...",
+      "description": "update project version to 1.11.0 and rename migration script for database changes"
+    },
+    {
+      "title": "add first-turn AI ti...",
+      "description": "add first-turn AI title summary with billing, settings, and admin config APIs"
+    },
+    {
+      "title": "add UserConfig table...",
+      "description": "add UserConfig table for user-specific string configurations"
+    },
+    {
+      "title": "add observability se...",
+      "description": "add observability section and update WeChat group QR code"
+    },
+    {
+      "title": "switch summary cards...",
+      "description": "switch summary cards to range-based chat and active user stats"
+    },
+    {
+      "title": "embed user message e...",
+      "description": "embed user message expand/collapse control into the message bubble with a 5.5-line preview"
+    },
+    {
+      "title": "refine compare dialo...",
+      "description": "refine compare dialog and column selection UX"
+    },
+    {
+      "title": "refine trace UI, det...",
+      "description": "refine trace UI, details loading, and quick presets"
+    },
+    {
+      "title": "record requests earl...",
+      "description": "record requests earlier and fix observer body capture"
+    },
+    {
+      "title": "add configurable URL...",
+      "description": "add configurable URL parameter redaction"
+    },
+    {
+      "title": "change request trace...",
+      "description": "change request trace sample rate to a percentage slider and add localized inline guidance"
+    },
+    {
+      "title": "reorder direction fi...",
+      "description": "reorder direction filter, unify control widths, clarify label, and use tilde-separated column params"
+    },
+    {
+      "title": "add exclude URL patt...",
+      "description": "add exclude URL patterns to quick presets and enhance UsageRecordsTab with export tips"
+    },
+    {
+      "title": "add retention lifecy...",
+      "description": "add retention lifecycle and body-length tracing"
+    },
+    {
+      "title": "integrate request tr...",
+      "description": "integrate request tracing across multiple services and update localization for new fields"
+    },
+    {
+      "title": "move request trace c...",
+      "description": "move request trace config to request-trace page and enhance config dialog UX"
+    },
+    {
+      "title": "update request trace...",
+      "description": "update request trace ID type from number to string across multiple components"
+    },
+    {
+      "title": "add configuration op...",
+      "description": "add configuration options for in-memory queue capacity"
+    },
+    {
+      "title": "add Request Trace fu...",
+      "description": "add Request Trace functionality with details and export options"
+    },
+    {
+      "title": "add trace ID to outb...",
+      "description": "add trace ID to outbound request tracing"
+    },
+    {
+      "title": "add exception handli...",
+      "description": "add exception handling and logging to request tracing middleware and persist service"
+    },
+    {
+      "title": "add capture streams ...",
+      "description": "add capture streams and middleware for enhanced request/response tracing"
+    },
+    {
+      "title": "refactor RequestTrac...",
+      "description": "refactor RequestTrace schema and middleware for enhanced tracking timestamps"
+    },
+    {
+      "title": "integrate IUrlEncryp...",
+      "description": "integrate IUrlEncryptionService for user ID decryption in middleware and handler"
+    },
+    {
+      "title": "remove RMB symbols f...",
+      "description": "remove RMB symbols from cost displays and simplify price formatting"
+    },
+    {
+      "title": "revamp session info ...",
+      "description": "revamp session info UI, add touch refresh flow, and improve env var editor UX"
+    },
+    {
+      "title": "unify and optimize E...",
+      "description": "unify and optimize ETag handling across models and prompts APIs"
+    },
+    {
+      "title": "add server-side ETag...",
+      "description": "add server-side ETag caching with stable hash for GET /api/messages/{chatId}"
+    },
+    {
+      "title": "switch chat groups c...",
+      "description": "switch chat groups cache to server-driven ETag and remove frontend localStorage cache"
+    },
+    {
+      "title": "Introduce ChatMiniMa...",
+      "description": "Introduce ChatMiniMap"
+    },
+    {
+      "title": "add NuGet local cach...",
+      "description": "add NuGet local cache with ClosedXML"
+    },
+    {
+      "title": "add python packages ...",
+      "description": "add python packages and skills.md"
+    },
+    {
+      "title": "add python, refactor...",
+      "description": "add python, refactor for extensibility"
+    },
+    {
+      "title": "add code-interpreter...",
+      "description": "add code-interpreter docker image workflow with ffmpeg"
+    },
+    {
+      "title": "enforce ApiType in o...",
+      "description": "enforce ApiType in openai/anthropic controller"
+    },
+    {
+      "title": "drive chat services ...",
+      "description": "drive chat services from DB Steps and migrate reasoning storage"
+    },
+    {
+      "title": "add loading indicato...",
+      "description": "add loading indicator for chat deletion confirmation"
+    },
+    {
+      "title": "Add per-reasoning se...",
+      "description": "Add per-reasoning segment lifecycle tracking and auto-collapse"
+    },
+    {
+      "title": "Add 1.8.1 database m...",
+      "description": "Add 1.8.1 database migration script for Azure AI Foundry URL cleanup"
+    },
+    {
+      "title": "Add TokenPony provid...",
+      "description": "Add TokenPony provider (ID=19) and refactor Azure/ChatService architecture"
+    },
+    {
+      "title": "add loading state to...",
+      "description": "add loading state to new chat creation button"
+    },
+    {
+      "title": "add chat list cachin...",
+      "description": "add chat list caching and parallel API loading"
+    },
+    {
+      "title": "implement lazy loadi...",
+      "description": "implement lazy loading for model management with ModelProviderOrder table"
+    },
+    {
+      "title": "add API type icons a...",
+      "description": "add API type icons and apply monospace font to model names"
+    },
+    {
+      "title": "add full-screen Imag...",
+      "description": "add full-screen ImagePreview with animated zoom; integrate with chat messages; polish gallery UX"
+    },
+    {
+      "title": "enhance model manage...",
+      "description": "enhance model management with quick add dialog improvements"
+    },
+    {
+      "title": "add chat message loa...",
+      "description": "add chat message loading skeleton with multi-model display"
+    },
+    {
+      "title": "implement accordion-...",
+      "description": "implement accordion-style expand interaction for model providers and keys"
+    }
+  ],
+  "uiImprovements": [
+    {
+      "title": "侧边栏",
+      "description": "使用 shadcn sidebar 组件重新设计聊天侧边栏"
+    },
+    {
+      "title": "临时聊天",
+      "description": "优化临时聊天界面，用背景色区分替代横幅"
+    },
+    {
+      "title": "模型定价",
+      "description": "replace legacy pricing translation keys with new model price labels"
+    },
+    {
+      "title": "extract getCopyableM...",
+      "description": "extract getCopyableMessageText function for support copy text/error, fix #127"
+    },
+    {
+      "title": "replace 'custom-scro...",
+      "description": "replace 'custom-scrollbar' with 'scroller' for consistent styling across components"
+    },
+    {
+      "title": "persist usage source...",
+      "description": "persist usage source on UserModelUsage and align source filtering"
+    },
+    {
+      "title": "update transaction t...",
+      "description": "update transaction types to use descriptive enum values"
+    },
+    {
+      "title": "remove db context Tr...",
+      "description": "remove db context TransactionType class"
+    },
+    {
+      "title": "remove TransactionTy...",
+      "description": "remove TransactionType lookup table and related EF mappings"
+    },
+    {
+      "title": "centralize and optim...",
+      "description": "centralize and optimize client info id resolution"
+    },
+    {
+      "title": "remove redundant des...",
+      "description": "remove redundant description for JSON fields in captured body"
+    },
+    {
+      "title": "unify include/exclud...",
+      "description": "unify include/exclude filters and simplify config dialog"
+    },
+    {
+      "title": "switch to Guid-linke...",
+      "description": "switch to Guid-linked updates, improve queue observability, and short-circuit tracing on entry drop"
+    },
+    {
+      "title": "unify admin/user tur...",
+      "description": "unify admin/user turn-step endpoints via messages API and remove admin-specific turn info path"
+    },
+    {
+      "title": "Add IHttpClientFacto...",
+      "description": "Add IHttpClientFactory to ImageChatSegment"
+    },
+    {
+      "title": "All backend HttpClie...",
+      "description": "All backend HttpClient use injected IHttpClientFactory"
+    },
+    {
+      "title": "use URL as single so...",
+      "description": "use URL as single source of truth for user-models filters"
+    },
+    {
+      "title": "replace model provid...",
+      "description": "replace model provider dropdown with responsive icon grid"
+    },
+    {
+      "title": "Optimize provider qu...",
+      "description": "Optimize provider query and add lazy loading with skeletons"
+    },
+    {
+      "title": "migrate ChatConfig.I...",
+      "description": "migrate ChatConfig.ImageSizeId to string-based ImageSize field"
+    },
+    {
+      "title": "Separate chat and im...",
+      "description": "Separate chat and image generation configs in preset modals"
+    },
+    {
+      "title": "Remove FileServiceTy...",
+      "description": "Remove FileServiceType table and replace with static class"
+    },
+    {
+      "title": "Remove ModelProvider...",
+      "description": "Remove ModelProvider, ModelReference and related unused tables"
+    },
+    {
+      "title": "convert navigation b...",
+      "description": "convert navigation buttons to anchor tags for better UX"
+    },
+    {
+      "title": "convert ChatListItem...",
+      "description": "convert ChatListItem button to anchor tag for better UX"
+    },
+    {
+      "title": "remove MemoizedChatM...",
+      "description": "remove MemoizedChatMessage wrapper component"
+    },
+    {
+      "title": "rename chat componen...",
+      "description": "rename chat components (Conversations→ChatList, Conversation→ChatListItem, Chat→ChatView)"
+    },
+    {
+      "title": "rename chat componen...",
+      "description": "rename chat components (Conversations→ChatList, Conversation→ChatListItem, Chat→ChatView)"
+    },
+    {
+      "title": "remove redundant typ...",
+      "description": "remove redundant type aliases in chat reducers"
+    }
+  ],
+  "bugFixes": [
+    "修复 SidebarProvider 包裹 div 导致聊天记录无法显示的问题",
+    "修复消息加载竞态条件和临时聊天并发创建问题",
+    "修复搜索栏与菜单按钮互相遮挡无法点击的问题",
+    "修复图标导入错误",
+    "访问主页时不再自动选择第一个聊天",
+    "remove pure black background in ChatMessage, set darker background for codeblock",
+    "adjust styles for improved layout and responsiveness in ChatMessage and StepInfoBubble components",
+    "ensure UserMessage maintains full width in edit mode on mobile",
+    "prevent lazy-loaded markdown components from flickering during streaming caused by f0cec5fb87f207d8920a6f0f8aee56633307788e",
+    "update fill color for dark mode to #23D57C",
+    "make mobile user message bubbles shrink to content naturally",
+    "resolve vulnerable NuGet dependency and nullable build warning",
+    "normalize Gemini tool schemas and usage accounting",
+    "preserve tool outputs and normalize provider-specific payloads",
+    "preserve tool response images across chat services",
+    "preserve Anthropic usage fields across partial stream deltas",
+    "ensure 'max_output_tokens' is set to minimum value of 16 if below threshold",
+    "Invalid 'max_output_tokens': integer below minimum value. Expected a value >= 16, but got 1 instead.",
+    "align file upload behavior with vision and agent capabilities",
+    "respect total_tokens for Azure AI Foundry Grok usage",
+    "move collapsed user message toggle below text",
+    "remove fixed max-height cap from ThinkingMessage expansion",
+    "keep all Anthropic tool results when converting to OpenAI payloads",
+    "remove redundant delete operation for RequestTracePayloads",
+    "capture 401 inbound request traces by reordering middleware",
+    "don't clamp if reasoningEffortId is 0, which indicates that reasoning effort is not specified and the system should use the default",
+    "enhance overflow handling and scrollbar styles",
+    "improve request trace redaction defaults and ordering",
+    "update MatchesPatterns to handle empty patterns result",
+    "preserve readable Unicode in fetched tool input schemas by replacing GetRawText() with relaxed JSON serialization",
+    "fix send button in ChatInput to the right(regression)",
+    "auto-collapse tool call when any subsequent content appears",
+    "detach stored files before adding to Step graph",
+    "rename NUGET_PACKAGES to NUGET_PRECACHE to avoid conflict with .NET env var",
+    "MessageTurns is incomplete: missing turnId=155076 in parent chain.",
+    "add scrolling support to user models drawer",
+    "Ensure back button will back to home",
+    "Only fetch files when FilesPopover is opened",
+    "avoid extra blank lines and honor soft break by enable remark-breaks in ResponseMessage",
+    "reasoning time is always 0 after refresh",
+    "修复登录页面运行时错误 - 处理 data 为 undefined 的情况",
+    "fix can not change password"
+  ],
+  "otherUpdates": [
+    {
+      "title": "侧边栏",
+      "description": "@ refactor(FE): 使用 shadcn sidebar-01 block 美化首页框架"
+    },
+    {
+      "title": "临时聊天",
+      "description": "temperary push AnthropicChatService(wip)"
+    },
+    {
+      "title": "包管理",
+      "description": "remove pnpm lockfile and clean up build doc references"
+    },
+    {
+      "title": "模型定价",
+      "description": "Refine model prices page responsive UX, add API type filters, and clarify pricing/context display"
+    },
+    {
+      "title": "构建",
+      "description": "Add 3 build page for better api development: /build/api-keys/, /build/docs/build/usage"
+    },
+    {
+      "title": "登录",
+      "description": "Make subtitle font smaller for small screen like phone in login page"
+    },
+    {
+      "title": "搜索功能",
+      "description": "Optimize Anthropic internal web_search tool frontend rendering, optimize ToolCallBlock look and feel in white theme"
+    },
+    {
+      "title": "添加 .next 目录到忽略列表",
+      "description": "添加 .next 目录到忽略列表"
+    },
+    {
+      "title": "使用 goreman 并发启动前后端",
+      "description": "使用 goreman 并发启动前后端"
+    },
+    {
+      "title": "添加 Taskfile 一键启动和部署",
+      "description": "添加 Taskfile 一键启动和部署"
+    },
+    {
+      "title": "golden model snapsho...",
+      "description": "golden model snapshot migration plan"
+    },
+    {
+      "title": "add model-snapshot m...",
+      "description": "add model-snapshot migration plan"
+    },
+    {
+      "title": "playwright test: ens...",
+      "description": "playwright test: ensure chatconfig screenshot"
+    },
+    {
+      "title": "add capture project ...",
+      "description": "add capture project for autotest/screenshot capture"
+    },
+    {
+      "title": "更新依赖版本以支持新功能",
+      "description": "更新依赖版本以支持新功能"
+    },
+    {
+      "title": "Handle Notiva.ai nul...",
+      "description": "Handle Notiva.ai null usage detail objects in OpenAI-compatible streaming responses"
+    },
+    {
+      "title": "update package refer...",
+      "description": "update package references to latest versions across multiple projects"
+    },
+    {
+      "title": "upgrade actions/uplo...",
+      "description": "upgrade actions/upload-artifact and actions/download-artifact to v7 and v8 respectively"
+    },
+    {
+      "title": "render code blocks a...",
+      "description": "render code blocks as plain monospace text before syntax highlighter loads"
+    },
+    {
+      "title": "lazy-load markdown r...",
+      "description": "lazy-load markdown rendering, KaTeX assets, charts, and session UI to cut initial payloads"
+    },
+    {
+      "title": "big refactor(be): in...",
+      "description": "big refactor(be): introduce ChatRunService and move retry/billing out of controllers"
+    },
+    {
+      "title": "fix mobile user mess...",
+      "description": "fix mobile user message bubbles to shrink for short text and keep padding for wrapped content"
+    },
+    {
+      "title": "Add view_image tool ...",
+      "description": "Add view_image tool and rewrite multimodal message filtering"
+    },
+    {
+      "title": "Fix code interpreter...",
+      "description": "Fix code interpreter workdir path resolution"
+    },
+    {
+      "title": "add python alias, py...",
+      "description": "add python alias, python-docx support, and refresh playwright versions"
+    },
+    {
+      "title": "delete patch_file & ...",
+      "description": "delete patch_file & read_file tool since it's not friendly to LLM and easily replacable by run_command"
+    },
+    {
+      "title": "update package refer...",
+      "description": "update package references to latest versions"
+    },
+    {
+      "title": "feat(request-trace) ...",
+      "description": "feat(request-trace) save json as formatted"
+    },
+    {
+      "title": "Fix deepseek api ant...",
+      "description": "Fix deepseek api anthropic protocol thinking signature issue"
+    },
+    {
+      "title": "Refine request trace...",
+      "description": "Refine request trace gateway presets by source and URL pattern"
+    },
+    {
+      "title": "RequestTraceLog Spli...",
+      "description": "RequestTraceLog Split into 4 pharse save"
+    },
+    {
+      "title": "Implementing backend...",
+      "description": "Implementing backend tracking infra"
+    },
+    {
+      "title": "upgrade Next.js to 1...",
+      "description": "upgrade Next.js to 16.1.6 and remove direct baseline-browser-mapping dev dependency"
+    },
+    {
+      "title": "maxTextCharsForTrunc...",
+      "description": "maxTextCharsForTruncate"
+    },
+    {
+      "title": "change into MaxTextC...",
+      "description": "change into MaxTextCharsForTruncate"
+    },
+    {
+      "title": "Implement RequestTra...",
+      "description": "Implement RequestTrack frontend config"
+    },
+    {
+      "title": "SourceNames -> Sourc...",
+      "description": "SourceNames -> SourcePatterns"
+    },
+    {
+      "title": "Add RequestTraceConf...",
+      "description": "Add RequestTraceConfig/RequestTrace infra db design"
+    },
+    {
+      "title": "upgrade mcp client t...",
+      "description": "upgrade mcp client to 0.8.0-preview.1, all mcp client using system IHttpClientFactory/LoggerFactory"
+    },
+    {
+      "title": "Drop non-used SharpC...",
+      "description": "Drop non-used SharpCompress dep"
+    },
+    {
+      "title": "Upgrade all 3rd part...",
+      "description": "Upgrade all 3rd party packages"
+    },
+    {
+      "title": "Update docs",
+      "description": "Update docs"
+    },
+    {
+      "title": "update docs",
+      "description": "update docs"
+    },
+    {
+      "title": "create latest manife...",
+      "description": "create latest manifest for non main branch"
+    },
+    {
+      "title": "Increase default Max...",
+      "description": "Increase default MaxOutputBytes from 6K to 8K, default code-interpreter image to latest"
+    },
+    {
+      "title": "add rg to code-inter...",
+      "description": "add rg to code-interpreter image"
+    },
+    {
+      "title": "add run version in c...",
+      "description": "add run version in code-interpreter skills.md"
+    },
+    {
+      "title": "Refactor think-tag p...",
+      "description": "Refactor think-tag parsing to use ChatSegment stream and simplify ChatService integration"
+    },
+    {
+      "title": "Fix(admin/messages) ...",
+      "description": "Fix(admin/messages) user query filter debounce issue"
+    },
+    {
+      "title": "ALiyun Oss also supp...",
+      "description": "ALiyun Oss also supports download as original file name"
+    },
+    {
+      "title": "Fix FE compilation e...",
+      "description": "Fix FE compilation error caused by recent change"
+    },
+    {
+      "title": "Show entire api key ...",
+      "description": "Show entire api key after create using dialog, because some user can't copy by click copy button"
+    },
+    {
+      "title": "make file service ad...",
+      "description": "make file service add button UI consistant with model management UI"
+    },
+    {
+      "title": "Optimize file servic...",
+      "description": "Optimize file service design/user exp, add validate button & frontend mask"
+    },
+    {
+      "title": "Upgrade baseline-bro...",
+      "description": "Upgrade baseline-browser-mapping to 2.9.19"
+    },
+    {
+      "title": "Fix local file servi...",
+      "description": "Fix local file service download content disposition"
+    },
+    {
+      "title": "Add FileName to down...",
+      "description": "Add FileName to download requests and set Content-Disposition for S3/Azure/local downloads"
+    },
+    {
+      "title": "Fix overlay with Cha...",
+      "description": "Fix overlay with ChatInput bug caused by height in ChatMessage"
+    },
+    {
+      "title": "Fix Maximum update d...",
+      "description": "Fix Maximum update depth exceeded when refresh page"
+    },
+    {
+      "title": "UserMessage/Response...",
+      "description": "UserMessage/ResponseMessage delete icon show loading state when request in progress"
+    },
+    {
+      "title": "Remove all 3 request...",
+      "description": "Remove all 3 requestAnimationFrame in ChatView"
+    },
+    {
+      "title": "Add some auto space ...",
+      "description": "Add some auto space in ChatMessage bottom, ensure auto scroll user message to top when send message/select chat"
+    },
+    {
+      "title": "Add little bit color...",
+      "description": "Add little bit color differnt in ChatInput"
+    },
+    {
+      "title": "fix ChatInput height...",
+      "description": "fix ChatInput height overwrite ChatMessage issue(regression)"
+    },
+    {
+      "title": "Fix unit test(caused...",
+      "description": "Fix unit test(caused by recent docker interface refactor"
+    },
+    {
+      "title": "Move agent link to b...",
+      "description": "Move agent link to bottom ChatInput"
+    },
+    {
+      "title": "Optimize docker mana...",
+      "description": "Optimize docker manager looks and feels"
+    },
+    {
+      "title": "Optimize env managem...",
+      "description": "Optimize env management copy in docker manager"
+    },
+    {
+      "title": "Extract env variable...",
+      "description": "Extract env variable management as a individual tab in session manage window"
+    },
+    {
+      "title": "Introduce environmen...",
+      "description": "Introduce environment variable management in docker session window"
+    },
+    {
+      "title": "Optimize pull image ...",
+      "description": "Optimize pull image display message"
+    },
+    {
+      "title": "Don't do extra log b...",
+      "description": "Don't do extra log because progress already yield in EnsureDocker"
+    },
+    {
+      "title": "Fix the bug causing ...",
+      "description": "Fix the bug causing file list double load"
+    },
+    {
+      "title": "Keep state after tab...",
+      "description": "Keep state after tab switch in session manager window"
+    },
+    {
+      "title": "Use same error layou...",
+      "description": "Use same error layout between Command execute & File explorer(in docker manage window)"
+    },
+    {
+      "title": "Fix the bug that ses...",
+      "description": "Fix the bug that session not terminated in db after destroy_session"
+    },
+    {
+      "title": "Show progress when p...",
+      "description": "Show progress when pulling docker"
+    },
+    {
+      "title": "Move ListDirectoryAs...",
+      "description": "Move ListDirectoryAsync out of DockerService as interface layer"
+    },
+    {
+      "title": "Delete stupid WrapDo...",
+      "description": "Delete stupid WrapDockerOperationAsync in docker service"
+    },
+    {
+      "title": "Move ListDirectoryAs...",
+      "description": "Move ListDirectoryAsync out of DockerService as interface layer"
+    },
+    {
+      "title": "Optimize fix ChatSes...",
+      "description": "Optimize fix ChatSessionManagerWindow UI/bug"
+    },
+    {
+      "title": "Fix drag upload bug",
+      "description": "Fix drag upload bug"
+    },
+    {
+      "title": "session manager Dele...",
+      "description": "session manager Delete path goes with body"
+    },
+    {
+      "title": "session manager down...",
+      "description": "session manager download goes with window.open"
+    },
+    {
+      "title": "optimize file editor...",
+      "description": "optimize file editor in session manager"
+    },
+    {
+      "title": "Use command instead ...",
+      "description": "Use command instead download archive to list folders to increse docker performance"
+    },
+    {
+      "title": "add basic info in ch...",
+      "description": "add basic info in chat docker manager"
+    },
+    {
+      "title": "Rename session manag...",
+      "description": "Rename session manager to sandbox manager"
+    },
+    {
+      "title": "Drop PathSafety, and...",
+      "description": "Drop PathSafety, and respect configured /app & artifacts folder"
+    },
+    {
+      "title": "Fix lots of bug in d...",
+      "description": "Fix lots of bug in docker manager window"
+    },
+    {
+      "title": "Add OwnerChatId to C...",
+      "description": "Add OwnerChatId to ChatDockerSession"
+    },
+    {
+      "title": "Fix WeChat browser u...",
+      "description": "Fix WeChat browser user agent tool long issue"
+    },
+    {
+      "title": "Try add session mana...",
+      "description": "Try add session management window in ChatHeader"
+    },
+    {
+      "title": "Fix 16 failed unit t...",
+      "description": "Fix 16 failed unit test cases caused by EF Core ExecuteUpdateAsync because InMemory provider don't support"
+    },
+    {
+      "title": "Switch send mode int...",
+      "description": "Switch send mode into ctrl+enter by default"
+    },
+    {
+      "title": "Delete hideChatBackg...",
+      "description": "Delete hideChatBackground/chatWindowStyle function"
+    },
+    {
+      "title": "Drop hideInputAfterS...",
+      "description": "Drop hideInputAfterSend function"
+    },
+    {
+      "title": "Bump version to 1.10...",
+      "description": "Bump version to 1.10.1"
+    },
+    {
+      "title": "Correct Allow Code E...",
+      "description": "Correct Allow Code Execution description in admin model page"
+    },
+    {
+      "title": "Minor update/correct...",
+      "description": "Minor update/correct docs"
+    },
+    {
+      "title": "refactor GeneralTab:...",
+      "description": "refactor GeneralTab: streamline font size handling and remove unused settings"
+    },
+    {
+      "title": "Add wechat group qr ...",
+      "description": "Add wechat group qr code image link into home readme"
+    },
+    {
+      "title": "Correct configuratio...",
+      "description": "Correct configuration.md default code-interpreter image to latest tag"
+    },
+    {
+      "title": "Update quick-start t...",
+      "description": "Update quick-start to better clarify Windows+DockerDesktop deployment usage"
+    },
+    {
+      "title": "Respect upstream sta...",
+      "description": "Respect upstream status code in API Gateway when RawChatServiceException"
+    },
+    {
+      "title": "Fix 2 places of \"Ope...",
+      "description": "Fix 2 places of \"Operand data type NULL is invalid for count operator\" when assign/unassign user model"
+    },
+    {
+      "title": "Delete anthropic ski...",
+      "description": "Delete anthropic skills because of license stuff"
+    },
+    {
+      "title": "fix strange chinese ...",
+      "description": "fix strange chinese character sync issue"
+    },
+    {
+      "title": "bump default image t...",
+      "description": "bump default image to r-31"
+    },
+    {
+      "title": "add opencv-python",
+      "description": "add opencv-python"
+    },
+    {
+      "title": "Bump DefaultImage ve...",
+      "description": "Bump DefaultImage version"
+    },
+    {
+      "title": "fix strange chinese ...",
+      "description": "fix strange chinese character sync issue"
+    },
+    {
+      "title": "bump default image t...",
+      "description": "bump default image to r-31"
+    },
+    {
+      "title": "add opencv-python",
+      "description": "add opencv-python"
+    },
+    {
+      "title": "Bump DefaultImage ve...",
+      "description": "Bump DefaultImage version"
+    },
+    {
+      "title": "Add the function of ...",
+      "description": "Add the function of setting chat window styles, support conversation mode and document mode, and update related components and translations"
+    },
+    {
+      "title": "Add the \"Hide input ...",
+      "description": "Add the \"Hide input box after sending\" function, and update relevant settings and translations"
+    },
+    {
+      "title": "Add the chat appeara...",
+      "description": "Add the chat appearance setting function, support hiding the chat background, and update the relevant styles and translations"
+    },
+    {
+      "title": "Add a font size sett...",
+      "description": "Add a font size setting function that allows users to adjust the font size of chat content and save the settings."
+    },
+    {
+      "title": "Refactor the univers...",
+      "description": "Refactor the universal tab, add a segment control component to support theme and language selection;"
+    },
+    {
+      "title": "Refactor the checkbo...",
+      "description": "Refactor the checkbox component to add support for tri-state checkboxes; update related components to use the new checkbox and optimize the user interaction experience"
+    },
+    {
+      "title": "Optimize the size of...",
+      "description": "Optimize the size of the chat component icons and adjust the size of the button text to improve user experience; replace the checkboxes with switch components."
+    },
+    {
+      "title": "Optimize the style o...",
+      "description": "Optimize the style of the chat component, adjust the size and spacing of icons; update the code block theme to support light and dark modes; fix the style and functionality of the tool call block."
+    },
+    {
+      "title": "Update model provide...",
+      "description": "Update model providers support doc"
+    },
+    {
+      "title": "Update/correct downl...",
+      "description": "Update/correct download links in doc"
+    },
+    {
+      "title": "Update more document...",
+      "description": "Update more documents about code interpreter env"
+    },
+    {
+      "title": "Update config docs",
+      "description": "Update config docs"
+    },
+    {
+      "title": "Extract downloads.md...",
+      "description": "Extract downloads.md from quick-start page"
+    },
+    {
+      "title": "Arrange more docs",
+      "description": "Arrange more docs"
+    },
+    {
+      "title": "Split main readme.md...",
+      "description": "Split main readme.md doc pages"
+    },
+    {
+      "title": "Update configuration...",
+      "description": "Update configuration docs"
+    },
+    {
+      "title": "Use positive words i...",
+      "description": "Use positive words in configurations.md"
+    },
+    {
+      "title": "Move development doc...",
+      "description": "Move development doc a little bit toper"
+    },
+    {
+      "title": "Add configuration do...",
+      "description": "Add configuration document"
+    },
+    {
+      "title": "Add matplotlibrc to ...",
+      "description": "Add matplotlibrc to support CJK fonts"
+    },
+    {
+      "title": "Update model provide...",
+      "description": "Update model providers support doc"
+    },
+    {
+      "title": "Update/correct downl...",
+      "description": "Update/correct download links in doc"
+    },
+    {
+      "title": "Update more document...",
+      "description": "Update more documents about code interpreter env"
+    },
+    {
+      "title": "优化聊天组件图标大小，调整样式以提升用户...",
+      "description": "优化聊天组件图标大小，调整样式以提升用户体验；新增发送飞机图标。"
+    },
+    {
+      "title": "优化组件样式，移除不必要的字体样式",
+      "description": "优化组件样式，移除不必要的字体样式"
+    },
+    {
+      "title": "优化聊天输入组件和消息组件的样式，调整动...",
+      "description": "优化聊天输入组件和消息组件的样式，调整动画和布局"
+    },
+    {
+      "title": "Update config docs",
+      "description": "Update config docs"
+    },
+    {
+      "title": "Extract downloads.md...",
+      "description": "Extract downloads.md from quick-start page"
+    },
+    {
+      "title": "Arrange more docs",
+      "description": "Arrange more docs"
+    },
+    {
+      "title": "更新代码结构，优化性能和可读性",
+      "description": "更新代码结构，优化性能和可读性"
+    },
+    {
+      "title": "Split main readme.md...",
+      "description": "Split main readme.md doc pages"
+    },
+    {
+      "title": "Update configuration...",
+      "description": "Update configuration docs"
+    },
+    {
+      "title": "Use positive words i...",
+      "description": "Use positive words in configurations.md"
+    },
+    {
+      "title": "Move development doc...",
+      "description": "Move development doc a little bit toper"
+    },
+    {
+      "title": "Add configuration do...",
+      "description": "Add configuration document"
+    },
+    {
+      "title": "Update readme en scr...",
+      "description": "Update readme en screenshot"
+    },
+    {
+      "title": "Update readme screen...",
+      "description": "Update readme screenshot"
+    },
+    {
+      "title": "Optimize readme",
+      "description": "Optimize readme"
+    },
+    {
+      "title": "Update interleaved t...",
+      "description": "Update interleaved thinking in readme"
+    },
+    {
+      "title": "Chat completions api...",
+      "description": "Chat completions api support deepseek v3.2 style interleaved thinking tool call"
+    },
+    {
+      "title": "fix some IDE0001",
+      "description": "fix some IDE0001"
+    },
+    {
+      "title": "TouchSession don't t...",
+      "description": "TouchSession don't track ChatDockerSession, fix the wired Balance/Step.Id changed issue"
+    },
+    {
+      "title": "code-interpreter ima...",
+      "description": "code-interpreter image: add imagemagick, update skills.md"
+    },
+    {
+      "title": "IDE001 Simplify iden...",
+      "description": "IDE001 Simplify identifier names"
+    },
+    {
+      "title": "Delete unused using",
+      "description": "Delete unused using"
+    },
+    {
+      "title": "Fix FE compilation e...",
+      "description": "Fix FE compilation eror caused by last commit"
+    },
+    {
+      "title": "ChatInput also suppo...",
+      "description": "ChatInput also supports drag&drop upload"
+    },
+    {
+      "title": "Allow Ctrl+V for Cha...",
+      "description": "Allow Ctrl+V for ChatInput component files also, use better name for pasted image"
+    },
+    {
+      "title": "Don't truncate filen...",
+      "description": "Don't truncate filename in FilePreview component"
+    },
+    {
+      "title": "Don't show step coun...",
+      "description": "Don't show step count when step count is 1 in TurnInfoBubble"
+    },
+    {
+      "title": "Show link to copy in...",
+      "description": "Show link to copy in ShareChat dialog, optimize share chat UI"
+    },
+    {
+      "title": "Fix FE compilation e...",
+      "description": "Fix FE compilation eror caused by last commit"
+    },
+    {
+      "title": "Optimize UI ToolCall...",
+      "description": "Optimize UI ToolCallBlock UI for all code interpreter commands"
+    },
+    {
+      "title": "Shorten non-clear re...",
+      "description": "Shorten non-clear result basic info into 1 line"
+    },
+    {
+      "title": "Code interpreter rea...",
+      "description": "Code interpreter read/write show lines instead of bytes to AI"
+    },
+    {
+      "title": "Optimize create_dock...",
+      "description": "Optimize create_docker_session failure prompt when terminated or expired"
+    },
+    {
+      "title": "EnsureSession not th...",
+      "description": "EnsureSession not throw, instead return Result<T>"
+    },
+    {
+      "title": "Fix siteInfo 404 cau...",
+      "description": "Fix siteInfo 404 causing FE resource note find issue"
+    },
+    {
+      "title": "Don't detach files b...",
+      "description": "Don't detach files because it's causing regression issue"
+    },
+    {
+      "title": "Simplify/flatten Cre...",
+      "description": "Simplify/flatten CreateDockerSession parameters"
+    },
+    {
+      "title": "Moonshot model provi...",
+      "description": "Moonshot model provider(kimi) now supports interleaved thinking"
+    },
+    {
+      "title": "Update appsettings i...",
+      "description": "Update appsettings image version"
+    },
+    {
+      "title": "code interpreter del...",
+      "description": "code interpreter delete/replace non exists fonts"
+    },
+    {
+      "title": "code interpreter ima...",
+      "description": "code interpreter imaeg: Add fonts and chromium"
+    },
+    {
+      "title": "Don't show windows d...",
+      "description": "Don't show windows docker in appsettings.json by default, bump code-interpreter docker to r-23"
+    },
+    {
+      "title": "Correct nuget config...",
+      "description": "Correct nuget config smoke test"
+    },
+    {
+      "title": "Append docker sessio...",
+      "description": "Append docker session info to user prompt prefix when using code interpreter"
+    },
+    {
+      "title": "Only inject cloud fi...",
+      "description": "Only inject cloud files into current turn user message"
+    },
+    {
+      "title": "Add today highlight ...",
+      "description": "Add today highlight to all system DateTimePopover component"
+    },
+    {
+      "title": "Add refresh button t...",
+      "description": "Add refresh button to model usage page"
+    },
+    {
+      "title": "Show step count/aver...",
+      "description": "Show step count/average duration/average TTFB in TurnGenerateInfo"
+    },
+    {
+      "title": "Optimize response ap...",
+      "description": "Optimize response api cache hit rate by provide prompt_cache_key"
+    },
+    {
+      "title": "Introduce response a...",
+      "description": "Introduce response api interleaved thinking tool call"
+    },
+    {
+      "title": "rename openai folder...",
+      "description": "rename openai folder into chatcomlpetions in unit test"
+    },
+    {
+      "title": "UnitTests call code_...",
+      "description": "UnitTests call code_interpreter tools directly"
+    },
+    {
+      "title": "Correct download_cha...",
+      "description": "Correct download_chat_files name, fix response prompt"
+    },
+    {
+      "title": "Try fix strange EF c...",
+      "description": "Try fix strange EF change trancking issue by introduce TempStartTurn"
+    },
+    {
+      "title": "reset firstTick in e...",
+      "description": "reset firstTick in each step, fix TotalDurationMs too large in agent senario issue"
+    },
+    {
+      "title": "Keep ToolCallBlock e...",
+      "description": "Keep ToolCallBlock expanded until next message content starts"
+    },
+    {
+      "title": "Docker call should s...",
+      "description": "Docker call should show progress as ToolCallProgress"
+    },
+    {
+      "title": "Add helper buttons(t...",
+      "description": "Add helper buttons(today/yesterday/this week/this month) in dashboard stat"
+    },
+    {
+      "title": "Fix user initial con...",
+      "description": "Fix user initial config page infinite page flash issue"
+    },
+    {
+      "title": "Fix FilePreview imag...",
+      "description": "Fix FilePreview image strentch issue in mobile screen"
+    },
+    {
+      "title": "Show docker IP addre...",
+      "description": "Show docker IP address to AI model when available so they can talk"
+    },
+    {
+      "title": "introduce MaxAllowed...",
+      "description": "introduce MaxAllowedNetworkMode security flag"
+    },
+    {
+      "title": "Introduce structured...",
+      "description": "Introduce structured ToolProgressDelta"
+    },
+    {
+      "title": "Fix very long issue ...",
+      "description": "Fix very long issue for run_command in frontend"
+    },
+    {
+      "title": "increase docker defa...",
+      "description": "increase docker default limit"
+    },
+    {
+      "title": "Fix ClosedXML versio...",
+      "description": "Fix ClosedXML version selection in smoke test"
+    },
+    {
+      "title": "Fix smoke test NuGet...",
+      "description": "Fix smoke test NuGet version parsing"
+    },
+    {
+      "title": "Fix code-interpreter...",
+      "description": "Fix code-interpreter NuGet precache script"
+    },
+    {
+      "title": "optimize smoke-test ...",
+      "description": "optimize smoke-test and nuget cache"
+    },
+    {
+      "title": "nuget folder contain...",
+      "description": "nuget folder contains real .nupkg files"
+    },
+    {
+      "title": "Add c++/sqlite3/node...",
+      "description": "Add c++/sqlite3/node.js to code interpreter"
+    },
+    {
+      "title": "Fix deepseek model p...",
+      "description": "Fix deepseek model provider interleaved thinking error in chat completions api"
+    },
+    {
+      "title": "Add DefaultImageDesc...",
+      "description": "Add DefaultImageDescription"
+    },
+    {
+      "title": "Download file not ad...",
+      "description": "Download file not add id as prefix, optimize multiple prompts"
+    },
+    {
+      "title": "optimize tailwaind.c...",
+      "description": "optimize tailwaind.config performance"
+    },
+    {
+      "title": "avoid restore during...",
+      "description": "avoid restore during dotnet add package"
+    },
+    {
+      "title": "install zip/7z and p...",
+      "description": "install zip/7z and precache ImageSharp"
+    },
+    {
+      "title": "render skills.md wit...",
+      "description": "render skills.md with real versions"
+    },
+    {
+      "title": "extract code-interpr...",
+      "description": "extract code-interpreter workflow assets"
+    },
+    {
+      "title": "should priori bash f...",
+      "description": "should priori bash first in linux containers"
+    },
+    {
+      "title": "Fix a strange Invali...",
+      "description": "Fix a strange InvalidOperationException: The property 'BalanceTransaction.Id' is part of a key and so cannot be modified or marked as modified"
+    },
+    {
+      "title": "fix resourceLimit fa...",
+      "description": "fix resourceLimit failed issue"
+    },
+    {
+      "title": "optimize more patch_...",
+      "description": "optimize more patch_file"
+    },
+    {
+      "title": "use more extensible ...",
+      "description": "use more extensible unified diff patch"
+    },
+    {
+      "title": "add DocumentFormat.O...",
+      "description": "add DocumentFormat.OpenXml"
+    },
+    {
+      "title": "show skills at docke...",
+      "description": "show skills at docker creation"
+    },
+    {
+      "title": "simplify dbSession l...",
+      "description": "simplify dbSession linq"
+    },
+    {
+      "title": "add load=true to avo...",
+      "description": "add load=true to avoid pulling image for smoke test"
+    },
+    {
+      "title": "Add code-interpreter...",
+      "description": "Add code-interpreter image"
+    },
+    {
+      "title": "Introduce ShellPrefi...",
+      "description": "Introduce ShellPrefix, fix lots of bugs in code interpreter"
+    },
+    {
+      "title": "Add shellPrefix colu...",
+      "description": "Add shellPrefix column"
+    },
+    {
+      "title": "default MaxOutputByt...",
+      "description": "default MaxOutputBytes to 6KB"
+    },
+    {
+      "title": "Optimize remote file...",
+      "description": "Optimize remote file select UI"
+    },
+    {
+      "title": "select remote photo ...",
+      "description": "select remote photo -> select remote file"
+    },
+    {
+      "title": "respect codeExecutio...",
+      "description": "respect codeExecutionEnabled for upload file/select remote photo/take photo"
+    },
+    {
+      "title": "fix cascade delete t...",
+      "description": "fix cascade delete turn issue, simplify db call"
+    },
+    {
+      "title": "ChatDockerSession do...",
+      "description": "ChatDockerSession don't have cascade delete set up, so we need to delete them manually"
+    },
+    {
+      "title": "Correct reuse contai...",
+      "description": "Correct reuse container"
+    },
+    {
+      "title": "Don't send files for...",
+      "description": "Don't send files for response api"
+    },
+    {
+      "title": "optimize more ToolCa...",
+      "description": "optimize more ToolCallBlock"
+    },
+    {
+      "title": "fix BE GetTurns 500 ...",
+      "description": "fix BE GetTurns 500 failure in some tool call related senarios"
+    },
+    {
+      "title": "returns image for cr...",
+      "description": "returns image for create docker"
+    },
+    {
+      "title": "optimize run command...",
+      "description": "optimize run command UI in frontend ToolCallBlock"
+    },
+    {
+      "title": "format file",
+      "description": "format file"
+    },
+    {
+      "title": "Only allow code exec...",
+      "description": "Only allow code execution when tool call enabled."
+    },
+    {
+      "title": "all model provider e...",
+      "description": "all model provider enable native docker based code interpreter"
+    },
+    {
+      "title": "image model should s...",
+      "description": "image model should support vision as input by default"
+    },
+    {
+      "title": "add 429 retry (defau...",
+      "description": "add 429 retry (default 3) for chat service"
+    },
+    {
+      "title": "docker based code in...",
+      "description": "docker based code interpreter worked"
+    },
+    {
+      "title": "bump version to 1.10...",
+      "description": "bump version to 1.10.0"
+    },
+    {
+      "title": "ef scaffold for 1.10...",
+      "description": "ef scaffold for 1.10.0 ChatDockerSession table"
+    },
+    {
+      "title": "Add docker interface...",
+      "description": "Add docker interfaces"
+    },
+    {
+      "title": "add 1.10.0.sql",
+      "description": "add 1.10.0.sql"
+    },
+    {
+      "title": "Correct license info",
+      "description": "Correct license info"
+    },
+    {
+      "title": "Move DB as a individ...",
+      "description": "Move DB as a individual project out of Web, rename Chats.Web back to Chats.DB for backwards compatible"
+    },
+    {
+      "title": "Rename and move the ...",
+      "description": "Rename and move the backend-related projects to more suitable locations to unlock more expansion potential."
+    },
+    {
+      "title": "Fix chat competion a...",
+      "description": "Fix chat competion api cache issue"
+    },
+    {
+      "title": "fix CS0114 caused by...",
+      "description": "fix CS0114 caused by googleai2 chat service"
+    },
+    {
+      "title": "Image default wider ...",
+      "description": "Image default wider edge to 1536 instead of 1792, remove useless enums"
+    },
+    {
+      "title": "fix issue that step ...",
+      "description": "fix issue that step info not showing in mobile"
+    },
+    {
+      "title": "add introduce date t...",
+      "description": "add introduce date to all model providers"
+    },
+    {
+      "title": "Optimize api key for...",
+      "description": "Optimize api key format in usage page"
+    },
+    {
+      "title": "Enforce one truth fr...",
+      "description": "Enforce one truth from url for usage page"
+    },
+    {
+      "title": "parallel_tool_calls ...",
+      "description": "parallel_tool_calls is only allowed when 'tools' are specified"
+    },
+    {
+      "title": "Xiaomi use self host...",
+      "description": "Xiaomi use self hosted icon"
+    },
+    {
+      "title": "don't need api-key h...",
+      "description": "don't need api-key header in replace for authorization bearer for mimo"
+    },
+    {
+      "title": "redact an unmasked a...",
+      "description": "redact an unmasked api key"
+    },
+    {
+      "title": "Add UserAgent for al...",
+      "description": "Add UserAgent for all chats httpclient usage"
+    },
+    {
+      "title": "latex formula now su...",
+      "description": "latex formula now supports copy by introduce copy hook"
+    },
+    {
+      "title": "fix http 500 issue f...",
+      "description": "fix http 500 issue for {turnId}/{contentId}/text-and-save-new method"
+    },
+    {
+      "title": "Change all dump into...",
+      "description": "Change all dump into .dump, fix mimo model think issue, refactor dump test to reflect correct chunk"
+    },
+    {
+      "title": "discard gemini signa...",
+      "description": "discard gemini signature when no tool call(better support gemini 3)"
+    },
+    {
+      "title": "Fix google ai list m...",
+      "description": "Fix google ai list models"
+    },
+    {
+      "title": "fix support to gpt-i...",
+      "description": "fix support to gpt-image-1.5 model"
+    },
+    {
+      "title": "fix generated image ...",
+      "description": "fix generated image always rectangle issue"
+    },
+    {
+      "title": "Fix non-streaming ap...",
+      "description": "Fix non-streaming api call issue when response tool property is null(for xiaomi-mimo)"
+    },
+    {
+      "title": "Add Xiaomi Mimo mode...",
+      "description": "Add Xiaomi Mimo model provider(id=21)"
+    },
+    {
+      "title": "Thinking message tim...",
+      "description": "Thinking message time duration use time from step"
+    },
+    {
+      "title": "Delete StepDivider a...",
+      "description": "Delete StepDivider and use generate info bubble for step info usage"
+    },
+    {
+      "title": "Introduce chat/turn/...",
+      "description": "Introduce chat/turn/step/content 4 level chatview"
+    },
+    {
+      "title": "RemoveNonCurrentTurn...",
+      "description": "RemoveNonCurrentTurnThinkingBlocks in chatservice preprocess"
+    },
+    {
+      "title": "Auto scroll to leafM...",
+      "description": "Auto scroll to leafMessage when messages load"
+    },
+    {
+      "title": "update leafMessageId...",
+      "description": "update leafMessageId to cache, fix not showing correct leaf message when refreshed"
+    },
+    {
+      "title": "Add dump request ass...",
+      "description": "Add dump request assert"
+    },
+    {
+      "title": "Support interleaved ...",
+      "description": "Support interleaved thinking for minimax/deepseek in chat completions api"
+    },
+    {
+      "title": "detect first and the...",
+      "description": "detect first and then execute"
+    },
+    {
+      "title": "fix 'The requested o...",
+      "description": "fix 'The requested operation requires an element of type 'String', but the target element has type 'Object'. caused by last commit"
+    },
+    {
+      "title": "Optimize error in no...",
+      "description": "Optimize error in non async model for response api"
+    },
+    {
+      "title": "Show error entire js...",
+      "description": "Show error entire json instead of just message when response api failed"
+    },
+    {
+      "title": "Consolidate ChatServ...",
+      "description": "Consolidate ChatService exception as RawChatServiceException/ChatServiceException only"
+    },
+    {
+      "title": "Fix FiddlerHttpDump ...",
+      "description": "Fix FiddlerHttpDump tests"
+    },
+    {
+      "title": "Fix prompt token not...",
+      "description": "Fix prompt token not counted issue when user stopped chat, fix response api tool call issue, caused by recent openai .net sdk removal"
+    },
+    {
+      "title": "TokenPony model prov...",
+      "description": "TokenPony model provider now supports thinking for deepseek-v3.* models"
+    },
+    {
+      "title": "Add google gemini un...",
+      "description": "Add google gemini unit test"
+    },
+    {
+      "title": "Optimize cache trigg...",
+      "description": "Optimize cache trigger in CI"
+    },
+    {
+      "title": "Add back env",
+      "description": "Add back env"
+    },
+    {
+      "title": "Move version out of ...",
+      "description": "Move version out of window global var but as an env variable"
+    },
+    {
+      "title": "update some other pa...",
+      "description": "update some other patch packages"
+    },
+    {
+      "title": "update other patch o...",
+      "description": "update other patch only FE packages"
+    },
+    {
+      "title": "update all @radix-ui...",
+      "description": "update all @radix-ui packages to latest versions"
+    },
+    {
+      "title": "Fix strange ChatMode...",
+      "description": "Fix strange ChatModelDropdownMenu flash issues that caused by next.js/react upgrade"
+    },
+    {
+      "title": "Fix anthropic first ...",
+      "description": "Fix anthropic first chat fail issue"
+    },
+    {
+      "title": "Harden usage-source ...",
+      "description": "Harden usage-source aware chat processing"
+    },
+    {
+      "title": "Fix a gemini stop te...",
+      "description": "Fix a gemini stop text empty issue"
+    },
+    {
+      "title": "Confirmed gemini too...",
+      "description": "Confirmed gemini tool call worked"
+    },
+    {
+      "title": "Remove Mscc.Generati...",
+      "description": "Remove Mscc.GenerativeAI, use custom HttpClient to call gemini"
+    },
+    {
+      "title": "Fix some cornor case...",
+      "description": "Fix some cornor cases that gemini image generation api would fail"
+    },
+    {
+      "title": "Save signature for g...",
+      "description": "Save signature for google gemini api"
+    },
+    {
+      "title": "Change signature int...",
+      "description": "Change signature into string field, make it easy"
+    },
+    {
+      "title": "Add AnthropicBuiltIn...",
+      "description": "Add AnthropicBuiltInTool in messages"
+    },
+    {
+      "title": "Response CacheCreati...",
+      "description": "Response CacheCreationTokens for anthropic api"
+    },
+    {
+      "title": "Delete unused alert....",
+      "description": "Delete unused alert.tsx component"
+    },
+    {
+      "title": "Optimize error layou...",
+      "description": "Optimize error layout: use mono-font, optimize dark layout color"
+    },
+    {
+      "title": "Simplify ChatSegment",
+      "description": "Simplify ChatSegment"
+    },
+    {
+      "title": "Fix ChatPresetModal ...",
+      "description": "Fix ChatPresetModal shows react error in F12 console issue(caused by react/nextjs upgrade)"
+    },
+    {
+      "title": "Fix mcp label not re...",
+      "description": "Fix mcp label not rendered in chatheader model setting dialog(caused by react/next.js upgrade)"
+    },
+    {
+      "title": "Fix cache token retr...",
+      "description": "Fix cache token retrieval logic"
+    },
+    {
+      "title": "Introduce prompt cac...",
+      "description": "Introduce prompt cache token/price"
+    },
+    {
+      "title": "Move release notes i...",
+      "description": "Move release notes into top of readme.md"
+    },
+    {
+      "title": "Fix some lint, fix c...",
+      "description": "Fix some lint, fix compile error"
+    },
+    {
+      "title": "Fix tons of eslint i...",
+      "description": "Fix tons of eslint issues that caused by recent react/node.js upgrade"
+    },
+    {
+      "title": "Upgrade next.js(15.5...",
+      "description": "Upgrade next.js(15.5.3->16.0.7) & react(18.2.0->19.2.1)"
+    },
+    {
+      "title": "Fix chat completion ...",
+      "description": "Fix chat completion service failed to extract usage issue - caused by openai .net sdk -> httpclient migration"
+    },
+    {
+      "title": "Update readme to ref...",
+      "description": "Update readme to reflect compatible with Claude Code"
+    },
+    {
+      "title": "Make think.Signature...",
+      "description": "Make think.Signature as utf8 encoded text to fix non-base64 format in DeepSeek-R1 anthropic thinking signature"
+    },
+    {
+      "title": "Introduce minimax/de...",
+      "description": "Introduce minimax/deepseek anthropic service"
+    },
+    {
+      "title": "Remove 1809 docker a...",
+      "description": "Remove 1809 docker and update readme"
+    },
+    {
+      "title": "Fix the tool call is...",
+      "description": "Fix the tool call issue in chat completion service, with integration test fix"
+    },
+    {
+      "title": "Delete openai .net s...",
+      "description": "Delete openai .net sdk"
+    },
+    {
+      "title": "fix openai .net sdk ...",
+      "description": "fix openai .net sdk chat completino api tool call issue"
+    },
+    {
+      "title": "Use NeutralMessage i...",
+      "description": "Use NeutralMessage instead of DB Step as ChatEntry"
+    },
+    {
+      "title": "Fix a DBUpdate issue...",
+      "description": "Fix a DBUpdate issue when get or insert ClientInfo/ClientIP/UserAgent"
+    },
+    {
+      "title": "Optimize readme",
+      "description": "Optimize readme"
+    },
+    {
+      "title": "Enhance README with ...",
+      "description": "Enhance README with badges and formatting updates"
+    },
+    {
+      "title": "Enhance README with ...",
+      "description": "Enhance README with badges and formatting updates"
+    },
+    {
+      "title": "Fix the StepContentT...",
+      "description": "Fix the StepContentThink delete is not cascade issue"
+    },
+    {
+      "title": "add missing translat...",
+      "description": "add missing translate for docs"
+    },
+    {
+      "title": "split docs page into...",
+      "description": "split docs page into openai/anthropic"
+    },
+    {
+      "title": "Use same UserMenuPop...",
+      "description": "Use same UserMenuPopover componanent in both chat/admin page, and add animation"
+    },
+    {
+      "title": "Mask api key for api...",
+      "description": "Mask api key for api key page(protect from screenshot etc)"
+    },
+    {
+      "title": "Fix unable to apply ...",
+      "description": "Fix unable to apply thinking budget issue"
+    },
+    {
+      "title": "Use JsonPolymorphic ...",
+      "description": "Use JsonPolymorphic for AnthropicStreamEvent"
+    },
+    {
+      "title": "Fix cornor cases of ...",
+      "description": "Fix cornor cases of AnthropicChatService"
+    },
+    {
+      "title": "Reimplement Anthropi...",
+      "description": "Reimplement AnthropicChatService by raw HttpClient, remove Anthropic .NET SDK for some issues"
+    },
+    {
+      "title": "Disable Google Gemin...",
+      "description": "Disable Google Gemini retry to workaround upstream bug (mscraftsman/generative-ai#144)"
+    },
+    {
+      "title": "Fix ChatInput height...",
+      "description": "Fix ChatInput height not resetting after sending message, add more debug flag in Test2ChatService"
+    },
+    {
+      "title": "Fix another strange ...",
+      "description": "Fix another strange sub pixel line under UserMessage when user inputs base64 very long text"
+    },
+    {
+      "title": "fix strange sub pixe...",
+      "description": "fix strange sub pixel line under UserMessage issue"
+    },
+    {
+      "title": "implement openai Ima...",
+      "description": "implement openai ImageGeneration/image edit api"
+    },
+    {
+      "title": "Show FilePreview ins...",
+      "description": "Show FilePreview inside ChatInput, fix the FilePreview is missing in non full screen chatinput mode issue"
+    },
+    {
+      "title": "Make chat service no...",
+      "description": "Make chat service not inherit IDisposable"
+    },
+    {
+      "title": "Implement anthropic ...",
+      "description": "Implement anthropic count tokens api"
+    },
+    {
+      "title": "Fix system prompt pa...",
+      "description": "Fix system prompt parse in anthropic messages api for claude code support"
+    },
+    {
+      "title": "move openai/anthropi...",
+      "description": "move openai/anthropic controller related stuffs into api folder"
+    },
+    {
+      "title": "fix anthropic compat...",
+      "description": "fix anthropic compatible api toolcall finish reason"
+    },
+    {
+      "title": "implmement anthropic...",
+      "description": "implmement anthropic compatible messages api"
+    },
+    {
+      "title": "Add animation to Cha...",
+      "description": "Add animation to ChatInput when collapse/expand"
+    },
+    {
+      "title": "Delete unused const ...",
+      "description": "Delete unused const variable in ChatInput"
+    },
+    {
+      "title": "Add full screen anim...",
+      "description": "Add full screen animation to ChatInput"
+    },
+    {
+      "title": "Fix a chatinput flas...",
+      "description": "Fix a chatinput flash issue when chat"
+    },
+    {
+      "title": "Fix Quick add model ...",
+      "description": "Fix Quick add model failed because recent allowVisionLink change"
+    },
+    {
+      "title": "Fix ToolCallBlock al...",
+      "description": "Fix ToolCallBlock always auto auto expand issue"
+    },
+    {
+      "title": "Optimize user initia...",
+      "description": "Optimize user initial test model use experience"
+    },
+    {
+      "title": "Anthropic model supp...",
+      "description": "Anthropic model supports vision link by default"
+    },
+    {
+      "title": "Supports claude-opus...",
+      "description": "Supports claude-opus-4.5 compatibility"
+    },
+    {
+      "title": "Increase anthropic m...",
+      "description": "Increase anthropic model defaults when create"
+    },
+    {
+      "title": "Add Ask DeepWiki bad...",
+      "description": "Add Ask DeepWiki badge"
+    },
+    {
+      "title": "Add Postgres back si...",
+      "description": "Add Postgres back since it's supported EF 10 now, upgrade .NET packages"
+    },
+    {
+      "title": "Fix the issue that g...",
+      "description": "Fix the issue that gemini can't talk with thinking"
+    },
+    {
+      "title": "optimize token pony(...",
+      "description": "optimize token pony(id=19) model provider icon in dark theme"
+    },
+    {
+      "title": "Add Anthropic(id=20)...",
+      "description": "Add Anthropic(id=20) model provider"
+    },
+    {
+      "title": "Fixed admin model 's...",
+      "description": "Fixed admin model 'show all provider' button not working bug"
+    },
+    {
+      "title": "Optimize model modal...",
+      "description": "Optimize model modal label"
+    },
+    {
+      "title": "Introduce Model's ne...",
+      "description": "Introduce Model's new field: SupportsVisionLink"
+    },
+    {
+      "title": "Only show useMaxComp...",
+      "description": "Only show useMaxCompletionTokens when is chat completion api in ChatResponseConfig"
+    },
+    {
+      "title": "Optimize admin model...",
+      "description": "Optimize admin model mobile layout"
+    },
+    {
+      "title": "Admin model page del...",
+      "description": "Admin model page delete model when model been used then auto soft delete the model"
+    },
+    {
+      "title": "Overall test and try...",
+      "description": "Overall test and try make it work for all model providers, now GithubModels/火山方舟/讯飞星火 unable to do"
+    },
+    {
+      "title": "Show specific error ...",
+      "description": "Show specific error dump when unable to load possible models in QuickAddModelModal"
+    },
+    {
+      "title": "Optimize Anthropic A...",
+      "description": "Optimize Anthropic AzureAIFoundry model create url preprocess logic"
+    },
+    {
+      "title": "Optimize ApiTest whe...",
+      "description": "Optimize ApiTest when troubleshooting"
+    },
+    {
+      "title": "Rename Model.ApiType...",
+      "description": "Rename Model.ApiType -> ApiTypeId, ChatConfig.ReasoningEffort -> ReasoningEffortId"
+    },
+    {
+      "title": "make all chat servic...",
+      "description": "make all chat service as DI singleton registered service"
+    },
+    {
+      "title": "Optimize description...",
+      "description": "Optimize description UI in create/update model"
+    },
+    {
+      "title": "Confirmed AnthropicC...",
+      "description": "Confirmed AnthropicChatService working, confirmed maxThinkingBudget in model/thinkingBudget in chat config is also working"
+    },
+    {
+      "title": "fix a gemini-2.5-pro...",
+      "description": "fix a gemini-2.5-pro chat issue"
+    },
+    {
+      "title": "UpdateModelRequest t...",
+      "description": "UpdateModelRequest think options/image size options is not nullable"
+    },
+    {
+      "title": "Implmemented Anthrop...",
+      "description": "Implmemented AnthropicChatService"
+    },
+    {
+      "title": "Split StepContentThi...",
+      "description": "Split StepContentThink to allow claude model's signature field(need data migration)"
+    },
+    {
+      "title": "Add anthropic .net s...",
+      "description": "Add anthropic .net sdk(road to anthropic)"
+    },
+    {
+      "title": "try fix the strange ...",
+      "description": "try fix the strange FE compile error seems caused by image compression"
+    },
+    {
+      "title": "remove Yuan ￥ for be...",
+      "description": "remove Yuan ￥ for better globalization"
+    },
+    {
+      "title": "optimize mobile admi...",
+      "description": "optimize mobile admin user page layout"
+    },
+    {
+      "title": "fix FE compilation e...",
+      "description": "fix FE compilation eror caused by last commit"
+    },
+    {
+      "title": "optimize even more a...",
+      "description": "optimize even more admin model management UI"
+    },
+    {
+      "title": "optimize more admin ...",
+      "description": "optimize more admin model page UI"
+    },
+    {
+      "title": "optimize admin model...",
+      "description": "optimize admin model page UI"
+    },
+    {
+      "title": "update OpenAI to 2.7...",
+      "description": "update OpenAI to 2.7.0, update other packages"
+    },
+    {
+      "title": "update packages, del...",
+      "description": "update packages, delete postgres support for now(wait .net 10)"
+    },
+    {
+      "title": "Add animated toggle ...",
+      "description": "Add animated toggle chevron and smooth width transition for ToolCallBlock header"
+    },
+    {
+      "title": "Keep chat cache in s...",
+      "description": "Keep chat cache in sync with create/delete actions and align DTO types"
+    },
+    {
+      "title": "Try use ubuntu 24.04...",
+      "description": "Try use ubuntu 24.04 to see if it packed with dotnet"
+    },
+    {
+      "title": "Upgrade to dotnet 10...",
+      "description": "Upgrade to dotnet 10, bump version to 1.9.0"
+    },
+    {
+      "title": "delete what's next i...",
+      "description": "delete what's next in release notes"
+    },
+    {
+      "title": "Update readme docs f...",
+      "description": "Update readme docs for better clarify docker deployment"
+    },
+    {
+      "title": "Fix windows containe...",
+      "description": "Fix windows container start up script"
+    },
+    {
+      "title": "Update readme model ...",
+      "description": "Update readme model provider list"
+    },
+    {
+      "title": "Update 1.8.1 readme",
+      "description": "Update 1.8.1 readme"
+    },
+    {
+      "title": "Fix VS Code Github C...",
+      "description": "Fix VS Code Github Copilot openai chat completion api compatible issue"
+    },
+    {
+      "title": "Fix ChatHeader layou...",
+      "description": "Fix ChatHeader layout issue when model not available"
+    },
+    {
+      "title": "Correct future versi...",
+      "description": "Correct future version plan in 1.8.1 release notes"
+    },
+    {
+      "title": "Correct future versi...",
+      "description": "Correct future version plan in 1.8.1 release notes"
+    },
+    {
+      "title": "Correct release note...",
+      "description": "Correct release notes in image type support part"
+    },
+    {
+      "title": "ToolCallMessage can ...",
+      "description": "ToolCallMessage can collapse, add animation to ToolCall/Thinking UI"
+    },
+    {
+      "title": "Optimize logic to ge...",
+      "description": "Optimize logic to get user list in admin user-model page"
+    },
+    {
+      "title": "Optimize admin model...",
+      "description": "Optimize admin models page UI"
+    },
+    {
+      "title": "Add Model->Model Use...",
+      "description": "Add Model->Model User management in admin model page"
+    },
+    {
+      "title": "Update ByUserTab com...",
+      "description": "Update ByUserTab commit to reflect real situation"
+    },
+    {
+      "title": "Remove ByModel tab i...",
+      "description": "Remove ByModel tab in new user model permission page"
+    },
+    {
+      "title": "Optimize UserModelPe...",
+      "description": "Optimize UserModelPermission ByUser page"
+    },
+    {
+      "title": "fix compilation erro...",
+      "description": "fix compilation error caused by previous user model permission page"
+    },
+    {
+      "title": "optimize admin user ...",
+      "description": "optimize admin user model permission page"
+    },
+    {
+      "title": "admin user model pag...",
+      "description": "admin user model page initial commit"
+    },
+    {
+      "title": "Use icon button for ...",
+      "description": "Use icon button for theme/language settings"
+    },
+    {
+      "title": "disable openai clien...",
+      "description": "disable openai client retry"
+    },
+    {
+      "title": "Move supported conte...",
+      "description": "Move supported content type into ChatCompletionService layer, fix gemini-2.0-flash-exp"
+    },
+    {
+      "title": "Refactor file previe...",
+      "description": "Refactor file preview with new FilePreview component"
+    },
+    {
+      "title": "Move file processing...",
+      "description": "Move file processing from ChatController to ChatService"
+    },
+    {
+      "title": "Refactor file handli...",
+      "description": "Refactor file handling and remove unused image size tables"
+    },
+    {
+      "title": "Fix reasoning conten...",
+      "description": "Fix reasoning content extraction/decode issues caused by OpenAI 2.6.0 upgrade"
+    },
+    {
+      "title": "optimize OpenRouter ...",
+      "description": "optimize OpenRouter error message"
+    },
+    {
+      "title": "Fix issue for reason...",
+      "description": "Fix issue for reasoning_content can't read after upgrade to OpenAI 2.6 by using self-compiled Sdcb.OpenAI"
+    },
+    {
+      "title": "hello world test mod...",
+      "description": "hello world test model should also supports streaming"
+    },
+    {
+      "title": "fix init issue",
+      "description": "fix init issue"
+    },
+    {
+      "title": "upgrade deps except ...",
+      "description": "upgrade deps except openai 2.6, fix qwen compile error"
+    },
+    {
+      "title": "road to upgrade to o...",
+      "description": "road to upgrade to openai 2.6"
+    },
+    {
+      "title": "Fix QwenChatService ...",
+      "description": "Fix QwenChatService createdAt is ms caused issue"
+    },
+    {
+      "title": "remove outdated Micr...",
+      "description": "remove outdated Microsoft.ML.Tokenizers.Data.Cl100kBase, upgrade O200kBase to 1.0.3"
+    },
+    {
+      "title": "update scaffold-basi...",
+      "description": "update scaffold-basic-data.linq to remove KnownImageSize table"
+    },
+    {
+      "title": "Update 1.8.0 release...",
+      "description": "Update 1.8.0 release notes"
+    },
+    {
+      "title": "Fix OpenAI model loa...",
+      "description": "Fix OpenAI model loader when model key URL is absent and refine quick add modal UI"
+    },
+    {
+      "title": "Remove FileServiceTy...",
+      "description": "Remove FileServiceType in scaffold-basic-data.linq"
+    },
+    {
+      "title": "lower retry from 60-...",
+      "description": "lower retry from 60->3 for google ai service"
+    },
+    {
+      "title": "Replace SkiaSharp wi...",
+      "description": "Replace SkiaSharp with ImageSharp for image parsing"
+    },
+    {
+      "title": "Add SkiaSharp Linux ...",
+      "description": "Add SkiaSharp Linux native assets for Docker support"
+    },
+    {
+      "title": "Refactor image parsi...",
+      "description": "Refactor image parsing to use SkiaSharp and optimize upload flow"
+    },
+    {
+      "title": "update Next.js from ...",
+      "description": "update Next.js from 15.5.3 to 15.5.6"
+    },
+    {
+      "title": "update browserslist ...",
+      "description": "update browserslist database"
+    },
+    {
+      "title": "FE uses latest BE ap...",
+      "description": "FE uses latest BE api, update ModelModal accodingly"
+    },
+    {
+      "title": "Add UpdateModelReque...",
+      "description": "Add UpdateModelRequest validation/xunit test"
+    },
+    {
+      "title": "Introduce 3rd ApiTyp...",
+      "description": "Introduce 3rd ApiType 2:ImageGeneration api and refactor ChatFactory"
+    },
+    {
+      "title": "fix non streaming ap...",
+      "description": "fix non streaming api tool call issue"
+    },
+    {
+      "title": "ModelReference->Mode...",
+      "description": "ModelReference->Model backend api changes"
+    },
+    {
+      "title": "Initial step for 1.8...",
+      "description": "Initial step for 1.8.0 release, add Model/ModelReference data migration"
+    },
+    {
+      "title": "update 1.7.2 release...",
+      "description": "update 1.7.2 release notes"
+    },
+    {
+      "title": "fix chatinput css",
+      "description": "fix chatinput css"
+    },
+    {
+      "title": "FE support image siz...",
+      "description": "FE support image size adjustments for gpt-image-1-mini model"
+    },
+    {
+      "title": "fix reasoning effort...",
+      "description": "fix reasoning effort for api image generation service not support issue"
+    },
+    {
+      "title": "Introduce Chats.BE.A...",
+      "description": "Introduce Chats.BE.ApiTest, a xunit test project to integrate test openai compatible chat completion api"
+    },
+    {
+      "title": "Move out chatApi.ts ...",
+      "description": "Move out chatApi.ts out of Chat.tsx(1431->1384 lines)"
+    },
+    {
+      "title": "auto route image gen...",
+      "description": "auto route image generation to non streaming if n>1 to fix stream mode not support multiple image"
+    },
+    {
+      "title": "tested FE confirmed ...",
+      "description": "tested FE confirmed streamed ImageGeneration service worked"
+    },
+    {
+      "title": "enable FE support im...",
+      "description": "enable FE support image streaming function"
+    },
+    {
+      "title": "clear debug info for...",
+      "description": "clear debug info for ImageGenerationService's streaming function"
+    },
+    {
+      "title": "remove unnecessary s...",
+      "description": "remove unnecessary server response(12) when image generation/edit to save tranfic"
+    },
+    {
+      "title": "add support for stre...",
+      "description": "add support for streaming gpt-image-1/gpt-image-1-mini image generation/edit api(with some debug info"
+    },
+    {
+      "title": "fix reasoning effort...",
+      "description": "fix reasoning effort not take effect issue"
+    },
+    {
+      "title": "add gpt-5-codex/gpt-...",
+      "description": "add gpt-5-codex/gpt-5-pro/gpt-image-1-mini in ModelReference"
+    },
+    {
+      "title": "fix BE compilation e...",
+      "description": "fix BE compilation error caused by mcp upgrade"
+    },
+    {
+      "title": "Show tool call inste...",
+      "description": "Show tool call instead of raw text output for gemini code execution"
+    },
+    {
+      "title": "upgrade Mscc.Generat...",
+      "description": "upgrade Mscc.GenerativeAI/AWSSDK.S3 dependency"
+    },
+    {
+      "title": "add a document to br...",
+      "description": "add a document to brief how to add a field to ChatConfig"
+    },
+    {
+      "title": "fix compilation erro...",
+      "description": "fix compilation error caused by previous commit"
+    },
+    {
+      "title": "Introduce CodeExecut...",
+      "description": "Introduce CodeExecutionEnabled in ChatConfig"
+    },
+    {
+      "title": "add reasoning effort...",
+      "description": "add reasoning effort minimal for gpt-5"
+    },
+    {
+      "title": "Add CodeExecutionEna...",
+      "description": "Add CodeExecutionEnabled field in ChatConfig"
+    },
+    {
+      "title": "Fix SystemPrompt tex...",
+      "description": "Fix SystemPrompt textarea scrolling bug"
+    },
+    {
+      "title": "Fix excessive spacin...",
+      "description": "Fix excessive spacing below chat messages after reducing input rows"
+    },
+    {
+      "title": "bump version to 1.7....",
+      "description": "bump version to 1.7.2, upgrade 11 third party deps"
+    },
+    {
+      "title": "update 1.7.1 release...",
+      "description": "update 1.7.1 release notes"
+    },
+    {
+      "title": "make the chatInput h...",
+      "description": "make the chatInput header a little bit shorter"
+    },
+    {
+      "title": "fullscreen mode also...",
+      "description": "fullscreen mode also show tools"
+    },
+    {
+      "title": "make send button sma...",
+      "description": "make send button smaller and have 90% opacity"
+    },
+    {
+      "title": "send button don't ta...",
+      "description": "send button don't taken 1 line in ChatInput"
+    },
+    {
+      "title": "fix compile error",
+      "description": "fix compile error"
+    },
+    {
+      "title": "don't lock to bottom...",
+      "description": "don't lock to bottom when generating after any scroll up"
+    },
+    {
+      "title": "use ModelProviderIco...",
+      "description": "use ModelProviderIcon for user usage tab"
+    },
+    {
+      "title": "admin message add me...",
+      "description": "admin message add message content query"
+    },
+    {
+      "title": "use pushState for ad...",
+      "description": "use pushState for admin message list"
+    },
+    {
+      "title": "optimize pagination ...",
+      "description": "optimize pagination component for 7 pages"
+    },
+    {
+      "title": "fix a F12 warning fo...",
+      "description": "fix a F12 warning for IconReasoning.tsx"
+    },
+    {
+      "title": "model header ui opti...",
+      "description": "model header ui optimize"
+    },
+    {
+      "title": "hide upload remote i...",
+      "description": "hide upload remote image button for non-vision model"
+    },
+    {
+      "title": "优化发送按钮的禁用状态逻辑，并增强 se...",
+      "description": "优化发送按钮的禁用状态逻辑，并增强 sendMode 的事件监听功能"
+    },
+    {
+      "title": "fix FE compilation e...",
+      "description": "fix FE compilation error"
+    },
+    {
+      "title": "split StepGenerateIn...",
+      "description": "split StepGenerateInfo load ondemand"
+    },
+    {
+      "title": "optimize generate in...",
+      "description": "optimize generate information"
+    },
+    {
+      "title": "send button supports...",
+      "description": "send button supports mobile"
+    },
+    {
+      "title": "fix gpt-image-1 issu...",
+      "description": "fix gpt-image-1 issue"
+    },
+    {
+      "title": "introduce send-butto...",
+      "description": "introduce send-button"
+    },
+    {
+      "title": "fix chat update titl...",
+      "description": "fix chat update title issue"
+    },
+    {
+      "title": "fix canlendar compon...",
+      "description": "fix canlendar component"
+    },
+    {
+      "title": "remove en.json",
+      "description": "remove en.json"
+    },
+    {
+      "title": "security log compone...",
+      "description": "security log components move to correct component folder"
+    },
+    {
+      "title": "delete non-used icon...",
+      "description": "delete non-used icons"
+    },
+    {
+      "title": "rename chatIcon to M...",
+      "description": "rename chatIcon to ModelProviderIcon"
+    },
+    {
+      "title": "ChatIcon support mod...",
+      "description": "ChatIcon support model provider name"
+    },
+    {
+      "title": "refactor model page ...",
+      "description": "refactor model page icon"
+    },
+    {
+      "title": "refactor deletePopov...",
+      "description": "refactor deletePopover"
+    },
+    {
+      "title": "add isSuccess",
+      "description": "add isSuccess"
+    },
+    {
+      "title": "add isSuccess",
+      "description": "add isSuccess"
+    },
+    {
+      "title": "refactor to security...",
+      "description": "refactor to security logs page"
+    },
+    {
+      "title": "implement tz",
+      "description": "implement tz"
+    },
+    {
+      "title": "add security audit a...",
+      "description": "add security audit admin page"
+    },
+    {
+      "title": "ChatInput pause butt...",
+      "description": "ChatInput pause button"
+    },
+    {
+      "title": "ChatInput position i...",
+      "description": "ChatInput position icons in same row"
+    },
+    {
+      "title": "don't need release w...",
+      "description": "don't need release webhook yml"
+    },
+    {
+      "title": "ReleaseWebhook no ne...",
+      "description": "ReleaseWebhook no need"
+    },
+    {
+      "title": "scaffold fe use late...",
+      "description": "scaffold fe use latest"
+    },
+    {
+      "title": "correct first token ...",
+      "description": "correct first token latency"
+    },
+    {
+      "title": "fix mobile generate ...",
+      "description": "fix mobile generate information popover"
+    },
+    {
+      "title": "introduce ToolCallBl...",
+      "description": "introduce ToolCallBlock"
+    },
+    {
+      "title": "ensure stop works",
+      "description": "ensure stop works"
+    },
+    {
+      "title": "optimize tool call n...",
+      "description": "optimize tool call name"
+    },
+    {
+      "title": "allow select from ga...",
+      "description": "allow select from galary in mobile"
+    },
+    {
+      "title": "fix drag/drog in mod...",
+      "description": "fix drag/drog in model page, optimize mobile UI"
+    },
+    {
+      "title": "add drag handle to C...",
+      "description": "add drag handle to ChatPresetList"
+    },
+    {
+      "title": "manage chatInput col...",
+      "description": "manage chatInput collapse"
+    },
+    {
+      "title": "fix chatpresetList d...",
+      "description": "fix chatpresetList drag jump issue"
+    },
+    {
+      "title": "fix edge case messag...",
+      "description": "fix edge case message display issue"
+    },
+    {
+      "title": "fix empty turn issue...",
+      "description": "fix empty turn issue, less unknown error"
+    },
+    {
+      "title": "drop console.log",
+      "description": "drop console.log"
+    },
+    {
+      "title": "fix init issue",
+      "description": "fix init issue"
+    },
+    {
+      "title": "not load mcp server ...",
+      "description": "not load mcp server by default"
+    },
+    {
+      "title": "fix a issue that add...",
+      "description": "fix a issue that add model before span"
+    },
+    {
+      "title": "narrow the user char...",
+      "description": "narrow the user charge modal"
+    },
+    {
+      "title": "add explicit UI for ...",
+      "description": "add explicit UI for disabled, fix a issue about reorder"
+    },
+    {
+      "title": "fix FE compilation e...",
+      "description": "fix FE compilation error"
+    },
+    {
+      "title": "don't need event in ...",
+      "description": "don't need event in Tips components"
+    },
+    {
+      "title": "fix tooltip for add ...",
+      "description": "fix tooltip for add model in ChatHeader"
+    },
+    {
+      "title": "rollback hover menu ...",
+      "description": "rollback hover menu to select menu in conversation component"
+    },
+    {
+      "title": "use shared state in ...",
+      "description": "use shared state in chats"
+    },
+    {
+      "title": "stop unmatched span ...",
+      "description": "stop unmatched span to be regenerated"
+    },
+    {
+      "title": "fix chatBar settings",
+      "description": "fix chatBar settings"
+    },
+    {
+      "title": "upgrade FE packages",
+      "description": "upgrade FE packages"
+    },
+    {
+      "title": "introduce ChatPreset...",
+      "description": "introduce ChatPresetResetDialog"
+    },
+    {
+      "title": "add mcp user assignm...",
+      "description": "add mcp user assignment function"
+    },
+    {
+      "title": "drop getIconStroke",
+      "description": "drop getIconStroke"
+    },
+    {
+      "title": "fix system theme dis...",
+      "description": "fix system theme display dark issue"
+    },
+    {
+      "title": "drop isSystem/requir...",
+      "description": "drop isSystem/requireApproval in db"
+    },
+    {
+      "title": "regenerate respect c...",
+      "description": "regenerate respect current span"
+    },
+    {
+      "title": "introduce MermaidBlo...",
+      "description": "introduce MermaidBlock"
+    },
+    {
+      "title": "add model tooltip to...",
+      "description": "add model tooltip to conversation/admin messages"
+    },
+    {
+      "title": "support mupltiple ic...",
+      "description": "support mupltiple icon in side panel"
+    },
+    {
+      "title": "add several usage po...",
+      "description": "add several usage position buttons to ChatInput"
+    },
+    {
+      "title": "mobile optimize for ...",
+      "description": "mobile optimize for user managment page"
+    },
+    {
+      "title": "add user page edit b...",
+      "description": "add user page edit button"
+    },
+    {
+      "title": "combine restore scri...",
+      "description": "combine restore script"
+    },
+    {
+      "title": "fix qwen tool call e...",
+      "description": "fix qwen tool call error"
+    },
+    {
+      "title": "add validate when ru...",
+      "description": "add validate when run tool"
+    },
+    {
+      "title": "add skeleton for res...",
+      "description": "add skeleton for response message"
+    },
+    {
+      "title": "fix a chat model cli...",
+      "description": "fix a chat model client issue"
+    },
+    {
+      "title": "fix a chat issue",
+      "description": "fix a chat issue"
+    },
+    {
+      "title": "auto hide chatinput ...",
+      "description": "auto hide chatinput when chatting"
+    },
+    {
+      "title": "improve thumb up/dow...",
+      "description": "improve thumb up/down action button"
+    },
+    {
+      "title": "improve keycloak com...",
+      "description": "improve keycloak compatibility"
+    },
+    {
+      "title": "introduce regenerate...",
+      "description": "introduce regenerate with model action component"
+    },
+    {
+      "title": "mcp update",
+      "description": "mcp update"
+    },
+    {
+      "title": "label unique",
+      "description": "label unique"
+    },
+    {
+      "title": "forbid colon in mcp",
+      "description": "forbid colon in mcp"
+    },
+    {
+      "title": "add dotnet tool note...",
+      "description": "add dotnet tool notes"
+    },
+    {
+      "title": "delete all db defaul...",
+      "description": "delete all db default value"
+    },
+    {
+      "title": "delete handle for re...",
+      "description": "delete handle for reorder chatpreset"
+    },
+    {
+      "title": "try implement drag r...",
+      "description": "try implement drag reorder for chatpreset"
+    },
+    {
+      "title": "implement reorder fo...",
+      "description": "implement reorder for chatpreset"
+    },
+    {
+      "title": "Add order ability to...",
+      "description": "Add order ability to ChatPreset"
+    },
+    {
+      "title": "introduce ChatConfig...",
+      "description": "introduce ChatConfigArchived table"
+    },
+    {
+      "title": "minor ui text change",
+      "description": "minor ui text change"
+    },
+    {
+      "title": "fix share page displ...",
+      "description": "fix share page display issue"
+    },
+    {
+      "title": "add fast validating ...",
+      "description": "add fast validating for model management dialog"
+    },
+    {
+      "title": "update dev.win.sql",
+      "description": "update dev.win.sql"
+    },
+    {
+      "title": "break limitation of ...",
+      "description": "break limitation of delete message"
+    },
+    {
+      "title": "fix a prompt issue",
+      "description": "fix a prompt issue"
+    },
+    {
+      "title": "system prompt add ed...",
+      "description": "system prompt add edit/rendered mode"
+    },
+    {
+      "title": "implement regenerate...",
+      "description": "implement regenerate-all-assistant-message"
+    },
+    {
+      "title": "fix fe compilation e...",
+      "description": "fix fe compilation error"
+    },
+    {
+      "title": "split into 2 compono...",
+      "description": "split into 2 componoents"
+    },
+    {
+      "title": "fix initial config",
+      "description": "fix initial config"
+    },
+    {
+      "title": "fix init settings di...",
+      "description": "fix init settings display/save issue"
+    },
+    {
+      "title": "add usage stat link ...",
+      "description": "add usage stat link in model page"
+    },
+    {
+      "title": "drop BadRequestMessa...",
+      "description": "drop BadRequestMessage"
+    },
+    {
+      "title": "introduce admin user...",
+      "description": "introduce admin user model controller"
+    },
+    {
+      "title": "add model provider i...",
+      "description": "add model provider icon"
+    },
+    {
+      "title": "remove unused FE use...",
+      "description": "remove unused FE user component"
+    },
+    {
+      "title": "fix compilation erro...",
+      "description": "fix compilation error"
+    },
+    {
+      "title": "user model managemen...",
+      "description": "user model management confirmed working"
+    },
+    {
+      "title": "add dev-user-model",
+      "description": "add dev-user-model"
+    },
+    {
+      "title": "fix model reference ...",
+      "description": "fix model reference load bug in model dialog"
+    },
+    {
+      "title": "consolidate model di...",
+      "description": "consolidate model dialog"
+    },
+    {
+      "title": "implement drag reord...",
+      "description": "implement drag reorder for models"
+    },
+    {
+      "title": "implement new reorde...",
+      "description": "implement new reorder"
+    },
+    {
+      "title": "update dev restore s...",
+      "description": "update dev restore script"
+    },
+    {
+      "title": "optimize drag ui",
+      "description": "optimize drag ui"
+    },
+    {
+      "title": "use dnd for drag",
+      "description": "use dnd for drag"
+    },
+    {
+      "title": "reorder model-key wo...",
+      "description": "reorder model-key works"
+    },
+    {
+      "title": "implement model prov...",
+      "description": "implement model provider order dragdrop"
+    },
+    {
+      "title": "split model manageme...",
+      "description": "split model management into multi parts"
+    },
+    {
+      "title": "add reorder api",
+      "description": "add reorder api"
+    },
+    {
+      "title": "upgrade package",
+      "description": "upgrade package"
+    },
+    {
+      "title": "add order to model-k...",
+      "description": "add order to model-key table"
+    },
+    {
+      "title": "layout align",
+      "description": "layout align"
+    },
+    {
+      "title": "model configs",
+      "description": "model configs"
+    },
+    {
+      "title": "user name -> account",
+      "description": "user name -> account"
+    },
+    {
+      "title": "add model-key/model ...",
+      "description": "add model-key/model query to usage"
+    },
+    {
+      "title": "optimize bolt icon",
+      "description": "optimize bolt icon"
+    },
+    {
+      "title": "remove model-keys/mo...",
+      "description": "remove model-keys/models page"
+    },
+    {
+      "title": "split out all icons",
+      "description": "split out all icons"
+    },
+    {
+      "title": "minor fix to model m...",
+      "description": "minor fix to model management ui"
+    },
+    {
+      "title": "new model management...",
+      "description": "new model management page"
+    },
+    {
+      "title": "default to 7 days",
+      "description": "default to 7 days"
+    },
+    {
+      "title": "ui adjustments",
+      "description": "ui adjustments"
+    },
+    {
+      "title": "add restore script",
+      "description": "add restore script"
+    },
+    {
+      "title": "add restore-dev.loca...",
+      "description": "add restore-dev.local"
+    },
+    {
+      "title": "ensure UserMcp when ...",
+      "description": "ensure UserMcp when update"
+    },
+    {
+      "title": "access permission al...",
+      "description": "access permission always controlled by UserMcp"
+    },
+    {
+      "title": "now it's all good",
+      "description": "now it's all good"
+    },
+    {
+      "title": "no need server label...",
+      "description": "no need server label in tool call"
+    },
+    {
+      "title": "add several fields",
+      "description": "add several fields"
+    },
+    {
+      "title": "all good",
+      "description": "all good"
+    },
+    {
+      "title": "fix compilation erro...",
+      "description": "fix compilation error"
+    },
+    {
+      "title": "fix chat not streame...",
+      "description": "fix chat not streamed issue"
+    },
+    {
+      "title": "switch into toolCall...",
+      "description": "switch into toolCallGroup"
+    },
+    {
+      "title": "some minor ui change...",
+      "description": "some minor ui changes"
+    },
+    {
+      "title": "fix FE compilation e...",
+      "description": "fix FE compilation error"
+    },
+    {
+      "title": "road to fix compilat...",
+      "description": "road to fix compilation error"
+    },
+    {
+      "title": "fix compilation erro...",
+      "description": "fix compilation error"
+    },
+    {
+      "title": "allow show tool call...",
+      "description": "allow show tool call group now"
+    },
+    {
+      "title": "fix another compilat...",
+      "description": "fix another compilation error"
+    },
+    {
+      "title": "fix compilation erro...",
+      "description": "fix compilation error"
+    },
+    {
+      "title": "correct temperature ...",
+      "description": "correct temperature ui"
+    },
+    {
+      "title": "normalize chat span ...",
+      "description": "normalize chat span settings"
+    },
+    {
+      "title": "all workflow worked",
+      "description": "all workflow worked"
+    },
+    {
+      "title": "chat can use mcp now...",
+      "description": "chat can use mcp now."
+    },
+    {
+      "title": "road to edit mcp",
+      "description": "road to edit mcp"
+    },
+    {
+      "title": "optimize image size ...",
+      "description": "optimize image size UI"
+    },
+    {
+      "title": "consider header in m...",
+      "description": "consider header in mcp hash"
+    },
+    {
+      "title": "now can specify imag...",
+      "description": "now can specify image size"
+    },
+    {
+      "title": "remove empty line",
+      "description": "remove empty line"
+    },
+    {
+      "title": "support use mcps/ima...",
+      "description": "support use mcps/imageSize in call"
+    },
+    {
+      "title": "done backend mcp pre...",
+      "description": "done backend mcp preset/span"
+    },
+    {
+      "title": "don't always select ...",
+      "description": "don't always select first conversation when delete"
+    },
+    {
+      "title": "optimize mcp managem...",
+      "description": "optimize mcp management"
+    },
+    {
+      "title": "fix some minor UI ch...",
+      "description": "fix some minor UI changes"
+    },
+    {
+      "title": "optimize mcp UI",
+      "description": "optimize mcp UI"
+    },
+    {
+      "title": "add mcp management f...",
+      "description": "add mcp management frontend UI"
+    },
+    {
+      "title": "sort",
+      "description": "sort"
+    },
+    {
+      "title": "complete unit tests",
+      "description": "complete unit tests"
+    },
+    {
+      "title": "support update mcp s...",
+      "description": "support update mcp server"
+    },
+    {
+      "title": "move requireApproval...",
+      "description": "move requireApproval to inner side"
+    },
+    {
+      "title": "supports user level ...",
+      "description": "supports user level mcp management"
+    },
+    {
+      "title": "add admin mcp server...",
+      "description": "add admin mcp server controller"
+    },
+    {
+      "title": "update basic data",
+      "description": "update basic data"
+    },
+    {
+      "title": "optimize sseresponse...",
+      "description": "optimize sseresponseline"
+    },
+    {
+      "title": "update database",
+      "description": "update database"
+    },
+    {
+      "title": "fix gpt-5 tool calli...",
+      "description": "fix gpt-5 tool calling"
+    },
+    {
+      "title": "google ai passed",
+      "description": "google ai passed"
+    },
+    {
+      "title": "fix some run errors",
+      "description": "fix some run errors"
+    },
+    {
+      "title": "error count: 0",
+      "description": "error count: 0"
+    },
+    {
+      "title": "huge step wip",
+      "description": "huge step wip"
+    },
+    {
+      "title": "finally some progres...",
+      "description": "finally some progress"
+    },
+    {
+      "title": "process",
+      "description": "process"
+    },
+    {
+      "title": "implement calling to...",
+      "description": "implement calling tool"
+    },
+    {
+      "title": "fix azure file migra...",
+      "description": "fix azure file migrator"
+    },
+    {
+      "title": "update mcp schema",
+      "description": "update mcp schema"
+    },
+    {
+      "title": "add mcp tables",
+      "description": "add mcp tables"
+    },
+    {
+      "title": "release 1.6.9",
+      "description": "release 1.6.9"
+    },
+    {
+      "title": "support force 3:2/2:...",
+      "description": "support force 3:2/2:3"
+    },
+    {
+      "title": "add model when edit ...",
+      "description": "add model when edit image"
+    },
+    {
+      "title": "now response api see...",
+      "description": "now response api seems worked again"
+    },
+    {
+      "title": "gpt-5 response api d...",
+      "description": "gpt-5 response api don't seems reliable for now"
+    },
+    {
+      "title": "add reliable error m...",
+      "description": "add reliable error message for gpt-5"
+    },
+    {
+      "title": "update readme",
+      "description": "update readme"
+    },
+    {
+      "title": "map google ai reason...",
+      "description": "map google ai reasoning effort low as 1024 tokens"
+    },
+    {
+      "title": "fix gpt-5-chat, fix ...",
+      "description": "fix gpt-5-chat, fix gemini-2.5-pro in low reasoning effort"
+    },
+    {
+      "title": "release 1.6.7",
+      "description": "release 1.6.7"
+    },
+    {
+      "title": "release 1.6.7",
+      "description": "release 1.6.7"
+    },
+    {
+      "title": "add missing cred",
+      "description": "add missing cred"
+    },
+    {
+      "title": "all switch into r2",
+      "description": "all switch into r2"
+    },
+    {
+      "title": "all minio to r2",
+      "description": "all minio to r2"
+    },
+    {
+      "title": "correct to aws s3 cp",
+      "description": "correct to aws s3 cp"
+    },
+    {
+      "title": "see if r2 works or n...",
+      "description": "see if r2 works or not"
+    },
+    {
+      "title": "add native support f...",
+      "description": "add native support for gpt-5 series,qwen3 series,glm-4.5 series"
+    },
+    {
+      "title": "1.6.6 release: remov...",
+      "description": "1.6.6 release: remove azure openai .net sdk"
+    },
+    {
+      "title": "consolidate openai s...",
+      "description": "consolidate openai sdk"
+    },
+    {
+      "title": "fix response api jso...",
+      "description": "fix response api json schema issue"
+    },
+    {
+      "title": "remove",
+      "description": "remove"
+    },
+    {
+      "title": "Add Azure One Key De...",
+      "description": "Add Azure One Key Deployment Script (#92)"
+    },
+    {
+      "title": "bump version",
+      "description": "bump version"
+    },
+    {
+      "title": "add kimi new models",
+      "description": "add kimi new models"
+    },
+    {
+      "title": "grok-4 ready",
+      "description": "grok-4 ready"
+    },
+    {
+      "title": "upgrade to use .net ...",
+      "description": "upgrade to use .net 9"
+    },
+    {
+      "title": "switch to use ubuntu...",
+      "description": "switch to use ubuntu 22.04"
+    },
+    {
+      "title": "optimize reasoning s...",
+      "description": "optimize reasoning summary for o3-pro"
+    },
+    {
+      "title": "enable async api for...",
+      "description": "enable async api for o3-pro"
+    },
+    {
+      "title": "correct yml filename",
+      "description": "correct yml filename"
+    },
+    {
+      "title": "elif",
+      "description": "elif"
+    },
+    {
+      "title": "optimize deployment",
+      "description": "optimize deployment"
+    },
+    {
+      "title": "go to openai 220",
+      "description": "go to openai 220"
+    },
+    {
+      "title": "added codex-mini",
+      "description": "added codex-mini"
+    },
+    {
+      "title": "add new recent model...",
+      "description": "add new recent models"
+    },
+    {
+      "title": "bump version to 1.6....",
+      "description": "bump version to 1.6.2"
+    },
+    {
+      "title": "selecting selected m...",
+      "description": "selecting selected message won't set leaf id"
+    },
+    {
+      "title": "change full screen k...",
+      "description": "change full screen key combination to ctrl+f"
+    },
+    {
+      "title": "fix edit user model ...",
+      "description": "fix edit user model issues"
+    },
+    {
+      "title": "add full screen key ...",
+      "description": "add full screen key combination"
+    },
+    {
+      "title": "yield status code in...",
+      "description": "yield status code in openai compatible sdk"
+    },
+    {
+      "title": "supports google gemi...",
+      "description": "supports google gemini think"
+    },
+    {
+      "title": "fix a gpt-image-1 En...",
+      "description": "fix a gpt-image-1 EndUserId issue."
+    },
+    {
+      "title": "fix o3/o4-mini can't...",
+      "description": "fix o3/o4-mini can't accept image input issue"
+    },
+    {
+      "title": "bump version to 1.6....",
+      "description": "bump version to 1.6.0"
+    },
+    {
+      "title": "change upload button...",
+      "description": "change upload button capture"
+    },
+    {
+      "title": "full writing hide sc...",
+      "description": "full writing hide scrolldown button"
+    },
+    {
+      "title": "optimize ui",
+      "description": "optimize ui"
+    },
+    {
+      "title": "merged code",
+      "description": "merged code"
+    },
+    {
+      "title": "upload button suppor...",
+      "description": "upload button support capture"
+    },
+    {
+      "title": "optimize chat input ...",
+      "description": "optimize chat input ui"
+    },
+    {
+      "title": "fix a issue that cau...",
+      "description": "fix a issue that causing load more failed"
+    },
+    {
+      "title": "fix gpt-image-1 imag...",
+      "description": "fix gpt-image-1 image response issue"
+    },
+    {
+      "title": "fix local image gpt-...",
+      "description": "fix local image gpt-image-1 issue"
+    },
+    {
+      "title": "change SseResponseLi...",
+      "description": "change SseResponseLine into JsonPolymorphic"
+    },
+    {
+      "title": "change scope into st...",
+      "description": "change scope into string"
+    },
+    {
+      "title": "refactor price calc ...",
+      "description": "refactor price calc logic"
+    },
+    {
+      "title": "update ResponseAt fi...",
+      "description": "update ResponseAt field in db"
+    },
+    {
+      "title": "optimize openai icon...",
+      "description": "optimize openai icon color"
+    },
+    {
+      "title": "fix openai chat serv...",
+      "description": "fix openai chat service"
+    },
+    {
+      "title": "better exception if ...",
+      "description": "better exception if failed to decrypt"
+    },
+    {
+      "title": "add message content ...",
+      "description": "add message content tool call/tool call response table"
+    },
+    {
+      "title": "only submit enabled ...",
+      "description": "only submit enabled models"
+    },
+    {
+      "title": "optimize edit user m...",
+      "description": "optimize edit user model dialog style"
+    },
+    {
+      "title": "add index to UserApi...",
+      "description": "add index to UserApiCache"
+    },
+    {
+      "title": "fix shared file issu...",
+      "description": "fix shared file issue"
+    },
+    {
+      "title": "all file download wi...",
+      "description": "all file download with api/file/private"
+    },
+    {
+      "title": "update db context",
+      "description": "update db context"
+    },
+    {
+      "title": "push db migration sc...",
+      "description": "push db migration scripts"
+    },
+    {
+      "title": "fix raw/preview togg...",
+      "description": "fix raw/preview toggle issue, use font-mono"
+    },
+    {
+      "title": "add a few notes in s...",
+      "description": "add a few notes in supported model providers"
+    },
+    {
+      "title": "bump version to 1.5",
+      "description": "bump version to 1.5"
+    },
+    {
+      "title": "allow disable thinki...",
+      "description": "allow disable thinking for qwen3"
+    },
+    {
+      "title": "upgrade dependencies",
+      "description": "upgrade dependencies"
+    },
+    {
+      "title": "add qwen3 models",
+      "description": "add qwen3 models"
+    },
+    {
+      "title": "suppress o3/o4-mini ...",
+      "description": "suppress o3/o4-mini error log"
+    },
+    {
+      "title": "confirmed response a...",
+      "description": "confirmed response api works"
+    },
+    {
+      "title": "google gemini suppor...",
+      "description": "google gemini supports code execution"
+    },
+    {
+      "title": "bump version to 1.4....",
+      "description": "bump version to 1.4.0"
+    },
+    {
+      "title": "correct function cal...",
+      "description": "correct function call response logic"
+    },
+    {
+      "title": "correct first respon...",
+      "description": "correct first response tick"
+    },
+    {
+      "title": "show warning",
+      "description": "show warning"
+    },
+    {
+      "title": "ignore openai compat...",
+      "description": "ignore openai compatible controller logs"
+    },
+    {
+      "title": "google ai now suppor...",
+      "description": "google ai now supports tool call"
+    },
+    {
+      "title": "response api also su...",
+      "description": "response api also supports tool call"
+    },
+    {
+      "title": "fix reasoning conten...",
+      "description": "fix reasoning content not show issue"
+    },
+    {
+      "title": "save cache usage in ...",
+      "description": "save cache usage in async way"
+    },
+    {
+      "title": "avoid duplicated aut...",
+      "description": "avoid duplicated authentication db call for api"
+    },
+    {
+      "title": "add cache metrics",
+      "description": "add cache metrics"
+    },
+    {
+      "title": "optimize performance...",
+      "description": "optimize performance by async client info call"
+    },
+    {
+      "title": "try increase api cac...",
+      "description": "try increase api cache performance"
+    },
+    {
+      "title": "cache also supports ...",
+      "description": "cache also supports tool call"
+    },
+    {
+      "title": "confirmed cache work...",
+      "description": "confirmed cache working"
+    },
+    {
+      "title": "implement cache supp...",
+      "description": "implement cache support"
+    },
+    {
+      "title": "road to go cache",
+      "description": "road to go cache"
+    },
+    {
+      "title": "initial commit of go...",
+      "description": "initial commit of google ai tool"
+    },
+    {
+      "title": "Add merge logic in f...",
+      "description": "Add merge logic in full chat completion"
+    },
+    {
+      "title": "add ToolCallSegment",
+      "description": "add ToolCallSegment"
+    },
+    {
+      "title": "initial commit of Us...",
+      "description": "initial commit of UserApiCache"
+    },
+    {
+      "title": "bump version",
+      "description": "bump version"
+    },
+    {
+      "title": "update basicdata for...",
+      "description": "update basicdata for ernie/gpt-image-1"
+    },
+    {
+      "title": "add ernie-x1/4.5 rel...",
+      "description": "add ernie-x1/4.5 related models"
+    },
+    {
+      "title": "parallel download im...",
+      "description": "parallel download images"
+    },
+    {
+      "title": "parallel download im...",
+      "description": "parallel download images"
+    },
+    {
+      "title": "gpt-image-1 now supp...",
+      "description": "gpt-image-1 now supports multiple images & mask"
+    },
+    {
+      "title": "edit image default c...",
+      "description": "edit image default count should also be 1"
+    },
+    {
+      "title": "default image count:...",
+      "description": "default image count: 1"
+    },
+    {
+      "title": "extract file name fr...",
+      "description": "extract file name from link"
+    },
+    {
+      "title": "pretend maxOutputTok...",
+      "description": "pretend maxOutputTokenCount as image count"
+    },
+    {
+      "title": "bump version to 1.3....",
+      "description": "bump version to 1.3.0"
+    },
+    {
+      "title": "add gpt-image-1 imag...",
+      "description": "add gpt-image-1 image-gen model support"
+    },
+    {
+      "title": "Message should updat...",
+      "description": "Message should updated by ctrl+enter"
+    },
+    {
+      "title": "bump version to 1.2....",
+      "description": "bump version to 1.2.0"
+    },
+    {
+      "title": "add file management ...",
+      "description": "add file management support"
+    },
+    {
+      "title": "adjust message uiux",
+      "description": "adjust message uiux"
+    },
+    {
+      "title": "adjust message uiux",
+      "description": "adjust message uiux"
+    },
+    {
+      "title": "adjust message uiux",
+      "description": "adjust message uiux"
+    },
+    {
+      "title": "adjust message uiux",
+      "description": "adjust message uiux"
+    },
+    {
+      "title": "adjust message uiux",
+      "description": "adjust message uiux"
+    },
+    {
+      "title": "optimize ui",
+      "description": "optimize ui"
+    },
+    {
+      "title": "upload to minio sync",
+      "description": "upload to minio sync"
+    },
+    {
+      "title": "bump to 1.1.0, use 2...",
+      "description": "bump to 1.1.0, use 2 \\n between think"
+    },
+    {
+      "title": "Response API does no...",
+      "description": "Response API does not support image content part in assistant message"
+    },
+    {
+      "title": "azure supports respo...",
+      "description": "azure supports response api"
+    },
+    {
+      "title": "upgrade azure openai...",
+      "description": "upgrade azure openai sdk"
+    },
+    {
+      "title": "optimize default pro...",
+      "description": "optimize default prompt"
+    },
+    {
+      "title": "adjust message style",
+      "description": "adjust message style"
+    },
+    {
+      "title": "admin panel adapt mo...",
+      "description": "admin panel adapt mobile device"
+    },
+    {
+      "title": "upgrade openai .net ...",
+      "description": "upgrade openai .net sdk"
+    },
+    {
+      "title": "fix unit test",
+      "description": "fix unit test"
+    },
+    {
+      "title": "add toggle message d...",
+      "description": "add toggle message dispaly type"
+    },
+    {
+      "title": "bump version to 1.0....",
+      "description": "bump version to 1.0.2"
+    },
+    {
+      "title": "fix google gemini re...",
+      "description": "fix google gemini reasoning effort issue/non thinking model issue"
+    },
+    {
+      "title": "fix company import e...",
+      "description": "fix company import error"
+    },
+    {
+      "title": "remove useless refer...",
+      "description": "remove useless references"
+    },
+    {
+      "title": "add admin dashboard ...",
+      "description": "add admin dashboard chart"
+    },
+    {
+      "title": "fix default reasonin...",
+      "description": "fix default reasoning effort causing unable chat"
+    },
+    {
+      "title": "fix cicd changeslogs...",
+      "description": "fix cicd changeslogs not contained issue"
+    },
+    {
+      "title": "allow non-admin user...",
+      "description": "allow non-admin user for admin usage page"
+    },
+    {
+      "title": "increase network tim...",
+      "description": "increase network timeout for google gemini to 24 hours"
+    },
+    {
+      "title": "merged code",
+      "description": "merged code"
+    },
+    {
+      "title": "fix response speed i...",
+      "description": "fix response speed issues"
+    },
+    {
+      "title": "fix toFixed issues",
+      "description": "fix toFixed issues"
+    },
+    {
+      "title": "upgrade deps, gemini...",
+      "description": "upgrade deps, gemini supports reasoning effort"
+    },
+    {
+      "title": "add gemini 2.5 flash",
+      "description": "add gemini 2.5 flash"
+    },
+    {
+      "title": "add balance display/...",
+      "description": "add balance display/ fix url issues"
+    },
+    {
+      "title": "increase timeout to ...",
+      "description": "increase timeout to 24 hours, disable cancellation token for chat"
+    },
+    {
+      "title": "fix EF date translat...",
+      "description": "fix EF date translate issue"
+    },
+    {
+      "title": "avoid kv model in st...",
+      "description": "avoid kv model in statistics response"
+    },
+    {
+      "title": "add statistics contr...",
+      "description": "add statistics controller"
+    },
+    {
+      "title": "merged code",
+      "description": "merged code"
+    },
+    {
+      "title": "rename grok shortnam...",
+      "description": "rename grok shortname as grok-3"
+    },
+    {
+      "title": "azure openai follow ...",
+      "description": "azure openai follow the 1 hour network timeout"
+    },
+    {
+      "title": "fix div 0 issue",
+      "description": "fix div 0 issue"
+    },
+    {
+      "title": "add admin usage page",
+      "description": "add admin usage page"
+    },
+    {
+      "title": "add usage stat",
+      "description": "add usage stat"
+    },
+    {
+      "title": "add pagination numbe...",
+      "description": "add pagination number"
+    },
+    {
+      "title": "add usage stat api",
+      "description": "add usage stat api"
+    },
+    {
+      "title": "not always throw err...",
+      "description": "not always throw error when latest version failed to parse"
+    },
+    {
+      "title": "optimize prompt tab",
+      "description": "optimize prompt tab"
+    },
+    {
+      "title": "update useTranslatio...",
+      "description": "update useTranslation hooks"
+    },
+    {
+      "title": "set 401 not show mes...",
+      "description": "set 401 not show message"
+    },
+    {
+      "title": "fix apply-preset 500...",
+      "description": "fix apply-preset 500 issue"
+    },
+    {
+      "title": "add doubao 1.5 new m...",
+      "description": "add doubao 1.5 new models"
+    },
+    {
+      "title": "merged code",
+      "description": "merged code"
+    },
+    {
+      "title": "move usage page to t...",
+      "description": "move usage page to tab"
+    },
+    {
+      "title": "add back r-RN as doc...",
+      "description": "add back r-RN as docker image tag"
+    },
+    {
+      "title": "add o3/o4-mini suppo...",
+      "description": "add o3/o4-mini support"
+    },
+    {
+      "title": "fix usage time query...",
+      "description": "fix usage time query issue"
+    },
+    {
+      "title": "support session in u...",
+      "description": "support session in url"
+    },
+    {
+      "title": "fix shared message d...",
+      "description": "fix shared message display issues"
+    },
+    {
+      "title": "export file method t...",
+      "description": "export file method to get"
+    },
+    {
+      "title": "page send mutiple re...",
+      "description": "page send mutiple request"
+    },
+    {
+      "title": "fix modal display is...",
+      "description": "fix modal display issues"
+    },
+    {
+      "title": "merged code",
+      "description": "merged code"
+    },
+    {
+      "title": "add export excel and...",
+      "description": "add export excel and format date"
+    },
+    {
+      "title": "add gpt-4.1 mini/nan...",
+      "description": "add gpt-4.1 mini/nano for azure/github models"
+    },
+    {
+      "title": "fix excel export iss...",
+      "description": "fix excel export issue"
+    },
+    {
+      "title": "remove extra quote",
+      "description": "remove extra quote"
+    },
+    {
+      "title": "fix minor full versi...",
+      "description": "fix minor full version"
+    },
+    {
+      "title": "show tags as groups",
+      "description": "show tags as groups"
+    },
+    {
+      "title": "fix get changes sect...",
+      "description": "fix get changes section in cicd"
+    },
+    {
+      "title": "use non obsolete",
+      "description": "use non obsolete"
+    },
+    {
+      "title": "try correct multiple...",
+      "description": "try correct multiple jobs ENV share by step outputs"
+    },
+    {
+      "title": "correct semantic ver...",
+      "description": "correct semantic version variable"
+    },
+    {
+      "title": "using semantic versi...",
+      "description": "using semantic version cicd"
+    },
+    {
+      "title": "merged code",
+      "description": "merged code"
+    },
+    {
+      "title": "fix usage api prompt...",
+      "description": "fix usage api prompt 500 if kid is null"
+    },
+    {
+      "title": "get version from Ass...",
+      "description": "get version from AssemblyFileVersion"
+    },
+    {
+      "title": "optimize sql style",
+      "description": "optimize sql style"
+    },
+    {
+      "title": "fix query time",
+      "description": "fix query time"
+    },
+    {
+      "title": "add usage records li...",
+      "description": "add usage records list page"
+    },
+    {
+      "title": "no need specify From...",
+      "description": "no need specify FromQuery in IUsageQuery"
+    },
+    {
+      "title": "excel query should n...",
+      "description": "excel query should not passing page/pageSize"
+    },
+    {
+      "title": "skip/take should not...",
+      "description": "skip/take should not specified in query"
+    },
+    {
+      "title": "specify bash -s",
+      "description": "specify bash -s"
+    },
+    {
+      "title": "rollback cicd ssh",
+      "description": "rollback cicd ssh"
+    },
+    {
+      "title": "add export as excel",
+      "description": "add export as excel"
+    },
+    {
+      "title": "specify query shortn...",
+      "description": "specify query shortname"
+    },
+    {
+      "title": "fix decrypt api key ...",
+      "description": "fix decrypt api key id"
+    },
+    {
+      "title": "add gpt-4.1",
+      "description": "add gpt-4.1"
+    },
+    {
+      "title": "quote branch in cicd",
+      "description": "quote branch in cicd"
+    },
+    {
+      "title": "list api key using g...",
+      "description": "list api key using guid"
+    },
+    {
+      "title": "add usage page",
+      "description": "add usage page"
+    },
+    {
+      "title": "fix change model mod...",
+      "description": "fix change model modal display issues"
+    },
+    {
+      "title": "optimize message thi...",
+      "description": "optimize message thinking display"
+    },
+    {
+      "title": "add language select",
+      "description": "add language select"
+    },
+    {
+      "title": "adjust ui",
+      "description": "adjust ui"
+    },
+    {
+      "title": "add theme setting",
+      "description": "add theme setting"
+    },
+    {
+      "title": "adjust setting ui",
+      "description": "adjust setting ui"
+    },
+    {
+      "title": "adjust settings page",
+      "description": "adjust settings page"
+    },
+    {
+      "title": "try fix feature cicd...",
+      "description": "try fix feature cicd since server switched into pwsh."
+    },
+    {
+      "title": "add settings sheet",
+      "description": "add settings sheet"
+    },
+    {
+      "title": "add setting page",
+      "description": "add setting page"
+    },
+    {
+      "title": "Update README_EN.md",
+      "description": "Update README_EN.md"
+    },
+    {
+      "title": "Update README.md",
+      "description": "Update README.md"
+    }
+  ]
+}

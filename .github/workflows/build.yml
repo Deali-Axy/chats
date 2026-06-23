@@ -27,7 +27,9 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v5
-        
+        with:
+          fetch-depth: 0
+
       - name: Get Version
         id: get_version
         run: |
@@ -43,7 +45,10 @@ jobs:
           echo "major_ver=${major_ver}" >> $GITHUB_OUTPUT
           echo "msbuild_args=/p:Version=${full_ver} /p:AssemblyVersion=${full_ver} /p:FileVersion=${full_ver} /p:InformationalVersion=${full_ver}" >> $GITHUB_OUTPUT
           echo "FE_VERSION=${full_ver}" >> $GITHUB_ENV
-        
+
+      - name: Generate poster data
+        run: python scripts/generate_poster_data.py ${{ steps.get_version.outputs.patch_full_ver }}
+
       - name: Cache FE build output
         id: fe_build_cache
         uses: actions/cache@v5

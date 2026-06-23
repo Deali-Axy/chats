@@ -17,72 +17,69 @@ import {
   ArrowRight,
 } from 'lucide-react';
 
-const ReleasePoster: React.FC = () => {
-  const features = [
-    {
-      icon: <MessageSquare className="h-5 w-5" />,
-      title: '临时聊天功能',
-      description: '支持创建临时对话，在侧边栏显示，切换时不再自动删除',
-    },
-    {
-      icon: <Search className="h-5 w-5" />,
-      title: '搜索功能增强',
-      description: '手动触发搜索、结果弹窗、内容高亮显示',
-    },
-    {
-      icon: <BarChart3 className="h-5 w-5" />,
-      title: '聊天标题总结',
-      description: '自动为聊天生成标题摘要',
-    },
-    {
-      icon: <Sparkles className="h-5 w-5" />,
-      title: '模型定价页面',
-      description: '新增独立的模型价格查看页面，支持搜索和筛选',
-    },
-    {
-      icon: <LogIn className="h-5 w-5" />,
-      title: '登录页优化',
-      description: '添加轮播背景、产品介绍卡与联系弹窗',
-    },
-  ];
+export interface PosterFeature {
+  title: string;
+  description: string;
+}
 
-  const uiImprovements = [
-    {
-      icon: <Layout className="h-5 w-5" />,
-      title: '侧边栏重构',
-      description: '使用 shadcn sidebar 组件重新设计',
-    },
-    {
-      icon: <Code className="h-5 w-5" />,
-      title: '代码块优化',
-      description: '支持复制、下载、展开/收起功能',
-    },
-    {
-      icon: <Palette className="h-5 w-5" />,
-      title: '欢迎界面',
-      description: '改进欢迎引导界面',
-    },
-  ];
+export interface PosterData {
+  version: string;
+  date: string;
+  tagline: string;
+  features: PosterFeature[];
+  uiImprovements: PosterFeature[];
+  bugFixes: string[];
+  otherUpdates: PosterFeature[];
+}
 
-  const bugFixes = [
-    '修复临时聊天的多个问题',
-    '修复消息加载竞态条件',
-    '修复搜索栏与菜单按钮遮挡问题',
-    '修复 SidebarProvider 导致聊天记录无法显示',
-  ];
+// 默认图标映射
+const featureIcons: Record<string, React.ReactNode> = {
+  '临时聊天': <MessageSquare className="h-5 w-5" />,
+  '搜索功能': <Search className="h-5 w-5" />,
+  '聊天标题': <BarChart3 className="h-5 w-5" />,
+  '模型定价': <Sparkles className="h-5 w-5" />,
+  '登录': <LogIn className="h-5 w-5" />,
+  '代码块': <Code className="h-5 w-5" />,
+  '海报': <Download className="h-5 w-5" />,
+};
 
-  const otherUpdates = [
-    {
-      icon: <Package className="h-5 w-5" />,
-      title: '包管理器迁移',
-      description: '从 npm 迁移到 pnpm',
-    },
-    {
-      icon: <Zap className="h-5 w-5" />,
-      title: '构建优化',
-      description: '修复 TypeScript 类型错误',
-    },
-  ];
+const uiIcons: Record<string, React.ReactNode> = {
+  '侧边栏': <Layout className="h-5 w-5" />,
+  '代码块': <Code className="h-5 w-5" />,
+  '欢迎界面': <Palette className="h-5 w-5" />,
+  '模型定价': <BarChart3 className="h-5 w-5" />,
+};
+
+const otherIcons: Record<string, React.ReactNode> = {
+  '包管理': <Package className="h-5 w-5" />,
+  '构建': <Zap className="h-5 w-5" />,
+  '侧边栏': <Layout className="h-5 w-5" />,
+  '模型定价': <BarChart3 className="h-5 w-5" />,
+};
+
+function getIcon(title: string, iconMap: Record<string, React.ReactNode>): React.ReactNode {
+  for (const [key, icon] of Object.entries(iconMap)) {
+    if (title.includes(key)) return icon;
+  }
+  return <Sparkles className="h-5 w-5" />;
+}
+
+interface ReleasePosterProps {
+  data: PosterData;
+}
+
+const ReleasePoster: React.FC<ReleasePosterProps> = ({ data }) => {
+  const { version, date, tagline, features, uiImprovements, bugFixes, otherUpdates } = data;
+
+  // 格式化日期为中文格式
+  const formatDate = (dateStr: string) => {
+    try {
+      const d = new Date(dateStr);
+      return `${d.getFullYear()} 年 ${d.getMonth() + 1} 月 ${d.getDate()} 日`;
+    } catch {
+      return dateStr;
+    }
+  };
 
   return (
     <div
@@ -111,114 +108,117 @@ const ReleasePoster: React.FC = () => {
           </h1>
           <div className="mb-4 inline-flex items-center gap-3">
             <span className="rounded-lg bg-gradient-to-r from-purple-500 to-blue-500 px-4 py-2 text-3xl font-bold text-white">
-              v1.13.0
+              v{version}
             </span>
           </div>
-          <p className="text-lg text-gray-300">
-            全新功能与体验优化
-          </p>
+          <p className="text-lg text-gray-300">{tagline}</p>
         </div>
 
         {/* 新功能区域 */}
-        <div className="mb-8">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/20">
-              <Sparkles className="h-5 w-5 text-green-400" />
-            </div>
-            <h2 className="text-2xl font-semibold text-white">✨ 新功能</h2>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {features.map((feature, index) => (
-              <div
-                key={index}
-                className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all hover:bg-white/10"
-              >
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="text-purple-400">{feature.icon}</div>
-                  <h3 className="text-base font-semibold text-white">{feature.title}</h3>
-                </div>
-                <p className="text-sm leading-relaxed text-gray-300">{feature.description}</p>
+        {features.length > 0 && (
+          <div className="mb-8">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-green-500/20">
+                <Sparkles className="h-5 w-5 text-green-400" />
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* UI 改进区域 */}
-        <div className="mb-8">
-          <div className="mb-5 flex items-center gap-3">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20">
-              <Layout className="h-5 w-5 text-blue-400" />
+              <h2 className="text-2xl font-semibold text-white">✨ 新功能</h2>
             </div>
-            <h2 className="text-2xl font-semibold text-white">🎨 UI/UX 改进</h2>
-          </div>
-          <div className="grid grid-cols-3 gap-4">
-            {uiImprovements.map((item, index) => (
-              <div
-                key={index}
-                className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
-              >
-                <div className="mb-2 flex items-center gap-2">
-                  <div className="text-blue-400">{item.icon}</div>
-                  <h3 className="text-sm font-semibold text-white">{item.title}</h3>
-                </div>
-                <p className="text-xs leading-relaxed text-gray-300">{item.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Bug 修复和其他更新 */}
-        <div className="mb-8 grid grid-cols-2 gap-6">
-          {/* Bug 修复 */}
-          <div>
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/20">
-                <Bug className="h-5 w-5 text-red-400" />
-              </div>
-              <h2 className="text-xl font-semibold text-white">🐛 Bug 修复</h2>
-            </div>
-            <div className="space-y-2">
-              {bugFixes.map((fix, index) => (
+            <div className="grid grid-cols-2 gap-4">
+              {features.map((feature, index) => (
                 <div
                   key={index}
-                  className="flex items-start gap-2 rounded-lg bg-white/5 p-3"
+                  className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm transition-all hover:bg-white/10"
                 >
-                  <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-400" />
-                  <span className="text-sm text-gray-300">{fix}</span>
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="text-purple-400">{getIcon(feature.title, featureIcons)}</div>
+                    <h3 className="text-base font-semibold text-white">{feature.title}</h3>
+                  </div>
+                  <p className="text-sm leading-relaxed text-gray-300">{feature.description}</p>
                 </div>
               ))}
             </div>
           </div>
+        )}
 
-          {/* 其他更新 */}
-          <div>
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/20">
-                <Package className="h-5 w-5 text-orange-400" />
+        {/* UI 改进区域 */}
+        {uiImprovements.length > 0 && (
+          <div className="mb-8">
+            <div className="mb-5 flex items-center gap-3">
+              <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/20">
+                <Layout className="h-5 w-5 text-blue-400" />
               </div>
-              <h2 className="text-xl font-semibold text-white">📦 其他更新</h2>
+              <h2 className="text-2xl font-semibold text-white">🎨 UI/UX 改进</h2>
             </div>
-            <div className="space-y-3">
-              {otherUpdates.map((item, index) => (
+            <div className="grid grid-cols-3 gap-4">
+              {uiImprovements.map((item, index) => (
                 <div
                   key={index}
                   className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
                 >
-                  <div className="mb-1 flex items-center gap-2">
-                    <div className="text-orange-400">{item.icon}</div>
+                  <div className="mb-2 flex items-center gap-2">
+                    <div className="text-blue-400">{getIcon(item.title, uiIcons)}</div>
                     <h3 className="text-sm font-semibold text-white">{item.title}</h3>
                   </div>
-                  <p className="text-xs text-gray-300">{item.description}</p>
+                  <p className="text-xs leading-relaxed text-gray-300">{item.description}</p>
                 </div>
               ))}
-              <div className="rounded-xl border border-white/10 bg-gradient-to-r from-purple-500/20 to-blue-500/20 p-4">
-                <p className="text-sm font-medium text-white">
-                  品牌重命名：Sdcb Chats → Ayaka Chats
-                </p>
-              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Bug 修复和其他更新 */}
+        {(bugFixes.length > 0 || otherUpdates.length > 0) && (
+          <div className="mb-8 grid grid-cols-2 gap-6">
+            {/* Bug 修复 */}
+            {bugFixes.length > 0 && (
+              <div>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/20">
+                    <Bug className="h-5 w-5 text-red-400" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-white">🐛 Bug 修复</h2>
+                </div>
+                <div className="space-y-2">
+                  {bugFixes.map((fix, index) => (
+                    <div
+                      key={index}
+                      className="flex items-start gap-2 rounded-lg bg-white/5 p-3"
+                    >
+                      <CheckCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-green-400" />
+                      <span className="text-sm text-gray-300">{fix}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* 其他更新 */}
+            {otherUpdates.length > 0 && (
+              <div>
+                <div className="mb-4 flex items-center gap-3">
+                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/20">
+                    <Package className="h-5 w-5 text-orange-400" />
+                  </div>
+                  <h2 className="text-xl font-semibold text-white">📦 其他更新</h2>
+                </div>
+                <div className="space-y-3">
+                  {otherUpdates.map((item, index) => (
+                    <div
+                      key={index}
+                      className="rounded-xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm"
+                    >
+                      <div className="mb-1 flex items-center gap-2">
+                        <div className="text-orange-400">{getIcon(item.title, otherIcons)}</div>
+                        <h3 className="text-sm font-semibold text-white">{item.title}</h3>
+                      </div>
+                      <p className="text-xs text-gray-300">{item.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* 底部信息 */}
         <div className="mt-10 border-t border-white/10 pt-6">
@@ -233,7 +233,7 @@ const ReleasePoster: React.FC = () => {
               </div>
             </div>
             <div className="text-right">
-              <p className="text-sm text-gray-400">2026 年 6 月 22 日</p>
+              <p className="text-sm text-gray-400">{formatDate(date)}</p>
               <p className="text-xs text-gray-500">立即升级体验全新功能</p>
             </div>
           </div>

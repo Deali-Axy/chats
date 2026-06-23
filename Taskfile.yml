@@ -35,6 +35,11 @@ tasks:
       - task: build:fe
       - task: build:be
 
+  generate:poster:
+    desc: 从 git 历史生成海报数据（可传版本号，如：task generate:poster -- 1.13.0）
+    cmds:
+      - python scripts/generate_poster_data.py {{.CLI_ARGS}}
+
   build:fe:
     desc: 构建前端项目
     dir: '{{.FE_DIR}}'
