@@ -1,10 +1,10 @@
 import React from 'react';
 import Head from 'next/head';
 import dynamic from 'next/dynamic';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText } from 'lucide-react';
 import Link from 'next/link';
-import posterData from '@/data/release-poster.json';
-import type { PosterData } from '@/components/Poster/ReleasePoster';
+import changelogData from '@/data/changelog.json';
+import type { ChangelogData } from '@/types/changelog';
 
 // 动态导入海报组件，避免 SSR 问题
 const ReleasePoster = dynamic(() => import('@/components/Poster/ReleasePoster'), {
@@ -21,7 +21,7 @@ const PosterDownloadButton = dynamic(
   { ssr: false }
 );
 
-const data = posterData as PosterData;
+const data = changelogData as ChangelogData;
 
 export default function PosterPage() {
   return (
@@ -33,13 +33,20 @@ export default function PosterPage() {
 
       <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 py-8">
         {/* 顶部导航 */}
-        <div className="container mx-auto mb-8 px-4">
+        <div className="container mx-auto mb-8 flex items-center justify-between px-4">
           <Link
             href="/home"
             className="inline-flex items-center gap-2 text-gray-400 transition-colors hover:text-white"
           >
             <ArrowLeft className="h-4 w-4" />
             返回首页
+          </Link>
+          <Link
+            href="/changelog"
+            className="inline-flex items-center gap-2 text-sm text-purple-400 transition-colors hover:text-purple-300"
+          >
+            <FileText className="h-4 w-4" />
+            查看完整更新日志
           </Link>
         </div>
 

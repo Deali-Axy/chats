@@ -16,21 +16,7 @@ import {
   XCircle,
   ArrowRight,
 } from 'lucide-react';
-
-export interface PosterFeature {
-  title: string;
-  description: string;
-}
-
-export interface PosterData {
-  version: string;
-  date: string;
-  tagline: string;
-  features: PosterFeature[];
-  uiImprovements: PosterFeature[];
-  bugFixes: string[];
-  otherUpdates: PosterFeature[];
-}
+import type { ChangelogData } from '@/types/changelog';
 
 // 默认图标映射
 const featureIcons: Record<string, React.ReactNode> = {
@@ -65,7 +51,7 @@ function getIcon(title: string, iconMap: Record<string, React.ReactNode>): React
 }
 
 interface ReleasePosterProps {
-  data: PosterData;
+  data: ChangelogData;
 }
 
 const ReleasePoster: React.FC<ReleasePosterProps> = ({ data }) => {
