@@ -37,14 +37,16 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.Name,
-                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
+                    ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps
                         .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders })
@@ -90,14 +92,16 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.Name,
-                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
+                    ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray(),
                 }).ToArray(),
@@ -133,13 +137,17 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             );
         }
 
-        // 获取匹配的会话列表（包含关联数据）
+        // 获取匹配的会话列表（包含关联数据；Model 走 snapshot）
         List<Chat> chatList = await query
             .Include(x => x.ChatTags)
             .Include(x => x.ChatSpans)
                 .ThenInclude(span => span.ChatConfig)
+                    .ThenInclude(config => config.ChatConfigMcps)
+            .Include(x => x.ChatSpans)
+                .ThenInclude(span => span.ChatConfig)
                     .ThenInclude(config => config.Model)
-                        .ThenInclude(model => model.ModelKey)
+                        .ThenInclude(model => model.CurrentSnapshot)
+                            .ThenInclude(snapshot => snapshot.ModelKeySnapshot)
             .Include(x => x.ChatShares)
             .Include(x => x.ChatTurns)
                 .ThenInclude(turn => turn.Steps)
@@ -147,7 +155,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                         .ThenInclude(content => content.StepContentText)
             .ToListAsync(cancellationToken);
 
-        // 构建响应，包含匹配的内容片段
+        // 构建响应，包含匹配的内容片段（保留搜索高亮 + 临时聊天字段）
         List<ChatsResponse> responses = new();
         foreach (Chat chat in chatList)
         {
@@ -264,7 +272,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                         WebSearchEnabled = false,
                         CodeExecutionEnabled = false,
                         MaxOutputTokens = null,
-                        ReasoningEffortId = 0,
+                        Effort = null,
                         SystemPrompt = defaultPrompt.Content,
                     }
                 }

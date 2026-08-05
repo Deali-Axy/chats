@@ -45,6 +45,18 @@ All capabilities inherited from upstream:
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
+## 🆕 Latest Release (1.12.0)
+
+- 📅 Release Date: 2026-06-14
+- 🧩 Request customization: Model Key and Model support custom headers and RFC 6902 JSON Patch body patches, with Model-level settings overriding Key-level settings
+- 🌐 Custom URL: Model adds `Custom URL` with `{baseUrl}` placeholder support for gateways, proxies, and provider-specific endpoints
+- 🧾 Configuration snapshots: adds `ModelKeySnapshot`, `ModelSnapshot`, and `ChatConfigSnapshot` so historical chats, usage, and billing reference immutable configuration facts
+- 🤖 Claude Code compatibility: Anthropic Messages supports in-message `role=system`, matching the latest Claude Code request structure
+- 🖼️ Image and UX fixes: image generation supports output format/compression, with fixes for image preview, model ordering, signed file URL caching, and protocol compatibility
+- 🛠️ Upgrade focus: the migration restructures model configuration references and removes old mutable config columns and `ChatConfigArchived`; custom SQL/reports should read snapshot tables instead
+
+👉 [View 1.12.0 Release Notes](./doc/en-US/release-notes/1.12.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+
 ## Quick Start
 
 Start with a single command (requires Docker):
@@ -90,6 +102,7 @@ This project is forked from [sdcb/chats](https://github.com/sdcb/chats) and cont
 
 - **Upstream Repository**: [github.com/sdcb/chats](https://github.com/sdcb/chats)
 - **Upstream Documentation**: [DeepWiki](https://deepwiki.com/sdcb/chats)
+- **Upstream Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 
 ---
 

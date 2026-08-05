@@ -45,6 +45,18 @@ Ayaka Chats 是一个强大灵活的大语言模型统一前端，支持 22+ 主
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
+## 🆕 最新版本（1.12.0）
+
+- 📅 发布日期：2026-06-14
+- 🧩 请求自定义：Model Key 和 Model 支持自定义 Header 与 RFC 6902 JSON Patch 请求体补丁，Model 层可以覆盖 Key 层配置
+- 🌐 自定义 URL：Model 新增 `Custom URL`，支持 `{baseUrl}` 占位符，便于适配网关、代理和厂商私有 endpoint
+- 🧾 配置快照化：新增 `ModelKeySnapshot`、`ModelSnapshot`、`ChatConfigSnapshot`，历史会话、用量和账单引用不可变配置事实
+- 🤖 Claude Code 兼容：Anthropic Messages 支持消息中的 `role=system`，兼容最新 Claude Code 请求结构
+- 🖼️ 图像与体验：图像生成支持输出格式/压缩，修复图片预览、模型排序、签名文件 URL 缓存和多项协议兼容问题
+- 🛠️ 升级重点：迁移脚本会重构模型配置引用关系，删除旧的可变配置列和 `ChatConfigArchived` 表；自定义 SQL/报表需要改读 snapshot 表
+
+👉 [查看 1.12.0 发布说明](./doc/zh-CN/release-notes/1.12.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+
 ## 快速开始
 
 一条命令即可启动（需要 Docker）：
@@ -90,6 +102,7 @@ mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped
 
 - **上游仓库**：[github.com/sdcb/chats](https://github.com/sdcb/chats)
 - **上游文档**：[DeepWiki](https://deepwiki.com/sdcb/chats)
+- **上游 Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
 
 ---
 

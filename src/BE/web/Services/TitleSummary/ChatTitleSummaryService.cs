@@ -84,7 +84,7 @@ public sealed class ChatTitleSummaryService(
             }
 
             UserModel? userModel = await SelectUserModel(userId, currentSpanUserModel, resolved, cancellationToken);
-            if (userModel == null || userModel.Model.ApiType == DBApiType.OpenAIImageGeneration)
+            if (userModel == null || (DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId == DBApiType.OpenAIImageGeneration)
             {
                 EmitFallback(writer, fallbackTitle);
                 return fallbackTitle;
@@ -113,7 +113,7 @@ public sealed class ChatTitleSummaryService(
                             Temperature = null,
                             WebSearchEnabled = false,
                             MaxOutputTokens = null,
-                            ReasoningEffortId = 0,
+                            Effort = null,
                             CodeExecutionEnabled = false,
                             SystemPrompt = null,
                             ImageSize = null,

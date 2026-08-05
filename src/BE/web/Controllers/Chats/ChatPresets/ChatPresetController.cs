@@ -11,7 +11,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authorization;
 using Chats.DB;
-using Chats.DB.Enums;
 
 namespace Chats.BE.Controllers.Chats.ChatPresets;
 
@@ -35,14 +34,16 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     Enabled = x.Enabled,
                     SystemPrompt = x.ChatConfig.SystemPrompt,
                     ModelId = x.ChatConfig.ModelId,
-                    ModelName = x.ChatConfig.Model.Name,
-                    ModelProviderId = x.ChatConfig.Model.ModelKey.ModelProviderId,
+                    ModelName = x.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = x.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = x.ChatConfig.Temperature,
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)x.ChatConfig.ReasoningEffortId,
+                    ReasoningEffort = x.ChatConfig.Effort,
                     ImageSize = x.ChatConfig.ImageSize,
+                    Format = x.ChatConfig.Format,
+                    Compression = x.ChatConfig.Compression,
                     ThinkingBudget = x.ChatConfig.ThinkingBudget,
                     Mcps = x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
@@ -221,7 +222,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                     WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                    ReasoningEffortId = x.ChatConfig.ReasoningEffortId,
+                    Effort = x.ChatConfig.Effort,
                     ImageSize = x.ChatConfig.ImageSize,
                     ChatConfigMcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatConfigMcp
                     {
@@ -273,7 +274,7 @@ public class ChatPresetController(ChatsDB db, CurrentUser currentUser, IUrlEncry
                 WebSearchEnabled = false,
                 CodeExecutionEnabled = false,
                 MaxOutputTokens = null,
-                ReasoningEffortId = 0,
+                Effort = null,
                 SystemPrompt = defaultPrompt.Content,
                 ImageSize = null,
             }

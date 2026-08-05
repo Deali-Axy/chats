@@ -7,24 +7,113 @@ using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
 using System.Net;
+using System.Text;
 
 namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
 public class AzureAIFoundryChatServiceTests
 {
-    /// <summary>
-    /// Creates a minimal Azure AI Foundry request for chat completion streaming tests.
-    /// </summary>
-    private static ChatRequest CreateStreamingRequest(Model model)
+    private sealed class CapturingHttpClientFactory(HttpStatusCode statusCode, string responseBody, Action<HttpRequestMessage> onRequest) : IHttpClientFactory
     {
-        var chatConfig = new ChatConfig
+        public HttpClient CreateClient(string name)
+        {
+            return new HttpClient(new CapturingHandler(statusCode, responseBody, onRequest));
+        }
+
+        private sealed class CapturingHandler(HttpStatusCode statusCode, string responseBody, Action<HttpRequestMessage> onRequest) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                onRequest(request);
+
+                HttpResponseMessage response = new(statusCode)
+                {
+                    Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(responseBody)))
+                };
+
+                response.Content.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue("text/event-stream")
+                {
+                    CharSet = "utf-8"
+                };
+
+                return Task.FromResult(response);
+            }
+        }
+    }
+
+    [Fact]
+    public async Task Streaming_ShouldUseAzureOpenAIPrefixInRequestUri()
+    {
+        // Arrange
+        string sse =
+            "data: {\"id\":\"chatcmpl-test\",\"object\":\"chat.completion.chunk\",\"created\":1773405995,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hello\"},\"finish_reason\":null}]}\n\n" +
+            "data: {\"id\":\"chatcmpl-test\",\"object\":\"chat.completion.chunk\",\"created\":1773405995,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n" +
+            "data: [DONE]\n\n";
+
+        Uri? requestUri = null;
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
+        {
+            requestUri = req.RequestUri;
+        });
+
+        AzureAIFoundryChatService service = new(httpClientFactory);
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
+        {
+            Id = 11,
+            ModelKeyId = 1,
+            Name = "TestKey",
+            Secret = "test-api-key",
+            Host = "https://rich-east-us2.openai.azure.com/",
+            ModelProviderId = (short)DBModelProvider.AzureAIFoundry,
+            CreatedAt = now,
+        };
+
+        ModelKey modelKey = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Grok",
+            DeploymentName = "grok-4-1-fast-reasoning",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
             Model = model,
         };
 
-        return new ChatRequest
+        ChatRequest request = new()
         {
             Messages = [NeutralMessage.FromUserText("hello")],
             ChatConfig = chatConfig,
@@ -32,50 +121,97 @@ public class AzureAIFoundryChatServiceTests
             Streamed = true,
             EndUserId = "8"
         };
-    }
 
-    /// <summary>
-    /// Creates a minimal Azure AI Foundry model for streaming parser tests.
-    /// </summary>
-    private static Model CreateAzureAIFoundryModel()
-    {
-        var modelKey = new ModelKey
+        // Act
+        await foreach (var _ in service.ChatStreamed(request, CancellationToken.None))
         {
-            Id = 1,
-            Name = "TestKey",
-            Secret = "test-api-key",
-            Host = "https://example.services.ai.azure.com/models",
-            ModelProviderId = (int)DBModelProvider.AzureAIFoundry,
-        };
+            // drain
+        }
 
-        return new Model
-        {
-            Id = 1,
-            Name = "Grok",
-            DeploymentName = "grok-4-1-fast-reasoning",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
-        };
+        // Assert
+        Assert.NotNull(requestUri);
+        Assert.Equal("https://rich-east-us2.openai.azure.com/openai/v1/chat/completions", requestUri!.ToString());
     }
 
     [Fact]
     public async Task Streaming_GrokUsageShouldRespectTotalTokens()
     {
-        var chunks = new List<string>
+        List<string> chunks = new()
         {
             "data: {\"id\":\"41b43bde-7f82-4a80-9692-91e8b0739f52\",\"object\":\"chat.completion.chunk\",\"created\":1773405995,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hello\"},\"finish_reason\":null}]}\n\n",
             "data: {\"id\":\"41b43bde-7f82-4a80-9692-91e8b0739f52\",\"object\":\"chat.completion.chunk\",\"created\":1773405995,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n",
             "data: {\"id\":\"41b43bde-7f82-4a80-9692-91e8b0739f52\",\"object\":\"chat.completion.chunk\",\"created\":1773405995,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[],\"usage\":{\"prompt_tokens\":69,\"completion_tokens\":837,\"total_tokens\":1737,\"prompt_tokens_details\":{\"text_tokens\":69,\"audio_tokens\":0,\"image_tokens\":0,\"cached_tokens\":0},\"completion_tokens_details\":{\"reasoning_tokens\":831,\"audio_tokens\":0,\"accepted_prediction_tokens\":0,\"rejected_prediction_tokens\":0},\"num_sources_used\":0,\"cost_in_usd_ticks\":0},\"system_fingerprint\":\"fp_39c5j0a324\"}\n\n",
             "data: [DONE]\n\n"
         };
+        DateTime now = DateTime.UtcNow;
 
-        var httpClientFactory = new FiddlerDumpHttpClientFactory(chunks, HttpStatusCode.OK);
-        var service = new AzureAIFoundryChatService(httpClientFactory);
-        var request = CreateStreamingRequest(CreateAzureAIFoundryModel());
+        FiddlerDumpHttpClientFactory httpClientFactory = new(chunks, HttpStatusCode.OK);
+        AzureAIFoundryChatService service = new(httpClientFactory);
 
-        var segments = new List<ChatSegment>();
+        ModelKeySnapshot modelKeySnapshot = new()
+        {
+            Id = 11,
+            ModelKeyId = 1,
+            Name = "TestKey",
+            Secret = "test-api-key",
+            Host = "https://example.services.ai.azure.com/models",
+            ModelProviderId = (short)DBModelProvider.AzureAIFoundry,
+            CreatedAt = now,
+        };
+
+        ModelKey modelKey = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Grok",
+            DeploymentName = "grok-4-1-fast-reasoning",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
+        {
+            Id = 1,
+            ModelId = 1,
+            Model = model,
+        };
+
+        ChatRequest request = new()
+        {
+            Messages = [NeutralMessage.FromUserText("hello")],
+            ChatConfig = chatConfig,
+            Source = UsageSource.Api,
+            Streamed = true,
+            EndUserId = "8"
+        };
+
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);
@@ -94,27 +230,97 @@ public class AzureAIFoundryChatServiceTests
     [InlineData("{\"index\":0,\"delta\":null,\"finish_reason\":\"stop\"}")]
     public async Task Streaming_FinalChunkWithoutObjectDelta_ShouldNotThrow(string finalChoice)
     {
-        var chunks = new List<string>
-        {
+        List<string> chunks =
+        [
             "data: {\"id\":\"chunk-1\",\"object\":\"chat.completion.chunk\",\"created\":1773405995,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"hello\"},\"finish_reason\":null}]}\n\n",
             $"data: {{\"id\":\"chunk-2\",\"object\":\"chat.completion.chunk\",\"created\":1773405996,\"model\":\"grok-4-1-fast-reasoning\",\"choices\":[{finalChoice}]}}\n\n",
             "data: [DONE]\n\n"
-        };
+        ];
 
-        var httpClientFactory = new FiddlerDumpHttpClientFactory(chunks, HttpStatusCode.OK);
-        var service = new AzureAIFoundryChatService(httpClientFactory);
-        var request = CreateStreamingRequest(CreateAzureAIFoundryModel());
+        FiddlerDumpHttpClientFactory httpClientFactory = new(chunks, HttpStatusCode.OK);
+        AzureAIFoundryChatService service = new(httpClientFactory);
+        ChatRequest request = CreateStreamingRequest(CreateAzureAIFoundryModel());
 
-        var segments = new List<ChatSegment>();
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);
         }
 
-        var textSegment = Assert.Single(segments.OfType<TextChatSegment>());
+        TextChatSegment textSegment = Assert.Single(segments.OfType<TextChatSegment>());
         Assert.Equal("hello", textSegment.Text);
 
-        var finishReason = Assert.Single(segments.OfType<FinishReasonChatSegment>());
+        FinishReasonChatSegment finishReason = Assert.Single(segments.OfType<FinishReasonChatSegment>());
         Assert.Equal(DBFinishReason.Stop, finishReason.FinishReason);
+    }
+
+    private static ChatRequest CreateStreamingRequest(Model model)
+    {
+        return new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("hello")],
+            ChatConfig = new ChatConfig
+            {
+                Id = 1,
+                ModelId = 1,
+                Model = model,
+            },
+            Source = UsageSource.Api,
+            Streamed = true,
+            EndUserId = "8"
+        };
+    }
+
+    private static Model CreateAzureAIFoundryModel()
+    {
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
+        {
+            Id = 11,
+            ModelKeyId = 1,
+            Name = "TestKey",
+            Secret = "test-api-key",
+            Host = "https://example.services.ai.azure.com/models",
+            ModelProviderId = (short)DBModelProvider.AzureAIFoundry,
+            CreatedAt = now,
+        };
+
+        ModelKey modelKey = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Grok",
+            DeploymentName = "grok-4-1-fast-reasoning",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+        return model;
     }
 }

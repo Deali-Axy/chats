@@ -108,6 +108,7 @@ interface Props {
   readonly?: boolean;
   chatId?: string;
   chatShareId?: string;
+  groupImageUrls?: string[];
   onEditResponseMessage?: (
     messageId: string,
     content: ResponseContent,
@@ -116,7 +117,7 @@ interface Props {
 }
 
 const ResponseMessage = (props: Props) => {
-  const { message, chatStatus, readonly, chatId, chatShareId, onEditResponseMessage } = props;
+  const { message, chatStatus, readonly, chatId, chatShareId, groupImageUrls, onEditResponseMessage } = props;
   const { t } = useTranslation();
 
   // 启用数学公式复制功能（复制时保留原始 LaTeX）
@@ -124,6 +125,7 @@ const ResponseMessage = (props: Props) => {
 
   const { id: messageId, status: messageStatus } = message;
   const content = useMemo(() => getMessageContents(message), [message.steps]);
+  const showPerStepActions = message.steps.length > 1;
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [editId, setEditId] = useState(EMPTY_ID);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -169,9 +171,14 @@ const ResponseMessage = (props: Props) => {
   };
 
   const handleImageClick = (imageUrl: string, allImages: string[], event: React.MouseEvent<HTMLImageElement>) => {
+    const normalizedImages = allImages.length > 0 ? allImages : [imageUrl];
+    const previewImageList = normalizedImages.includes(imageUrl)
+      ? normalizedImages
+      : [imageUrl, ...normalizedImages];
+
     setSourceImageElement(event.currentTarget);
-    setPreviewImages(allImages);
-    setPreviewIndex(allImages.indexOf(imageUrl));
+    setPreviewImages(previewImageList);
+    setPreviewIndex(Math.max(previewImageList.indexOf(imageUrl), 0));
     setIsPreviewOpen(true);
   };
 
@@ -220,7 +227,7 @@ const ResponseMessage = (props: Props) => {
 
   const renderToolGroup = (toolGroup: ToolGroupContent, index: number, stepInfo?: { step: IStep; isLastInStep: boolean }) => {
     const { toolCall, toolResponse } = toolGroup;
-    const showStepInfo = stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
+    const showStepInfo = showPerStepActions && stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
 
     // 用于驱动 ToolCallBlock 的“自动收起”行为：
     // 在该 toolGroup 之后有任何内容（包括另一个 toolGroup）时，自动收起。
@@ -275,7 +282,10 @@ const ResponseMessage = (props: Props) => {
     (c): c is ResponseContent & { c: FileDef } =>
       c.$type === MessageContentType.fileId || c.$type === MessageContentType.tempFileId,
   );
-  const allImageUrls = imageContents.map((c) => getFileUrl(c.c as FileDef));
+  const messageImageUrls = imageContents.map((c) => getFileUrl(c.c as FileDef));
+  const previewGalleryImages = groupImageUrls && groupImageUrls.length > 0
+    ? groupImageUrls
+    : messageImageUrls;
 
   // 计算每个 content 属于哪个 step，以及是否为该 step 的最后一个 content
   const contentStepMap = useMemo(() => {
@@ -362,6 +372,7 @@ const ResponseMessage = (props: Props) => {
                       key={'file-' + groupIndex + '-' + index}
                       file={c.c as FileDef}
                       onImageClick={handleImageClick}
+                      imageGallery={previewGalleryImages}
                     />
                   );
                 } else if (c.$type === MessageContentType.tempFileId) {
@@ -378,7 +389,7 @@ const ResponseMessage = (props: Props) => {
                           className="h-full w-auto rounded-md cursor-pointer hover:opacity-90 transition-opacity"
                           style={{ maxWidth: '100%' }}
                           src={imageUrl}
-                          onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
+                          onClick={(e) => handleImageClick(imageUrl, previewGalleryImages, e)}
                         />
                         {/* 蓝色激光扫描效果 */}
                         <div className="absolute inset-0 pointer-events-none">
@@ -416,6 +427,7 @@ const ResponseMessage = (props: Props) => {
                         <FilePreview
                           file={fileDef}
                           onImageClick={handleImageClick}
+                          imageGallery={previewGalleryImages}
                           className="opacity-60 animate-pulse"
                         />
                       </div>
@@ -511,7 +523,7 @@ const ResponseMessage = (props: Props) => {
           ) : (
             (() => {
               const contentInfo = contentStepMap.get(c.i);
-              const showStepInfo = contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
+              const showStepInfo = showPerStepActions && contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
               return (
                 <div key={'text-' + index} className="relative group/item w-full min-w-0">
                   {message.displayType === 'Raw' ? (
@@ -547,22 +559,24 @@ const ResponseMessage = (props: Props) => {
                     <div className="pointer-events-auto flex items-center gap-px">
                       {!isChatting(chatStatus) && !readonly && (
                         <>
-                          <Tips
-                            side="top"
-                            content={t('Copy')}
-                            trigger={
-                              <button
-                                disabled={isChatting(messageStatus)}
-                                className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
-                                onClick={(e) => {
-                                  handleCopy(c.c);
-                                  e.stopPropagation();
-                                }}
-                              >
-                                <IconCopy size={16} />
-                              </button>
-                            }
-                          />
+                          {showPerStepActions && (
+                            <Tips
+                              side="top"
+                              content={t('Copy')}
+                              trigger={
+                                <button
+                                  disabled={isChatting(messageStatus)}
+                                  className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
+                                  onClick={(e) => {
+                                    handleCopy(c.c);
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <IconCopy size={16} />
+                                </button>
+                              }
+                            />
+                          )}
                           <Tips
                             side="top"
                             content={t('Edit')}

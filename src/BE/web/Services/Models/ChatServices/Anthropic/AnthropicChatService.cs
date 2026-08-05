@@ -20,10 +20,10 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 {
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.ModelKey);
+        (string url, string apiKey) = GetMessagesEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot);
         JsonObject requestBody = BuildRequestBody(request);
 
-        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages");
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url);
         AddApiKeyHeader(httpRequest, apiKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
@@ -221,12 +221,14 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
     private static ChatTokenUsage MergeUsage(ChatTokenUsage? previousUsage, JsonElement usage)
     {
         ChatTokenUsage baseUsage = previousUsage ?? ChatTokenUsage.Zero;
+        int cacheTokens = GetUsageValueOrFallback(usage, "cache_read_input_tokens", baseUsage.CacheTokens);
+        int freshInputTokens = GetUsageValueOrFallback(usage, "input_tokens", baseUsage.InputFreshTokens);
 
         return new ChatTokenUsage
         {
-            InputTokens = GetUsageValueOrFallback(usage, "input_tokens", baseUsage.InputTokens),
+            InputTokens = freshInputTokens + cacheTokens,
             OutputTokens = GetUsageValueOrFallback(usage, "output_tokens", baseUsage.OutputTokens),
-            CacheTokens = GetUsageValueOrFallback(usage, "cache_read_input_tokens", baseUsage.CacheTokens),
+            CacheTokens = cacheTokens,
             CacheCreationTokens = GetUsageValueOrFallback(usage, "cache_creation_input_tokens", baseUsage.CacheCreationTokens),
             ReasoningTokens = baseUsage.ReasoningTokens,
         };
@@ -274,7 +276,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return json.ToString();
     }
 
-    protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKey modelKey)
+    protected virtual (string url, string apiKey) GetEndpointAndKey(ModelKeySnapshot modelKey)
     {
         string url = (modelKey.Host ?? "https://api.anthropic.com").TrimEnd('/');
         if (url.EndsWith(".ai.azure.com")) // Azure AI Foundry Anthropic
@@ -282,6 +284,25 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             url += "/anthropic";
         }
         return (url, modelKey.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "API key is required for Anthropic"));
+    }
+
+    protected virtual (string url, string apiKey) GetMessagesEndpointAndKey(ModelSnapshot snapshot)
+    {
+        string apiKey = snapshot.ModelKeySnapshot.Secret ?? throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "API key is required for Anthropic");
+
+        if (!string.IsNullOrWhiteSpace(snapshot.OverrideUrl))
+        {
+            return (ModelRequestOverrides.ResolveEndpoint(snapshot), apiKey);
+        }
+
+        (string baseUrl, _) = GetEndpointAndKey(snapshot.ModelKeySnapshot);
+        return (baseUrl + "/v1/messages", apiKey);
+    }
+
+    protected virtual (string url, string apiKey) GetCountTokensEndpointAndKey(ModelSnapshot snapshot)
+    {
+        (string messagesUrl, string apiKey) = GetMessagesEndpointAndKey(snapshot);
+        return (messagesUrl + "/count_tokens", apiKey);
     }
 
     protected virtual void AddApiKeyHeader(HttpRequestMessage request, string apiKey)
@@ -303,7 +324,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         return null;
     }
 
-    public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    public override async Task<string[]> ListModels(ModelKeySnapshot modelKey, CancellationToken cancellationToken)
     {
         (string url, string apiKey) = GetEndpointAndKey(modelKey);
 
@@ -338,10 +359,10 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
     public override async Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
     {
-        (string url, string apiKey) = GetEndpointAndKey(request.ChatConfig.Model.ModelKey);
+        (string url, string apiKey) = GetCountTokensEndpointAndKey(request.ChatConfig.Model.CurrentSnapshot);
         JsonObject requestBody = BuildCountTokensRequestBody(request);
 
-        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/v1/messages/count_tokens");
+        using HttpRequestMessage httpRequest = new(HttpMethod.Post, url);
         AddApiKeyHeader(httpRequest, apiKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
 
@@ -368,8 +389,8 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         JsonObject body = new()
         {
-            ["max_tokens"] = request.ChatConfig.Model.MaxResponseTokens,
-            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["max_tokens"] = request.ChatConfig.Model.CurrentSnapshot.MaxResponseTokens,
+            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
             ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source),
             ["stream"] = true,
         };
@@ -540,7 +561,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
             ["messages"] = ConvertMessages(request.Messages, allowThinkingBlocks, request.Source),
         };
 
@@ -570,10 +591,9 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
         JsonArray result = [];
         foreach (NeutralMessage msg in mergedMessages)
         {
-            // 非当前 turn 的 thinking 已在 ChatService.PreProcess 中统一清理；
-            // 这里仅根据 WebChat + allowThinkingBlocks 决定是否允许 thinking block 出现在上游 payload 中。
-            bool reallyAllowThinkingBlocks = allowThinkingBlocks && source == UsageSource.WebChat;
-            result.Add(ToAnthropicMessage(msg, reallyAllowThinkingBlocks));
+            // WebChat 的历史 thinking 裁剪已经在 ChatController 按 turn/model 完成；
+            // API 入口应尊重用户传入的 thinking/redacted_thinking，不再因为来源是 API 而删除。
+            result.Add(ToAnthropicMessage(msg, allowThinkingBlocks));
         }
         return result;
 
@@ -707,6 +727,7 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
             {
                 NeutralChatRole.User => "user",
                 NeutralChatRole.Assistant => "assistant",
+                NeutralChatRole.System => "system",
                 NeutralChatRole.Tool => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool messages should be merged into user messages before conversion."),
                 _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Unknown message role: {message.Role}"),
             };

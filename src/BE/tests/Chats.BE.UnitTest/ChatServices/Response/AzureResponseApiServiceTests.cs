@@ -30,7 +30,7 @@ public class AzureResponseApiServiceTests
             {
                 onRequest(request);
 
-                var resp = new HttpResponseMessage(statusCode)
+                HttpResponseMessage resp = new(statusCode)
                 {
                     Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(responseBody)))
                 };
@@ -47,34 +47,63 @@ public class AzureResponseApiServiceTests
 
     private static ChatRequest CreateBaseChatRequest()
     {
-        var modelKey = new ModelKey
+        DateTime now = DateTime.UtcNow;
+
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
             Host = "https://redacted.openai.azure.com",
             ModelProviderId = (short)DBModelProvider.AzureAIFoundry,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
+        };
+
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
             Name = "Test Model",
             DeploymentName = "gpt-5.2",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
             AllowStreaming = true,
             ApiTypeId = (byte)DBApiType.OpenAIResponse,
             UseAsyncApi = false,
+            CreatedAt = now,
         };
 
-        var chatConfig = new ChatConfig
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
             Model = model,
             Temperature = 1,
-            ReasoningEffortId = (byte)DBReasoningEffort.High,
+            Effort = ReasoningEfforts.High,
             SystemPrompt = "你是AI助手Sdcb Chats\n当前日期: 2026/01/07，当前模型：gpt-5.2",
         };
 
@@ -88,6 +117,33 @@ public class AzureResponseApiServiceTests
     }
 
     [Fact]
+    public async Task ResponseApiService_ShouldUseAzureOpenAIPrefixInRequestUri()
+    {
+        // Arrange
+        string sse = "event: response.completed\n" +
+                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
+
+        Uri? requestUri = null;
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
+        {
+            requestUri = req.RequestUri;
+        });
+
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest();
+
+        // Act
+        await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+            // drain
+        }
+
+        // Assert
+        Assert.NotNull(requestUri);
+        Assert.Equal("https://redacted.openai.azure.com/openai/v1/responses", requestUri!.ToString());
+    }
+
+    [Fact]
     public async Task ResponseApiService_ShouldSendIncludeReasoningEncryptedContent()
     {
         // Arrange
@@ -96,12 +152,12 @@ public class AzureResponseApiServiceTests
 
         string? capturedBody = null;
 
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
 
         // Act
@@ -117,7 +173,7 @@ public class AzureResponseApiServiceTests
         Assert.True(doc.RootElement.TryGetProperty("include", out JsonElement includeEl), "Request body should contain include.");
         Assert.Equal(JsonValueKind.Array, includeEl.ValueKind);
 
-        var items = includeEl.EnumerateArray().Select(x => x.GetString()).ToList();
+        List<string?> items = includeEl.EnumerateArray().Select(x => x.GetString()).ToList();
         Assert.Contains("reasoning.encrypted_content", items);
     }
 
@@ -129,12 +185,12 @@ public class AzureResponseApiServiceTests
                      "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
 
         string? capturedBody = null;
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest() with
         {
             Messages =
@@ -173,6 +229,52 @@ public class AzureResponseApiServiceTests
     }
 
     [Fact]
+    public async Task ResponseApiService_ShouldSendOuterAndInnerSystemMessagesInOrder()
+    {
+        // Arrange
+        string sse = "event: response.completed\n" +
+                     "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
+
+        string? capturedBody = null;
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
+        {
+            capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
+        });
+
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        ChatRequest request = CreateBaseChatRequest() with
+        {
+            Messages =
+            [
+                NeutralMessage.FromUserText("first user"),
+                NeutralMessage.FromSystemText("inner system"),
+                NeutralMessage.FromUserText("second user")
+            ]
+        };
+
+        // Act
+        await foreach (ChatSegment _ in service.ChatStreamed(request, CancellationToken.None))
+        {
+            // drain
+        }
+
+        // Assert
+        Assert.False(string.IsNullOrWhiteSpace(capturedBody));
+
+        using JsonDocument doc = JsonDocument.Parse(capturedBody!);
+        JsonElement input = doc.RootElement.GetProperty("input");
+        JsonElement[] messages = input.EnumerateArray()
+            .Where(item => item.GetProperty("type").GetString() == "message")
+            .ToArray();
+
+        Assert.Equal(["system", "user", "system", "user"], messages.Select(x => x.GetProperty("role").GetString()!).ToArray());
+        Assert.Equal("你是AI助手Sdcb Chats\n当前日期: 2026/01/07，当前模型：gpt-5.2", messages[0].GetProperty("content")[0].GetProperty("text").GetString());
+        Assert.Equal("first user", messages[1].GetProperty("content")[0].GetProperty("text").GetString());
+        Assert.Equal("inner system", messages[2].GetProperty("content")[0].GetProperty("text").GetString());
+        Assert.Equal("second user", messages[3].GetProperty("content")[0].GetProperty("text").GetString());
+    }
+
+    [Fact]
     public async Task ResponseApiService_ShouldPutEncryptedContentIntoThinkChatSegmentSignature_OnOutputItemDone()
     {
         // Arrange
@@ -180,10 +282,10 @@ public class AzureResponseApiServiceTests
         var dump = FiddlerHttpDumpParser.ParseFile(filePath);
 
         // SSE requires newlines between events, but FiddlerHttpDumpParser strips them.
-        var chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
-        var httpClientFactory = new FiddlerDumpHttpClientFactory(chunksWithNewlines, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: null);
+        List<string> chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
+        FiddlerDumpHttpClientFactory httpClientFactory = new(chunksWithNewlines, (HttpStatusCode)dump.Response.StatusCode, expectedRequestBody: null);
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest();
 
         string expectedEncrypted = ExtractEncryptedContentFromDump(filePath);
@@ -209,12 +311,12 @@ public class AzureResponseApiServiceTests
                      "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
 
         string? capturedBody = null;
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest() with
         {
             Messages =
@@ -264,12 +366,12 @@ public class AzureResponseApiServiceTests
                      "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
 
         string? capturedBody = null;
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest() with
         {
             Messages =
@@ -318,12 +420,12 @@ public class AzureResponseApiServiceTests
                      "data: {\"type\":\"response.completed\",\"response\":{\"status\":\"completed\",\"usage\":{\"input_tokens\":0,\"output_tokens\":0}}}\n\n";
 
         string? capturedBody = null;
-        var httpClientFactory = new CapturingHttpClientFactory(HttpStatusCode.OK, sse, req =>
+        CapturingHttpClientFactory httpClientFactory = new(HttpStatusCode.OK, sse, req =>
         {
             capturedBody = req.Content == null ? null : req.Content.ReadAsStringAsync().GetAwaiter().GetResult();
         });
 
-        var service = new AzureResponseApiService(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
+        AzureResponseApiService service = new(httpClientFactory, NullLogger<AzureResponseApiService>.Instance);
         ChatRequest request = CreateBaseChatRequest() with
         {
             Messages =

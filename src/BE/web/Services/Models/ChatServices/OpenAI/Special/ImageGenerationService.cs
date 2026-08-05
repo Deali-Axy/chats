@@ -19,7 +19,7 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI.Special;
 
 public class ImageGenerationService(IHttpClientFactory httpClientFactory) : ChatService
 {
-    protected virtual string GetEndpoint(ModelKey modelKey)
+    protected virtual string GetEndpoint(ModelKeySnapshot modelKey)
     {
         string? host = modelKey.Host;
         if (string.IsNullOrWhiteSpace(host))
@@ -29,7 +29,12 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         return host?.TrimEnd('/') ?? "";
     }
 
-    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
+    protected virtual string GetEndpoint(Model model)
+    {
+        return ModelRequestOverrides.ResolveEndpoint(model.CurrentSnapshot);
+    }
+
+    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKeySnapshot modelKey)
     {
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
     }
@@ -57,7 +62,9 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             yield break;
         }
 
-        string endpoint = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        Model model = request.ChatConfig.Model;
+        ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
+        string endpoint = GetEndpoint(model);
 
         if (images.Length == 0)
         {
@@ -65,16 +72,16 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
-                ["model"] = request.ChatConfig.Model.DeploymentName,
+                ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
                 ["n"] = n,
                 ["stream"] = true,
                 ["partial_images"] = 3,
                 ["moderation"] = "low"
             };
 
-            if (request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
+            if (request.ChatConfig.Effort != null)
             {
-                requestBody["quality"] = request.ChatConfig.ReasoningEffort.ToGeneratedImageQualityText();
+                requestBody["quality"] = request.ChatConfig.Effort;
             }
 
             if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
@@ -82,14 +89,27 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 requestBody["size"] = request.ChatConfig.ImageSize;
             }
 
+            if (!string.IsNullOrEmpty(request.ChatConfig.Format))
+            {
+                requestBody["output_format"] = request.ChatConfig.Format;
+            }
+
+            if (request.ChatConfig.Compression.HasValue)
+            {
+                requestBody["output_compression"] = request.ChatConfig.Compression.Value;
+            }
+
             if (request.EndUserId != null)
             {
                 requestBody["user"] = request.EndUserId;
             }
 
+            ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
+
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/generations");
-            AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+            AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+            ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
             httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
             using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageGeneration);
@@ -113,13 +133,15 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         else
         {
             // Image edits API with streaming
-            using MultipartFormDataContent form = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
+            using MultipartFormDataContent baseForm = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
+            using MultipartFormDataContent form = ModelRequestOverrides.ApplyMultipartBody(baseForm, model.CurrentSnapshot);
             form.Add(new StringContent("true"), "stream");
             form.Add(new StringContent("3"), "partial_images");
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/edits");
-            AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+            AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = form;
+            ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
             httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
             using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageGeneration);
@@ -146,7 +168,9 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
     {
         string prompt = GetPromptStatic(request.Messages);
         NeutralContent[] images = GetImagesStatic(request.Messages);
-        string endpoint = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        Model model = request.ChatConfig.Model;
+        ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
+        string endpoint = GetEndpoint(model);
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceImageGeneration);
         httpClient.Timeout = NetworkTimeout;
@@ -157,14 +181,14 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
             JsonObject requestBody = new()
             {
                 ["prompt"] = prompt,
-                ["model"] = request.ChatConfig.Model.DeploymentName,
+                ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
                 ["n"] = request.ChatConfig.MaxOutputTokens ?? 1,
                 ["moderation"] = "low"
             };
 
-            if (request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
+            if (request.ChatConfig.Effort != null)
             {
-                requestBody["quality"] = request.ChatConfig.ReasoningEffort.ToGeneratedImageQualityText();
+                requestBody["quality"] = request.ChatConfig.Effort;
             }
 
             if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
@@ -172,14 +196,27 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
                 requestBody["size"] = request.ChatConfig.ImageSize;
             }
 
+            if (!string.IsNullOrEmpty(request.ChatConfig.Format))
+            {
+                requestBody["output_format"] = request.ChatConfig.Format;
+            }
+
+            if (request.ChatConfig.Compression.HasValue)
+            {
+                requestBody["output_compression"] = request.ChatConfig.Compression.Value;
+            }
+
             if (request.EndUserId != null)
             {
                 requestBody["user"] = request.EndUserId;
             }
 
+            ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
+
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/generations");
-            AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+            AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+            ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
 
             using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
             if (!response.IsSuccessStatusCode)
@@ -193,11 +230,13 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
         }
         else
         {
-            using MultipartFormDataContent form = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
+            using MultipartFormDataContent baseForm = await BuildImageEditFormAsync(images, prompt, request, cancellationToken);
+            using MultipartFormDataContent form = ModelRequestOverrides.ApplyMultipartBody(baseForm, model.CurrentSnapshot);
 
             using HttpRequestMessage httpRequest = new(HttpMethod.Post, $"{endpoint}/v1/images/edits");
-            AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+            AddAuthorizationHeader(httpRequest, modelKey);
             httpRequest.Content = form;
+            ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
 
             using HttpResponseMessage response = await httpClient.SendAsync(httpRequest, cancellationToken);
             if (!response.IsSuccessStatusCode)
@@ -323,7 +362,7 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
         form.Add(new StringContent(prompt), "prompt");
         form.Add(new StringContent((request.ChatConfig.MaxOutputTokens ?? 1).ToString()), "n");
-        form.Add(new StringContent(request.ChatConfig.Model.DeploymentName), "model");
+        form.Add(new StringContent(request.ChatConfig.Model.CurrentSnapshot.DeploymentName), "model");
 
         if (!string.IsNullOrEmpty(request.ChatConfig.ImageSize))
         {
@@ -337,9 +376,19 @@ public class ImageGenerationService(IHttpClientFactory httpClientFactory) : Chat
 
         form.Add(new StringContent("low"), "moderation");
 
-        if (request.ChatConfig.ReasoningEffort != DBReasoningEffort.Default)
+        if (request.ChatConfig.Effort != null)
         {
-            form.Add(new StringContent(request.ChatConfig.ReasoningEffort.ToGeneratedImageQualityText()!), "quality");
+            form.Add(new StringContent(request.ChatConfig.Effort), "quality");
+        }
+
+        if (!string.IsNullOrEmpty(request.ChatConfig.Format))
+        {
+            form.Add(new StringContent(request.ChatConfig.Format), "output_format");
+        }
+
+        if (request.ChatConfig.Compression.HasValue)
+        {
+            form.Add(new StringContent(request.ChatConfig.Compression.Value.ToString()), "output_compression");
         }
 
         return form;

@@ -1,5 +1,4 @@
 ﻿using Chats.DB;
-using Chats.DB.Enums;
 using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using System.Text.Json.Serialization;
 
@@ -29,7 +28,7 @@ public record UpdateChatSpanRequest
     public int? MaxOutputTokens { get; init; }
 
     [JsonPropertyName("reasoningEffort")]
-    public DBReasoningEffort ReasoningEffort { get; init; }
+    public string? ReasoningEffort { get; init; }
 
     [JsonPropertyName("thinkingBudget")]
     public int? ThinkingBudget { get; init; }
@@ -37,11 +36,18 @@ public record UpdateChatSpanRequest
     [JsonPropertyName("imageSize")]
     public string? ImageSize { get; init; }
 
+    [JsonPropertyName("format")]
+    public string? Format { get; init; }
+
+    [JsonPropertyName("compression")]
+    public byte? Compression { get; init; }
+
     [JsonPropertyName("mcps")]
     public ChatSpanMcp[] Mcps { get; init; } = [];
 
     public void ApplyTo(ChatSpan span)
     {
+        ReasoningEfforts.ThrowIfInvalid(ReasoningEffort);
         span.Enabled = Enabled;
 
         ChatConfig config = span.ChatConfig ?? throw new InvalidOperationException("ChatSpan.ChatConfig is null");
@@ -51,9 +57,11 @@ public record UpdateChatSpanRequest
         config.WebSearchEnabled = WebSearchEnabled;
         config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
-        config.ReasoningEffortId = (byte)ReasoningEffort;
+        config.Effort = ReasoningEffort;
         config.ThinkingBudget = ThinkingBudget;
         config.ImageSize = ImageSize;
+        config.Format = Format;
+        config.Compression = Compression;
         
         // Update ChatConfigMcp associations
         UpdateMcpAssociations(config);
@@ -61,6 +69,7 @@ public record UpdateChatSpanRequest
 
     public void ApplyTo(ChatPresetSpan span, Model model)
     {
+        ReasoningEfforts.ThrowIfInvalid(ReasoningEffort);
         if (model.Id != ModelId)
         {
             throw new ArgumentException("ModelId does not match the provided model", nameof(ModelId));
@@ -75,9 +84,11 @@ public record UpdateChatSpanRequest
         config.WebSearchEnabled = WebSearchEnabled;
         config.CodeExecutionEnabled = CodeExecutionEnabled;
         config.MaxOutputTokens = MaxOutputTokens;
-        config.ReasoningEffortId = (byte)ReasoningEffort;
+        config.Effort = ReasoningEffort;
         config.ThinkingBudget = ThinkingBudget;
         config.ImageSize = ImageSize;
+        config.Format = Format;
+        config.Compression = Compression;
         
         // Update ChatConfigMcp associations
         UpdateMcpAssociations(config);
@@ -85,6 +96,7 @@ public record UpdateChatSpanRequest
 
     public ChatPresetSpan ToDB(Model model, byte spanId)
     {
+        ReasoningEfforts.ThrowIfInvalid(ReasoningEffort);
         if (model.Id != ModelId)
         {
             throw new ArgumentException("ModelId does not match the provided model", nameof(ModelId));
@@ -99,9 +111,11 @@ public record UpdateChatSpanRequest
             WebSearchEnabled = WebSearchEnabled,
             CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
-            ReasoningEffortId = (byte)ReasoningEffort,
+            Effort = ReasoningEffort,
             ThinkingBudget = ThinkingBudget,
             ImageSize = ImageSize,
+            Format = Format,
+            Compression = Compression,
         };
 
         ChatPresetSpan presetSpan = new ChatPresetSpan()

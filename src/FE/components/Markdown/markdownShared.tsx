@@ -26,7 +26,7 @@ export const appendStreamingCursor = (
 
 export const markdownComponents = {
   pre({ children }: ReactMarkdownProps) {
-    return <div className="not-prose my-4">{children}</div>;
+    return <div className="not-prose my-2">{children}</div>;
   },
   code({ className, inline, children, ...props }: CodeProps) {
     if (children.length && children[0] == '▍') {
@@ -52,9 +52,11 @@ export const markdownComponents = {
   },
   table({ children }: ReactMarkdownProps) {
     return (
-      <table className="border-collapse border border-black px-3 py-1 dark:border-white">
-        {children}
-      </table>
+      <div className="not-prose my-2 w-full max-w-full overflow-x-auto">
+        <table className="w-full border-collapse border border-black dark:border-white">
+          {children}
+        </table>
+      </div>
     );
   },
   th({ children }: TableHeaderCellProps) {
@@ -71,12 +73,7 @@ export const markdownComponents = {
       </td>
     );
   },
-
-    pre({ children }: ReactMarkdownProps) {
-      return <>{children}</>;
-    },
-  } as unknown as MarkdownComponents;
-
+} as unknown as MarkdownComponents;
 
 export const MarkdownLoadingFallback = ({
   children,
