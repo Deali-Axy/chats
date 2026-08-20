@@ -4,9 +4,11 @@
 
 ## 这是什么
 
-.NET 10 控制台应用。宿主是自研 mini host（`FluentConsoleApp` / `FluentConsoleBuilder`），**不是** `Microsoft.Extensions.Hosting`，也不是 ASP.NET。
+仓库内的一次性 / 可扩展 SQLite ETL 控制台。宿主是自研 mini host（`FluentConsoleApp` / `FluentConsoleBuilder`），**不是** `Microsoft.Extensions.Hosting`，也不是 ASP.NET。
 
 目标框架 `net10.0`，nullable 与 implicit usings 已开启。
+
+当前入口是 `EtlService`：用 Chats.BE 的 EF migrations 建一份空的 1.15 库，再把生产 1.11 结构的 SQLite 灌进去。不要用模板自带的 snake_case `AppDbContext` 碰 `Chats.DB` 表。
 
 ## 命令
 
@@ -37,18 +39,17 @@ dotnet ef database update
 
 | 要做的事 | 放这里 |
 |---|---|
-| 业务逻辑 | `src/Services`，实现 `IService`（`Task<Result> Run()`） |
-| 强类型配置 | `src/Entities/AppSettings.cs`，对应 `appsettings.yaml` 的 `AppSettings` |
+| 入口 / 调度 | `src/Services/EtlService.cs`（实现 `IService`） |
+| 新的迁移 Job | `src/Jobs`，实现 `IEtlJob`，并在 `EtlService.CreateJob` 登记 |
+| ATTACH / 同构表拷贝 / 序列 / FK 检查 | `src/Etl` |
+| 路径与报告 | `src/Entities/EtlOptions.cs`、`EtlReport.cs`；YAML 节 `Etl` |
 | JSON DTO | `src/Entities`，并在 `SourceGenerationContext` 注册 |
-| EF 实体 | `src/Data/Models` |
-| EF Fluent 配置 | `src/Data/Config` |
-| 工具方法 | `src/Utilities` |
 
 实现了 `IService` 的非抽象类会被自动 **Scoped** 注册。不要在 `Program.cs` 里再 `AddScoped<T>()`。
 
 入口保持：`CreateBuilder` → `Build` → `Run<T>()`。换入口只改 `Run<T>` 的类型参数。
 
-启用数据库时在 `Build()` 之后调用 `app.AddDefaultEFCoreIntegration()`。不要再注册一份默认 `AppDbContext`，除非用户要换数据库。
+不要调用 `app.AddDefaultEFCoreIntegration()`。目标 schema 走 `EfSqliteSchema.RecreateAsync`（Chats.BE migrations）。源库只读 ATTACH，不要 in-place 改生产备份。
 
 JSON 序列化走 `SourceGenerationContext`，不要改成无源生成的 `JsonSerializer.Serialize(obj)`。
 
@@ -64,7 +65,7 @@ JSON 序列化走 `SourceGenerationContext`，不要改成无源生成的 `JsonS
 - 返回值：`FluentResults.Result`
 - HTTP：已引用 `Flurl.Http`
 - 调试打印：Dumpify `.Dump()`
-- EF：默认 SQLite + snake_case 命名，按需开启
+- EF：目标库使用 `Chats.DB` + Chats.BE migrations（Pascal 表名）。不要给生产/目标库开 snake_case
 
 ## 不要提交
 

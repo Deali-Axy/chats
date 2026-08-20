@@ -1,6 +1,20 @@
 # DataMigration
 
-基于 flu-cli 脚手架的 .NET 10 控制台应用：依赖注入、YAML 配置、日志、可选 EF Core，用法接近 Web 应用。
+把生产 SQLite（1.11 扁平结构）迁到当前 Ayaka Chats 1.15 EF schema 的小 ETL。基于 flu-cli 脚手架：依赖注入、YAML 配置、日志。
+
+## 跑第一次 Job
+
+配置在 `appsettings.yaml` 的 `Etl` 节（路径相对仓库根目录）：
+
+- 源：`temp/server-data/v2-new/backup-08-20.db`
+- 先写：`src/BE/web/AppData/chats.migrated.db`
+- 校验通过后备份并替换：`src/BE/web/AppData/chats.db`
+
+```bash
+dotnet run --project tools/DataMigration
+```
+
+报告写在 `src/BE/web/AppData/etl-report.json`。历史附件不在 db 里，需要另外把生产 `AppData/Files` 拷到 `src/BE/web/AppData/Files`。
 
 ## 要求
 
