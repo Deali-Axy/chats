@@ -1,12 +1,17 @@
 Logging:
   LogLevel:
-    Default: Debug
+    Default: Information
 ConnectionStrings:
   SQLite: "Data Source=app.db;"
 AppSettings:
-  Name: "The name of this app is fluent console demo"
+  Name: "DataMigration"
   Boolean: true
-  DemoList:
-    - item1
-    - item2
-    - item3
+  DemoList: []
+Etl:
+  Job: ProdSqliteV111ToV115
+  # Paths are relative to the repo root (directory that contains Chats.slnx).
+  SourceDb: temp/server-data/v2-new/backup-08-20.db
+  TargetDb: src/BE/web/AppData/chats.migrated.db
+  FinalDb: src/BE/web/AppData/chats.db
+  SkipRequestTrace: false
+  SwapToFinal: true

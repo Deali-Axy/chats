@@ -6,6 +6,8 @@ using DataMigration.Framework;
 var builder = FluentConsoleApp.CreateBuilder(args);
 var app = builder.Build();
 
-await app.Run<MainService>();
-
-Console.Read();
+var result = await app.Run<EtlService>();
+if (result.IsFailed)
+{
+    Environment.ExitCode = 1;
+}
