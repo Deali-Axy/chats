@@ -48,7 +48,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         Dictionary<string, int> r = await q
-            .GroupBy(x => x.Model.ModelKey.ModelProviderId)
+            .GroupBy(x => x.ModelSnapshot.ModelKeySnapshot.ModelProviderId)
             .Select(g => new { ProviderId = g.Key, Count = g.Count() })
             .ToListAsync(cancellationToken)
             .ContinueWith(t => t.Result.ToDictionary(
@@ -62,7 +62,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         SingleValueStatisticsEntry[] r = await q
-            .GroupBy(x => x.Model.DeploymentName)
+            .GroupBy(x => x.ModelSnapshot.DeploymentName)
             .Select(x => new SingleValueStatisticsEntry(x.Key, x.Count()))
             .ToArrayAsync(cancellationToken);
         return Ok(r);
@@ -73,7 +73,7 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
         SingleValueStatisticsEntry[] r = await q
-            .GroupBy(x => x.Model.ModelKey.Name)
+            .GroupBy(x => x.ModelSnapshot.ModelKeySnapshot.Name)
             .Select(x => new SingleValueStatisticsEntry(x.Key, x.Count()))
             .ToArrayAsync(cancellationToken);
         return Ok(r);
@@ -83,10 +83,20 @@ public class StatisticsController(ChatsDB db) : ControllerBase
     public async Task<ActionResult<SingleValueStatisticsEntry[]>> GetSourceStatistics([FromQuery] StartEndDate query, CancellationToken cancellationToken)
     {
         IQueryable<UserModelUsage> q = GetUserModelQuery(query);
-        SingleValueStatisticsEntry[] r = await q
-            .GroupBy(x => x.UserApiUsage != null ? UsageSource.Api : UsageSource.WebChat)
-            .Select(x => new SingleValueStatisticsEntry(x.Key.ToString(), x.Count()))
+        var sourceStats = await q
+            .GroupBy(x => x.SourceId)
+            .Select(x => new { SourceId = x.Key, Count = x.Count() })
             .ToArrayAsync(cancellationToken);
+
+        SingleValueStatisticsEntry[] r = sourceStats
+            .Select(x =>
+            {
+                string sourceName = Enum.IsDefined(typeof(UsageSource), (int)x.SourceId)
+                    ? ((UsageSource)x.SourceId).ToString()
+                    : $"Unknown({x.SourceId})";
+                return new SingleValueStatisticsEntry(sourceName, x.Count);
+            })
+            .ToArray();
         return Ok(r);
     }
 

@@ -1,12 +1,39 @@
-# Sdcb Chats [![docker pulls](https://img.shields.io/docker/pulls/sdcb/chats)](https://hub.docker.com/r/sdcb/chats) [![QQ](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=social&logo=tencent-qq&logoColor=000&logoWidth=20)](https://qm.qq.com/q/AM8tY9cAsS) [![License](https://img.shields.io/github/license/sdcb/chats)](LICENSE)
+# Ayaka Chats [![License](https://img.shields.io/github/license/Deali-Axy/chats)](LICENSE)
 
 **English** | [简体中文](README.md)
 
-Sdcb Chats is a powerful and flexible frontend for large language models, supporting 21+ mainstream AI model providers. Whether you want to unify the management of multiple model interfaces or need a simple and easy-to-use deployment solution, Sdcb Chats can meet your needs.
+> A community fork of [sdcb/chats](https://github.com/sdcb/chats).
 
-## ✨ Why Choose Sdcb Chats
+Ayaka Chats is a powerful and flexible unified frontend for large language models, supporting 22+ mainstream AI model providers. Building on top of the upstream project, Ayaka Chats focuses on **UI/UX improvements**, **developer toolchain enhancements**, and **independent feature iteration**.
 
-- 🚀 **All-in-One**: One hub for 21+ AI model providers
+## 🌸 Fork Highlights
+
+While inheriting all upstream capabilities, Ayaka Chats introduces the following improvements:
+
+### 🎨 UI/UX Overhaul
+
+- **Redesigned Sidebar**: Rebuilt the chat sidebar using the shadcn/ui `sidebar-01` block for a more modern look and smoother interactions
+- **Homepage Layout Upgrade**: Refactored the homepage layout with `SidebarProvider`, fixing issues like the search bar and menu button overlapping each other
+- **Temporary Chat Improvements**: Temporary chats now persist in the sidebar and survive tab switching; fixed multiple issues including model editing, duplicate creation, and the end-chat button not working; replaced banners with subtle background colors for a cleaner look
+- **Model Pricing Page**: Refactored into a local component with full-width display for a better experience
+
+### 🛠️ Developer Toolchain
+
+- **pnpm Package Manager**: Migrated the frontend from npm to pnpm for faster installs and smaller disk footprint
+- **Automation Scripts**: Added unified build, package, push, and deploy scripts to streamline CI/CD
+- **goreman Concurrent Startup**: One-command dev environment via `Procfile` + `Taskfile` running both frontend and backend
+
+### 📢 Independent Features
+
+- **Release Poster**: Auto-generated v1.13.0 release poster with one-click image copy for sharing
+
+---
+
+## ✨ Core Features
+
+All capabilities inherited from upstream:
+
+- 🚀 **All-in-One**: One hub for 22+ AI model providers
 - 🎯 **Ready in Minutes**: One-command Docker deploy, plus native executables for 8 platforms
 - 🐳 **Code Interpreter**: Docker sandbox with built-in tools (browser, code execution, Excel, and more)
 - 🔌 **API Gateway**: Chat Completions/Messages compatible, works with Claude Code
@@ -16,18 +43,20 @@ Sdcb Chats is a powerful and flexible frontend for large language models, suppor
 - 💾 **Storage Freedom**: SQLite/SQL Server/PostgreSQL, plus Local/S3/OSS/Azure Blob
 - 🔐 **Enterprise Security**: Permissions & balance control, rate limiting & audit logs, Keycloak SSO & SMS login
 
-<img alt="chats-en" src="https://github.com/user-attachments/assets/40d2376e-58a0-4309-a2f5-5ed8262a0c2e" />
+<img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 Latest Release (1.10.2)
+## 🆕 Latest Release (1.15.0)
 
-- 📅 Release Date: 2026-03-10
-- 🔍 Request Trace: adds end-to-end inbound and outbound HTTP tracing with timing points, status codes, errors, body capture, and raw payload storage
-- 🧑‍💼 Admin workspace: adds a dedicated request trace page with filtering, details, raw downloads, compare view, Excel export, and bulk delete by filters
-- ⚙️ Trace governance: adds sampling, include/exclude rules, URL parameter redaction, retention policies, and hot-refreshable configuration
-- ♻️ Lifecycle management: adds bounded queue protection and scheduled cleanup to reduce long-running trace pressure
-- 🛠️ Other improvements: dashboard summary cards now follow the selected time range, long user messages can collapse, and Anthropic compatibility is improved further
+- 📅 Release Date: 2026-08-19
+- 📝 Prompt convergence: keeps Prompt management and `/xxx` shortcuts, inserts selected content verbatim, and removes all `{{...}}` substitutions
+- 🧩 MCP metadata: separates protocol/display names, supports editable tool metadata, and synchronizes four annotation hints
+- ⚡ MCP execution: runs up to four read-only tools in parallel, retries idempotent failures within bounds, and preserves call order
+- 🧰 Tool-call UX: expands parallel tools independently, stays open during streamed arguments/progress, and collapses after completion
+- 🧠 Responses reasoning: preserves reasoning signature boundaries and original reasoning/tool/message order to prevent corrupted encrypted content
+- 👥 MCP user assignment: compact four-column table, long-name truncation, multiline JSON headers, and immediate available-list updates
+- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the corresponding `1.15.0` database migration
 
-👉 [View 1.10.2 Release Notes](./doc/en-US/release-notes/1.10.2.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.15.0 Release Notes](./doc/en-US/release-notes/1.15.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
@@ -45,49 +74,53 @@ After startup, visit `http://localhost:8080` and log in with the default account
 
 ## 📚 Documentation
 
-Chats is developed using `C#`/`TypeScript`. Here are the complete documentation resources:
-
 - [🚀 Quick Start](./doc/en-US/quick-start.md) - Deployment guide, Docker configuration, database setup
 - [💾 Downloads](./doc/en-US/downloads.md) - Docker images and executable file downloads
-- [🤖 Supported Model Providers](./doc/en-US/model-providers.md) - 21+ model providers list and support status
+- [🤖 Supported Model Providers](./doc/en-US/model-providers.md) - 22+ model providers list and support status
 - [🛠️ Development Guide](./doc/en-US/build.md) - How to compile and develop Chats
 - [⚙️ Configuration Guide](./doc/en-US/configuration.md) - Detailed configuration parameters
 - [📝 Release Notes](./doc/en-US/release-notes/README.md) - Version update history
-- [🔍 Ask DeepWiki](https://deepwiki.com/sdcb/chats) - AI-powered project knowledge base
 - [❓ FAQ](./doc/en-US/faq.md) - Common questions about deployment and usage
 
 ---
 
-## Contributing
+## Tech Stack
 
-We welcome contributions of all kinds, including but not limited to:
-
-- 🐛 Report bugs
-- 💡 Suggest new features
-- 📝 Improve documentation
-- 🔧 Submit code
-
-Please submit issues or suggestions via [GitHub Issues](https://github.com/sdcb/chats/issues).
+| Layer | Technology |
+|-------|-----------|
+| Backend | C# / .NET 10.0 / ASP.NET Core / Entity Framework Core |
+| Frontend | TypeScript / Next.js 16 / React 19 / Tailwind CSS / shadcn/ui |
+| Database | SQLite / SQL Server / PostgreSQL |
+| Storage | Local filesystem / AWS S3 / Aliyun OSS / Azure Blob / MinIO |
+| Package Manager | pnpm (frontend) / NuGet (backend) |
+| Container | Docker / Docker Compose |
 
 ---
 
-## Contact
+## Relationship with Upstream
 
-- **GitHub Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
-- **QQ Group**: 498452653 [![Join QQ Group](https://img.shields.io/badge/QQ_Group-498452653-52B6EF?style=flat&logo=tencent-qq)](https://qm.qq.com/q/AM8tY9cAsS)
-- **WeChat Group** ![](https://io.starworks.cc:88/cv-public/2026/chats-wxg-qr.png?t=0329) If the WeChat group is full, please join the QQ group to get a temporary invitation QR code.
+This project is forked from [sdcb/chats](https://github.com/sdcb/chats) and continuously tracks and merges important upstream updates. Ayaka Chats aims to explore UI/UX improvements and developer experience enhancements on top of the upstream's stable feature set.
+
+- **Upstream Repository**: [github.com/sdcb/chats](https://github.com/sdcb/chats)
+- **Upstream Documentation**: [DeepWiki](https://deepwiki.com/sdcb/chats)
+- **Upstream Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
+
+---
+
+## Special Thanks
+
+<div align="left">
+  <h1>RoutinAI</h1>
+  <img width="154" height="151" src="https://routin.ai/favicon.png"/>
+</div>
+
+[RoutinAI](https://routin.ai/) is an enterprise-grade unified LLM API gateway that provides a single, type-safe interface to access over 100 leading large language models from the GPT, Claude, and Gemini families, including models such as gpt-5.6-sol, claude-opus-5 and gemini-3.1-pro-preview. It eliminates the complexity of managing multiple AI vendors by providing zero-latency edge routing, seamless model switching without code modifications, unified billing, and centralized governance with spending caps and access policies.
 
 ---
 
 ## License
 
 This project is licensed under the [Apache 2.0](LICENSE).
-
----
-
-## Star History
-
-[![Star History Chart](https://api.star-history.com/svg?repos=sdcb/chats&type=Date)](https://star-history.com/#sdcb/chats&Date)
 
 ---
 

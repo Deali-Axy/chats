@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import useTranslation from '@/hooks/useTranslation';
 import useMathCopy from '@/hooks/useMathCopy';
 
-import { isChatting, preprocessLaTeX } from '@/utils/chats';
+import { isChatting } from '@/utils/chats';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 import {
   ChatSpanStatus,
@@ -18,32 +19,47 @@ import {
 } from '@/types/chat';
 import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
 
-import { CodeBlock } from '@/components/Markdown/CodeBlock';
-import { MemoizedReactMarkdown } from '@/components/Markdown/MemoizedReactMarkdown';
-import ToolCallBlock from '@/components/Markdown/ToolCallBlock';
+import { loadComponentOnce } from '@/components/common/loadComponentOnce';
+import MarkdownRenderer from '@/components/Markdown/MarkdownRenderer';
+import { MarkdownLoadingFallback } from '@/components/Markdown/markdownShared';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import FilePreview from '@/components/FilePreview/FilePreview';
 import StepInfoBubble from './StepInfoBubble';
 
 import ChatError from '../ChatError/ChatError';
 import { IconCopy, IconEdit } from '../Icons';
+import Tips from '../Tips/Tips';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
-import ThinkingMessage from './ThinkingMessage';
 
 import { cn } from '@/lib/utils';
-import rehypeKatex from 'rehype-katex';
-import { rehypeKatexDataMath } from '@/components/Markdown/rehypeKatexWithCopy';
-import remarkGfm from 'remark-gfm';
-import remarkMath from 'remark-math';
-import remarkBreaks from 'remark-breaks';
-import type { Components as MarkdownComponents } from 'react-markdown';
-import type {
-  CodeProps,
-  ReactMarkdownProps,
-  TableDataCellProps,
-  TableHeaderCellProps,
-} from 'react-markdown/lib/ast-to-react';
+
+const ToolCallBlock = loadComponentOnce<{
+  toolCall: ToolCallContent;
+  toolResponse?: ToolResponseContent;
+  chatStatus?: ChatSpanStatus;
+}>({
+  cacheKey: 'Markdown/ToolCallBlock',
+  loader: () => import('@/components/Markdown/ToolCallBlock').then((mod) => mod.default),
+  renderFallback: () => (
+    <div className="h-8 w-40 animate-pulse rounded-md bg-muted" />
+  ),
+});
+
+const ThinkingMessage = loadComponentOnce<{
+  readonly?: boolean;
+  content: string;
+  finished?: boolean;
+  messageId: string;
+  stepId?: string;
+  chatId?: string;
+  chatShareId?: string;
+  chatStatus: ChatStatus;
+}>({
+  cacheKey: 'ChatMessage/ThinkingMessage',
+  loader: () => import('./ThinkingMessage').then((mod) => mod.default),
+  renderFallback: () => <MarkdownLoadingFallback />,
+});
 
 // 骨架动画组件
 const SkeletonLine = ({ width = '100%', height = '1rem', delay = '0s' }: { width?: string; height?: string; delay?: string }) => (
@@ -71,65 +87,13 @@ const MessageSkeleton = () => (
   </div>
 );
 
-const markdownComponents = {
-  code({ node, className, inline, children, ...props }: CodeProps) {
-    if (children.length) {
-      if (children[0] == '▍') {
-        return (
-          <span className="animate-pulse cursor-default mt-1">
-            ▍
-          </span>
-        );
-      }
-    }
-
-    const match = /language-(\w+)/.exec(className || '');
-
-    return !inline ? (
-      <CodeBlock
-        key={Math.random()}
-        language={(match && match[1]) || ''}
-        value={String(children).replace(/\n$/, '')}
-        {...props}
-      />
-    ) : (
-      <code className={className} {...props}>
-        {children}
-      </code>
-    );
-  },
-  p({ children }: ReactMarkdownProps) {
-    return <p className="md-p">{children}</p>;
-  },
-  table({ children }: ReactMarkdownProps) {
-    return (
-      <table className="border-collapse border border-black px-3 py-1 dark:border-white">
-        {children}
-      </table>
-    );
-  },
-  th({ children }: TableHeaderCellProps) {
-    return (
-      <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
-        {children}
-      </th>
-    );
-  },
-  td({ children }: TableDataCellProps) {
-    return (
-      <td className="break-words border border-black px-3 py-1 dark:border-white">
-        {children}
-      </td>
-    );
-  },
-} as unknown as MarkdownComponents;
-
 interface Props {
   message: IChatMessage;
   chatStatus: ChatStatus;
   readonly?: boolean;
   chatId?: string;
   chatShareId?: string;
+  groupImageUrls?: string[];
   onEditResponseMessage?: (
     messageId: string,
     content: ResponseContent,
@@ -138,7 +102,7 @@ interface Props {
 }
 
 const ResponseMessage = (props: Props) => {
-  const { message, chatStatus, readonly, chatId, chatShareId, onEditResponseMessage } = props;
+  const { message, chatStatus, readonly, chatId, chatShareId, groupImageUrls, onEditResponseMessage } = props;
   const { t } = useTranslation();
 
   // 启用数学公式复制功能（复制时保留原始 LaTeX）
@@ -146,6 +110,7 @@ const ResponseMessage = (props: Props) => {
 
   const { id: messageId, status: messageStatus } = message;
   const content = useMemo(() => getMessageContents(message), [message.steps]);
+  const showPerStepActions = message.steps.length > 1;
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [editId, setEditId] = useState(EMPTY_ID);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -187,13 +152,18 @@ const ResponseMessage = (props: Props) => {
   };
 
   const handleCopy = (text: string) => {
-    navigator.clipboard.writeText(text || '');
+    void copyTextToClipboard(text || '');
   };
 
   const handleImageClick = (imageUrl: string, allImages: string[], event: React.MouseEvent<HTMLImageElement>) => {
+    const normalizedImages = allImages.length > 0 ? allImages : [imageUrl];
+    const previewImageList = normalizedImages.includes(imageUrl)
+      ? normalizedImages
+      : [imageUrl, ...normalizedImages];
+
     setSourceImageElement(event.currentTarget);
-    setPreviewImages(allImages);
-    setPreviewIndex(allImages.indexOf(imageUrl));
+    setPreviewImages(previewImageList);
+    setPreviewIndex(Math.max(previewImageList.indexOf(imageUrl), 0));
     setIsPreviewOpen(true);
   };
 
@@ -242,12 +212,7 @@ const ResponseMessage = (props: Props) => {
 
   const renderToolGroup = (toolGroup: ToolGroupContent, index: number, stepInfo?: { step: IStep; isLastInStep: boolean }) => {
     const { toolCall, toolResponse } = toolGroup;
-    const showStepInfo = stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
-
-    // 用于驱动 ToolCallBlock 的“自动收起”行为：
-    // 在该 toolGroup 之后有任何内容（包括另一个 toolGroup）时，自动收起。
-    const processedIndex = processedContent.findIndex((c) => c === toolGroup);
-    const nextMessageContentStarted = processedIndex >= 0 && processedIndex + 1 < processedContent.length;
+    const showStepInfo = showPerStepActions && stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
 
     return (
       <div key={`tool-group-${index}`} className={cn("relative group/item", index > 0 ? "my-1" : "")}>
@@ -255,19 +220,20 @@ const ResponseMessage = (props: Props) => {
           toolCall={toolCall}
           toolResponse={toolResponse}
           chatStatus={messageStatus}
-          nextMessageContentStarted={nextMessageContentStarted}
         />
         {showStepInfo && (
           <div className={cn(
-            'absolute -bottom-0.5 right-2 z-10 invisible group-hover/item:visible hover:bg-muted rounded-full',
+            'pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-end pr-1',
             isChatting(chatStatus) && 'hidden',
           )}>
-            <StepInfoBubble
-              stepId={stepInfo!.step.id}
-              edited={stepInfo!.step.edited}
-              chatId={chatId}
-              chatShareId={chatShareId}
-            />
+            <div className="pointer-events-auto invisible group-hover/item:visible">
+              <StepInfoBubble
+                stepId={stepInfo!.step.id}
+                edited={stepInfo!.step.edited}
+                chatId={chatId}
+                chatShareId={chatShareId}
+              />
+            </div>
           </div>
         )}
       </div>
@@ -295,7 +261,10 @@ const ResponseMessage = (props: Props) => {
     (c): c is ResponseContent & { c: FileDef } =>
       c.$type === MessageContentType.fileId || c.$type === MessageContentType.tempFileId,
   );
-  const allImageUrls = imageContents.map((c) => getFileUrl(c.c as FileDef));
+  const messageImageUrls = imageContents.map((c) => getFileUrl(c.c as FileDef));
+  const previewGalleryImages = groupImageUrls && groupImageUrls.length > 0
+    ? groupImageUrls
+    : messageImageUrls;
 
   // 计算每个 content 属于哪个 step，以及是否为该 step 的最后一个 content
   const contentStepMap = useMemo(() => {
@@ -382,6 +351,7 @@ const ResponseMessage = (props: Props) => {
                       key={'file-' + groupIndex + '-' + index}
                       file={c.c as FileDef}
                       onImageClick={handleImageClick}
+                      imageGallery={previewGalleryImages}
                     />
                   );
                 } else if (c.$type === MessageContentType.tempFileId) {
@@ -398,7 +368,7 @@ const ResponseMessage = (props: Props) => {
                           className="h-full w-auto rounded-md cursor-pointer hover:opacity-90 transition-opacity"
                           style={{ maxWidth: '100%' }}
                           src={imageUrl}
-                          onClick={(e) => handleImageClick(imageUrl, allImageUrls, e)}
+                          onClick={(e) => handleImageClick(imageUrl, previewGalleryImages, e)}
                         />
                         {/* 蓝色激光扫描效果 */}
                         <div className="absolute inset-0 pointer-events-none">
@@ -436,6 +406,7 @@ const ResponseMessage = (props: Props) => {
                         <FilePreview
                           file={fileDef}
                           onImageClick={handleImageClick}
+                          imageGallery={previewGalleryImages}
                           className="opacity-60 animate-pulse"
                         />
                       </div>
@@ -531,66 +502,86 @@ const ResponseMessage = (props: Props) => {
           ) : (
             (() => {
               const contentInfo = contentStepMap.get(c.i);
-              const showStepInfo = contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
+              const showStepInfo = showPerStepActions && contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
               return (
-                <div key={'text-' + index} className="relative group/item">
+                <div key={'text-' + index} className="relative group/item w-full min-w-0">
                   {message.displayType === 'Raw' ? (
                     <div className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] rounded-r-md flex-1 overflow-auto text-sm leading-4 font-normal py-2 px-3 group/item">
                       <div className="whitespace-pre-wrap font-mono">{c.c}</div>
                     </div>
                   ) : (
-                    <MemoizedReactMarkdown
-                      className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] leading-4 font-normal prose-p:text-sm prose-p:leading-4 prose-p:font-normal prose-li:text-sm prose-li:leading-4 prose-li:font-normal"
-                      // 顺序：math -> gfm -> breaks，确保数学与 GFM 处理后，再将 softbreak 转为 <br/>
-                      remarkPlugins={[remarkMath, remarkGfm, remarkBreaks]}
-                      rehypePlugins={[rehypeKatex as any, rehypeKatexDataMath]}
-                      components={markdownComponents}
-                    >
-                      {`${preprocessLaTeX(c.c!)}${
-                        (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) && 
-                        index === processedContent.length - 1 && 
-                        c.$type === MessageContentType.text ? '▍' : ''
-                      }`}
-                    </MemoizedReactMarkdown>
-                  )}
-                  <div className="absolute -bottom-0.5 right-0 z-10 flex items-center gap-0.5">
-                    {!isChatting(chatStatus) && !readonly && (
-                      <>
-                        <button
-                          disabled={isChatting(messageStatus)}
-                          className="invisible group-hover/item:visible bg-card rounded-full p-1 hover:bg-accent transition-colors"
-                          onClick={(e) => {
-                            handleCopy(c.c);
-                            e.stopPropagation();
-                          }}
-                        >
-                          <IconCopy size={20} className="hover:opacity-50" />
-                        </button>
-                        <button
-                          disabled={isChatting(messageStatus)}
-                          className="invisible group-hover/item:visible bg-card rounded-full p-1 hover:bg-accent transition-colors"
-                          onClick={(e) => {
-                            handleToggleEditing(c.i, c.c);
-                            e.stopPropagation();
-                          }}
-                        >
-                          <IconEdit size={20} className="hover:opacity-50" />
-                        </button>
-                      </>
-                    )}
-                    {showStepInfo && (
-                      <div className={cn(
-                        'invisible group-hover/item:visible bg-card rounded-full',
-                        isChatting(chatStatus) && 'hidden',
-                      )}>
-                        <StepInfoBubble
-                          stepId={contentInfo!.step.id}
-                          edited={contentInfo!.step.edited}
-                          chatId={chatId}
-                          chatShareId={chatShareId}
+                    (() => {
+                      const showCursor =
+                        (messageStatus === ChatSpanStatus.Pending ||
+                          messageStatus === ChatSpanStatus.Chatting) &&
+                        index === processedContent.length - 1 &&
+                        c.$type === MessageContentType.text;
+                      const markdownClassName =
+                        'prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] leading-4 font-normal prose-p:text-sm prose-p:leading-4 prose-p:font-normal prose-li:text-sm prose-li:leading-4 prose-li:font-normal';
+
+                      return (
+                        <MarkdownRenderer
+                          className={markdownClassName}
+                          content={c.c!}
+                          showCursor={showCursor}
                         />
-                      </div>
-                    )}
+                      );
+                    })()
+                  )}
+                  <div className="pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-end pr-1">
+                    <div className="pointer-events-auto flex items-center gap-px">
+                      {!isChatting(chatStatus) && !readonly && (
+                        <>
+                          {showPerStepActions && (
+                            <Tips
+                              side="top"
+                              content={t('Copy')}
+                              trigger={
+                                <button
+                                  disabled={isChatting(messageStatus)}
+                                  className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
+                                  onClick={(e) => {
+                                    handleCopy(c.c);
+                                    e.stopPropagation();
+                                  }}
+                                >
+                                  <IconCopy size={16} />
+                                </button>
+                              }
+                            />
+                          )}
+                          <Tips
+                            side="top"
+                            content={t('Edit')}
+                            trigger={
+                              <button
+                                disabled={isChatting(messageStatus)}
+                                className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
+                                onClick={(e) => {
+                                  handleToggleEditing(c.i, c.c);
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <IconEdit size={16} />
+                              </button>
+                            }
+                          />
+                        </>
+                      )}
+                      {showStepInfo && (
+                        <div className={cn(
+                          'invisible group-hover/item:visible',
+                          isChatting(chatStatus) && 'hidden',
+                        )}>
+                          <StepInfoBubble
+                            stepId={contentInfo!.step.id}
+                            edited={contentInfo!.step.edited}
+                            chatId={chatId}
+                            chatShareId={chatShareId}
+                          />
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
               );

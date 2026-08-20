@@ -7,7 +7,79 @@ This page indexes all major version release notes for the Chats project, from th
 
 ---
 
-## [1.10.2](1.10.2.md) - 2026-03-10 ⭐ Latest Release
+## [1.15.0](1.15.0.md) - 2026-08-19 ⭐ Latest Release
+
+**Core Highlights**: Prompt convergence to plain-text shortcuts · MCP Server/tool metadata and parallel retries · independent parallel tool-call expansion and completion collapse · compact MCP user assignment · removal of the legacy retry setting · .NET dependency security updates
+
+- 📝 **Prompt Convergence**: Prompt management and `/xxx` shortcuts remain, while selected content is inserted verbatim and all `{{...}}` substitutions are removed
+- 🧩 **MCP Metadata**: separates protocol and display names, adds editable tool metadata, and synchronizes four annotation hints
+- ⚡ **MCP Execution**: read-only tools run in batches of up to four, with bounded retries for idempotent failures and stable call ordering
+- 🧰 **Tool-Call UX**: keeps tools expanded during streamed arguments/progress, delays completion collapse, and supports independent parallel cards
+- 🧠 **Responses Reasoning**: preserves reasoning signature boundaries and original reasoning/tool/message order to prevent corrupted encrypted content
+- 👥 **MCP User Assignment**: compact four-column layout, long-name truncation, multiline JSON headers, and immediate available-list updates
+- 📦 **Dependency Maintenance**: upgrades .NET, EF Core, Npgsql, Playwright, AWS S3 SDK, and test SDK, while removing the redundant SQLite native-library reference
+
+[View Full Release Notes →](1.15.0.md)
+
+---
+
+## [1.14.0](1.14.0.md) - 2026-08-13
+
+**Core Highlights**: user text and model context separation · system preset model groups · enhanced administrator and initial account configuration · reliable MCP tool naming and shortcuts · transient model request retries
+
+- 🧊 **Context Snapshots**: preserves UI-visible user text in `Content` while storing frozen model context in `ContextTemplate`, with no historical-data backfill required
+- 🌐 **System Presets**: administrators can maintain preset model groups visible to every signed-in user, while regular users can apply or clone them
+- 👤 **User Controls**: expands SSO Sub, password reset, API Key permission, and initial account configuration management
+- 🧩 **MCP Reliability**: provides deterministic aliases for conflicting tool names and atomically updates MCP shortcuts across tool-capable spans
+- 🔁 **Transient Retries**: retries 408, 429, common 5xx responses, and network errors before the first text output; `Retry429Times` is deprecated and will be removed in 1.15
+
+[View Full Release Notes →](1.14.0.md)
+
+---
+
+## [1.13.0](1.13.0.md) - 2026-08-05
+
+**Core Highlights**: MCP shortcuts and Server Instructions · Smart Search for OpenAI/Azure Responses, DeepSeek, and MiMo · Reasoning order and LAN clipboard fixes · Node.js 24 and MCP SDK 2.0 · SQL Server/SQLite migrations
+
+- ⚡ **MCP Shortcuts**: pin frequently used MCP servers as chat input buttons with per-user visibility preferences
+- 🧠 **MCP Server Instructions**: automatically fetch, edit, and inject Server Instructions into chats where the MCP is enabled
+- 🌐 **Expanded Smart Search**: native web search, citations, and history round-tripping for OpenAI/Azure Responses, DeepSeek Messages, and Xiaomi MiMo
+- 🛠️ **Compatibility Fixes**: corrects reasoning-segment order, interleaved Responses search pairing, and clipboard failures on LAN HTTP deployments
+- ⬆️ **Engineering & Upgrades**: updates Node.js 24, npm 12, MCP SDK 2.0, and other dependencies, with new SQL Server and SQLite migrations
+
+[View Full Release Notes →](1.13.0.md)
+
+---
+
+## [1.12.0](1.12.0.md) - 2026-06-14
+
+**Core Highlights**: Model Key/Model custom Header and Body · Model custom URL · Model configuration snapshots · Latest Claude Code compatibility · Image output format/compression · Stability fixes
+
+- 🧩 **Request Customization**: Model Key and Model support custom headers and RFC 6902 JSON Patch body patches, with Model-level overrides applied after Key-level settings
+- 🌐 **Model URL Override**: Model adds `Custom URL` with `{baseUrl}` placeholder support for gateways, proxies, and provider-specific endpoints
+- 🧾 **Configuration Snapshots**: adds `ModelKeySnapshot`, `ModelSnapshot`, and `ChatConfigSnapshot` so historical chats, usage, and billing reference immutable configuration facts
+- 🤖 **Claude Code Compatibility**: Anthropic Messages supports in-message `role=system`, with fixes for API thinking blocks and cached read token accounting
+- 🖼️ **Image & UX Improvements**: image generation supports output format/compression, with improvements to image preview, model ordering, Request Trace details, and model picker search
+
+[View Full Release Notes →](1.12.0.md)
+
+---
+
+## [1.11.0](1.11.0.md) - 2026-04-07
+
+**Core Highlights**: AI chat title summary · Model pricing page · WebChat/Api/Summary usage source tracking · Novita AI provider · Frontend lazy-loading and desktop UX improvements
+
+- 🧠 **Smart Title Summary**: adds first-turn AI title generation with admin defaults, per-user overrides, dedicated model modes, and separate `Summary` usage billing
+- 💵 **Model Pricing Page**: adds a `/model-prices` overview with provider, API type, free-model, and keyword filters, plus context windows and multi-dimensional pricing
+- 📊 **Usage Source Tracking**: adds `SourceId` on `UserModelUsage` so users and admins can distinguish `WebChat`, `Api`, and `Summary`
+- 🆕 **Novita AI Provider**: adds Novita AI as the 22nd provider, with reasoning information round-tripping support
+- ⚡ **Frontend Performance & UX**: lazy-loads Markdown, KaTeX, charts, and session UI, adds resizable desktop sidebar, and improves admin table consistency
+
+[View Full Release Notes →](1.11.0.md)
+
+---
+
+## [1.10.2](1.10.2.md) - 2026-03-10
 
 **Core Highlights**: Request Trace end-to-end tracing · Admin request trace workspace · Sampling/filtering/redaction/retention policies · Export, compare, and scheduled cleanup · Small UX and compatibility improvements
 
@@ -115,7 +187,7 @@ This page indexes all major version release notes for the Chats project, from th
 - 🎨 **UI Optimizations**: Admin on-demand lazy loading, skeleton screens, separated preset configs
 - 🛠️ **Image Processing Refactor**: ImageSharp replaces hand-written parsers (-1,217 lines)
 
-[View Full Release Notes →](1.8.0.md) | [API Changes](../1.8.0-api-changes.md)
+[View Full Release Notes →](1.8.0.md)
 
 ---
 
@@ -289,5 +361,5 @@ Starting from 1.0.0, Chats follows Semantic Versioning:
 ---
 
 <p align="center">
-  <sub>Last updated: 2025-12-21</sub>
+  <sub>Last updated: 2026-08-19</sub>
 </p>

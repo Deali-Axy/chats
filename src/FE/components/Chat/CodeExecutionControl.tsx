@@ -1,6 +1,8 @@
 import { useState, useMemo, useContext } from 'react';
 import { createPortal } from 'react-dom';
 
+import dynamic from 'next/dynamic';
+
 import useTranslation from '@/hooks/useTranslation';
 
 import { AdminModelDto } from '@/types/adminApis';
@@ -8,12 +10,19 @@ import { ChatSpanDto } from '@/types/clientApis';
 
 import { IconDocker } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
-import ChatSessionManagerWindow from '@/components/ChatSessionManager/ChatSessionManagerWindow';
 
 import HomeContext from '@/contexts/home.context';
 import { setChats } from '@/actions/chat.actions';
 import { putChatSpan } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
+
+const ChatSessionManagerWindow = dynamic(
+  () => import('@/components/ChatSessionManager/ChatSessionManagerWindow'),
+  {
+    ssr: false,
+    loading: () => null,
+  },
+);
 
 interface CodeExecutionControlProps {
   chatId: string;
@@ -85,6 +94,9 @@ const CodeExecutionControl: React.FC<CodeExecutionControlProps> = ({
             codeExecutionEnabled: newValue,
             maxOutputTokens: span.maxOutputTokens,
             reasoningEffort: span.reasoningEffort,
+            imageSize: span.imageSize,
+            format: span.format,
+            compression: span.compression,
             thinkingBudget: span.thinkingBudget,
             mcps: span.mcps,
           })
@@ -186,7 +198,8 @@ const CodeExecutionControl: React.FC<CodeExecutionControlProps> = ({
       </div>
 
       {/* 沙盒管理窗口 - 使用 Portal 渲染到 body，避免被父容器限制 */}
-      {typeof document !== 'undefined' &&
+      {isSessionManagerOpen &&
+        typeof document !== 'undefined' &&
         createPortal(
           <ChatSessionManagerWindow
             chatId={chatId}

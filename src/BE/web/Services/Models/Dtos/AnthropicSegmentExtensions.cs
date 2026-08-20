@@ -1,12 +1,17 @@
 using Chats.DB.Enums;
 using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Text.Json;
 
 namespace Chats.BE.Services.Models.Dtos;
 
 public static class AnthropicSegmentExtensions
 {
+    private static int ToAnthropicInputTokens(this ChatTokenUsage usage) => usage.InputFreshTokens;
+
+    private static int? ToNullableAnthropicToken(this int value) => value > 0 ? value : null;
+
     /// <summary>
     /// Converts DBFinishReason to Anthropic stop_reason
     /// Anthropic supports: end_turn, max_tokens, stop_sequence, tool_use, pause_turn, refusal
@@ -29,6 +34,7 @@ public static class AnthropicSegmentExtensions
     public static AnthropicResponse ToAnthropicResponse(this ChatCompletionSnapshot snapshot, string model, string messageId)
     {
         List<AnthropicResponseContentBlock> content = [];
+        HashSet<string> hostedWebSearchCallIds = new(StringComparer.Ordinal);
 
         foreach (ChatSegment item in snapshot.Segments)
         {
@@ -39,6 +45,18 @@ public static class AnthropicSegmentExtensions
                     break;
                 case TextChatSegment text:
                     content.Add(AnthropicResponseContentBlock.FromText(text.Text));
+                    break;
+                case ToolCallSegment tool when tool.Id != null
+                    && tool.Name == DeepSeekHostedWebSearch.InternalToolName
+                    && DeepSeekHostedWebSearch.TryParseBlock(tool.Arguments, DeepSeekHostedWebSearch.ServerToolUseType, out System.Text.Json.Nodes.JsonObject? serverToolUse)
+                    && serverToolUse != null:
+                    hostedWebSearchCallIds.Add(tool.Id);
+                    content.Add(AnthropicResponseContentBlock.FromServerToolUse(serverToolUse));
+                    break;
+                case ToolCallResponseSegment response when hostedWebSearchCallIds.Contains(response.ToolCallId)
+                    && DeepSeekHostedWebSearch.TryParseBlock(response.Response, DeepSeekHostedWebSearch.ToolResultType, out System.Text.Json.Nodes.JsonObject? webSearchResult)
+                    && webSearchResult != null:
+                    content.Add(AnthropicResponseContentBlock.FromWebSearchToolResult(webSearchResult));
                     break;
                 case ToolCallSegment tool when tool.Id != null && tool.Name != null:
                     object input = new { };
@@ -66,10 +84,10 @@ public static class AnthropicSegmentExtensions
             StopReason = snapshot.FinishReason.ToAnthropicStopReason(),
             Usage = new AnthropicUsage
             {
-                InputTokens = snapshot.Usage.InputTokens,
+                InputTokens = snapshot.Usage.ToAnthropicInputTokens(),
                 OutputTokens = snapshot.Usage.OutputTokens,
-                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
-                CacheReadInputTokens = snapshot.Usage.CacheTokens
+                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens.ToNullableAnthropicToken(),
+                CacheReadInputTokens = snapshot.Usage.CacheTokens.ToNullableAnthropicToken()
             }
         };
     }
@@ -87,9 +105,9 @@ public static class AnthropicSegmentExtensions
                 Model = model,
                 Usage = new MessageStartUsage
                 {
-                    InputTokens = snapshot.Usage.InputTokens,
-                    CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
-                    CacheReadInputTokens = snapshot.Usage.CacheTokens
+                    InputTokens = snapshot.Usage.ToAnthropicInputTokens(),
+                    CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens.ToNullableAnthropicToken(),
+                    CacheReadInputTokens = snapshot.Usage.CacheTokens.ToNullableAnthropicToken()
                 }
             }
         };
@@ -108,10 +126,10 @@ public static class AnthropicSegmentExtensions
             },
             Usage = new MessageDeltaUsage
             {
-                InputTokens = snapshot.Usage.InputTokens,
+                InputTokens = snapshot.Usage.ToAnthropicInputTokens(),
                 OutputTokens = snapshot.Usage.OutputTokens,
-                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens,
-                CacheReadInputTokens = snapshot.Usage.CacheTokens
+                CacheCreationInputTokens = snapshot.Usage.CacheCreationTokens.ToNullableAnthropicToken(),
+                CacheReadInputTokens = snapshot.Usage.CacheTokens.ToNullableAnthropicToken()
             }
         };
     }

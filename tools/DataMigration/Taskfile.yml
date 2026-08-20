@@ -1,0 +1,67 @@
+version: '3'
+
+vars:
+  CONFIG: Debug
+
+tasks:
+  default:
+    desc: Build and run
+    cmds:
+      - task: run
+
+  restore:
+    desc: Restore NuGet packages
+    cmds:
+      - dotnet restore
+
+  build:
+    desc: Build the project
+    cmds:
+      - dotnet build -c {{.CONFIG}} --nologo
+
+  run:
+    desc: Run the app
+    cmds:
+      - dotnet run -c {{.CONFIG}}
+
+  watch:
+    desc: Run with hot reload
+    cmds:
+      - dotnet watch run -c {{.CONFIG}}
+
+  publish:
+    desc: Publish a Release build to ./publish
+    cmds:
+      - dotnet publish -c Release -o ./publish --nologo
+
+  docker:build:
+    desc: Build the Docker image
+    cmds:
+      - docker build -t DataMigration .
+
+  docker:run:
+    desc: Run the Docker image
+    cmds:
+      - docker run --rm DataMigration
+
+  ef:tools:
+    desc: Install or update the dotnet-ef global tool
+    cmds:
+      - dotnet tool update --global dotnet-ef
+
+  ef:migrate:
+    desc: Add an EF Core migration (NAME=InitialCreate)
+    vars:
+      NAME: InitialCreate
+    cmds:
+      - dotnet ef migrations add {{.NAME}} -o ./src/Data/Migrations
+
+  ef:update:
+    desc: Apply EF Core migrations
+    cmds:
+      - dotnet ef database update
+
+  clean:
+    desc: Clean build output
+    cmds:
+      - dotnet clean --nologo

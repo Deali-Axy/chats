@@ -6,59 +6,83 @@ using Chats.BE.Services.Models.Neutral;
 using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
-using System.Net;
 
 namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
 public class MoonshotChatUsageTests
 {
-    private const string TestDataPath = "ChatServices/ChatCompletions/FiddlerDump";
-
-    private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump, bool validateRequest = true)
-    {
-        var statusCode = (HttpStatusCode)dump.Response.StatusCode;
-        // SSE requires newlines between events, but FiddlerHttpDumpParser strips them.
-        // We add them back here for the mock stream.
-        var chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
-        return new FiddlerDumpHttpClientFactory(chunksWithNewlines, statusCode, validateRequest ? dump.Request.Body : null);
-    }
-
     [Fact]
     public async Task Streaming_MoonshotUsageTopLevelCachedTokens_ShouldBeParsed()
     {
-        var filePath = Path.Combine(TestDataPath, "Moonshot.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump, validateRequest: false);
+        const string sse = """
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{"content":"Hello"},"finish_reason":null}]}
 
-        var service = new MoonshotChatService(httpClientFactory);
+            data: {"id":"chat_1","choices":[],"usage":{"prompt_tokens":10,"completion_tokens":5,"total_tokens":15,"cached_tokens":2304}}
 
-        var modelKey = new ModelKey
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{},"finish_reason":"stop"}]}
+
+            data: [DONE]
+
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(sse);
+        DateTime now = DateTime.UtcNow;
+
+        MoonshotChatService service = new(httpClientFactory);
+
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.Moonshot,
+            ModelProviderId = (short)DBModelProvider.Moonshot,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
-            Name = "Test Model",
-            DeploymentName = "kimi-k2-thinking-turbo",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
         };
 
-        var chatConfig = new ChatConfig
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Test Model",
+            DeploymentName = "kimi-k2-thinking-turbo",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        ChatConfig chatConfig = new()
         {
             Id = 1,
             ModelId = 1,
             Model = model,
         };
 
-        var request = new ChatRequest
+        ChatRequest request = new()
         {
             Messages = [NeutralMessage.FromUserText("hello")],
             ChatConfig = chatConfig,
@@ -67,7 +91,7 @@ public class MoonshotChatUsageTests
             EndUserId = "8"
         };
 
-        var segments = new List<ChatSegment>();
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);

@@ -137,7 +137,9 @@ public sealed record CallingToolLine(
     [property: JsonPropertyName("i")] byte SpanId,
     [property: JsonPropertyName("u")] string ToolCallId,
     [property: JsonPropertyName("r")] string ToolName,
-    [property: JsonPropertyName("p")] string Parameters
+    [property: JsonPropertyName("p")] string Parameters,
+    [property: JsonPropertyName("d")] string? DisplayName = null,
+    [property: JsonPropertyName("c")] bool Completed = false
 ) : SseResponseLine;
 
 public sealed record ToolProgressLine(
@@ -171,6 +173,10 @@ public sealed record EndTurn(
 public sealed record TempStartTurn(
     [property: JsonPropertyName("i")] byte SpanId,
     [property: JsonPropertyName("r")] ChatTurn Turn
+) : SseResponseLine;
+
+public sealed record SetTitleInternal(
+    string Title
 ) : SseResponseLine;
 
 #endregion

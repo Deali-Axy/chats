@@ -50,14 +50,16 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.Name,
-                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
+                    ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
@@ -95,14 +97,16 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.Name,
-                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
+                    ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                     {
@@ -139,9 +143,9 @@ public class AdminMessageController(ChatsDB db, CurrentUser currentUser, IUrlEnc
                 SpanId = x.SpanId,
                 Usage = x.IsUser ? null : new ChatMessageTempUsage()
                 {
-                    ModelId = x.Steps.First().Usage!.ModelId,
-                    ModelName = x.Steps.First().Usage!.Model.Name,
-                    ModelProviderId = x.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
+                    ModelId = x.Steps.First().Usage!.ModelSnapshot.ModelId,
+                    ModelName = x.Steps.First().Usage!.ModelSnapshot.Name,
+                    ModelProviderId = x.Steps.First().Usage!.ModelSnapshot.ModelKeySnapshot.ModelProviderId,
                 },
                 Reaction = x.ReactionId,
             })

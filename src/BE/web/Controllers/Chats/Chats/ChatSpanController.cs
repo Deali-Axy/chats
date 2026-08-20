@@ -9,6 +9,7 @@ using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Chats.BE.Services.Mcp;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
@@ -27,7 +28,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
 
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.ChatConfigMcps)
-            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.Model.ModelKey)
+            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig.Model.CurrentSnapshot).ThenInclude(x => x.ModelKeySnapshot)
             .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatId(encryptedChatId) && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)
@@ -89,7 +90,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
                 WebSearchEnabled = false,
                 CodeExecutionEnabled = false,
                 MaxOutputTokens = null,
-                ReasoningEffortId = 0,
+                Effort = null,
                 SystemPrompt = defaultPrompt.Content,
                 ImageSize = null,
                 ChatConfigMcps = [],
@@ -110,7 +111,7 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
                     WebSearchEnabled = false,
                     CodeExecutionEnabled = false,
                     MaxOutputTokens = null,
-                    ReasoningEffortId = 0,
+                    Effort = null,
                     SystemPrompt = defaultPrompt.Content,
                     ImageSize = null,
                     ChatConfigMcps = [],
@@ -174,14 +175,14 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
 
         span.ChatConfig.Model = um.Model;
         span.ChatConfig.ModelId = um.ModelId;
-        span.ChatConfig.WebSearchEnabled = um.Model.AllowSearch && span.ChatConfig.WebSearchEnabled;
+        span.ChatConfig.WebSearchEnabled = um.Model.CurrentSnapshot.AllowSearch && span.ChatConfig.WebSearchEnabled;
         if (span.ChatConfig.Temperature != null)
         {
-            span.ChatConfig.Temperature = (float)Math.Clamp((decimal)span.ChatConfig.Temperature.Value, um.Model.MinTemperature, um.Model.MaxTemperature);
+            span.ChatConfig.Temperature = (float)Math.Clamp((decimal)span.ChatConfig.Temperature.Value, um.Model.CurrentSnapshot.MinTemperature, um.Model.CurrentSnapshot.MaxTemperature);
         }
         if (span.ChatConfig.MaxOutputTokens != null)
         {
-            span.ChatConfig.MaxOutputTokens = Math.Min(span.ChatConfig.MaxOutputTokens.Value, um.Model.MaxResponseTokens);
+            span.ChatConfig.MaxOutputTokens = Math.Min(span.ChatConfig.MaxOutputTokens.Value, um.Model.CurrentSnapshot.MaxResponseTokens);
         }
         await db.SaveChangesAsync(cancellationToken);
         return Ok(ChatSpanDto.FromDB(span));
@@ -200,6 +201,15 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         if (request.Mcps.Select(x => x.Id).Distinct().Count() != request.Mcps.Length)
         {
             return BadRequest("Duplicate MCP servers are not allowed");
+        }
+
+        string? mcpNameConflict = await McpServerNameConflictValidator.FindConflictAsync(
+            db,
+            request.Mcps.Select(x => x.Id),
+            cancellationToken);
+        if (mcpNameConflict is not null)
+        {
+            return BadRequest(mcpNameConflict);
         }
 
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
@@ -256,6 +266,8 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         int chatId = idEncryption.DecryptChatId(encryptedChatId);
         Chat? chat = await db.Chats
             .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatSpans)
+            .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatConfigMcps)
+            .AsSplitQuery()
             .FirstOrDefaultAsync(x => x.Id == chatId && x.UserId == currentUser.Id && !x.IsArchived, cancellationToken);
         if (chat == null)
         {
@@ -263,8 +275,9 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         }
 
         ChatPreset? preset = await db.ChatPresets
-            .Include(x => x.ChatPresetSpans).ThenInclude(x => x.ChatConfig)
-            .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatPresetId(presetId) && x.UserId == currentUser.Id, cancellationToken);
+            .Include(x => x.ChatPresetSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatConfigMcps)
+            .FirstOrDefaultAsync(x => x.Id == idEncryption.DecryptChatPresetId(presetId) &&
+                (x.IsSystem || x.UserId == currentUser.Id), cancellationToken);
         if (preset == null)
         {
             return NotFound();
@@ -275,6 +288,31 @@ public class ChatSpanController(ChatsDB db, IUrlEncryptionService idEncryption, 
         if (userModels.Count != requiredModelIds.Count)
         {
             return BadRequest("Not all models available");
+        }
+
+        HashSet<int> requiredMcpIds = [.. preset.ChatPresetSpans
+            .SelectMany(x => x.ChatConfig.ChatConfigMcps)
+            .Select(x => x.McpServerId)];
+        string? mcpNameConflict = await McpServerNameConflictValidator.FindConflictAsync(
+            db,
+            requiredMcpIds,
+            cancellationToken);
+        if (mcpNameConflict is not null)
+        {
+            return BadRequest(mcpNameConflict);
+        }
+
+        if (requiredMcpIds.Count > 0)
+        {
+            int availableMcpCount = await db.UserMcps
+                .Where(x => x.UserId == currentUser.Id && requiredMcpIds.Contains(x.McpServerId))
+                .Select(x => x.McpServerId)
+                .Distinct()
+                .CountAsync(cancellationToken);
+            if (availableMcpCount != requiredMcpIds.Count)
+            {
+                return BadRequest("Not all MCP servers available");
+            }
         }
 
         Dictionary<byte, ChatSpan> dbSpans = chat.ChatSpans.ToDictionary(x => x.SpanId, v => v);

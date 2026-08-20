@@ -12,6 +12,7 @@ on:
   workflow_dispatch:
 
 permissions:
+  actions: read
   contents: write
 
 jobs:
@@ -26,8 +27,10 @@ jobs:
       msbuild_args: ${{ steps.get_version.outputs.msbuild_args }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
-        
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
       - name: Get Version
         id: get_version
         run: |
@@ -43,10 +46,13 @@ jobs:
           echo "major_ver=${major_ver}" >> $GITHUB_OUTPUT
           echo "msbuild_args=/p:Version=${full_ver} /p:AssemblyVersion=${full_ver} /p:FileVersion=${full_ver} /p:InformationalVersion=${full_ver}" >> $GITHUB_OUTPUT
           echo "FE_VERSION=${full_ver}" >> $GITHUB_ENV
-        
+
+      - name: Generate poster data
+        run: python scripts/generate_poster_data.py ${{ steps.get_version.outputs.patch_full_ver }}
+
       - name: Cache FE build output
         id: fe_build_cache
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ./src/FE/out
           key: fe-build-${{ hashFiles('src/FE/**') }}
@@ -54,7 +60,7 @@ jobs:
       - name: Cache node_modules
         id: node_modules_cache
         if: steps.fe_build_cache.outputs.cache-hit != 'true'
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ./src/FE/node_modules
           key: fe-node_modules-${{ hashFiles('src/FE/package-lock.json') }}
@@ -75,13 +81,13 @@ jobs:
           cp -r ./src/FE/out/* ./src/BE/web/wwwroot
         
       - name: Upload FE build artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: chats-fe
           path: ./src/FE/out
 
       - name: Upload BE src folder
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: be-src
           path: |
@@ -109,6 +115,12 @@ jobs:
         run: |
           aws s3 cp . s3://chats/latest --recursive --exclude "*" --include "*.zip" --endpoint-url ${{ secrets.R2_HOST }}
 
+      - name: Upload release FE artifacts to Cloudflare R2
+        if: needs.build-fe.outputs.is_release == 'true'
+        run: |
+          aws s3 cp chats-fe.zip s3://chats/release/latest/chats-fe.zip --endpoint-url ${{ secrets.R2_HOST }}
+          aws s3 cp be-src.zip s3://chats/release/latest/be-src.zip --endpoint-url ${{ secrets.R2_HOST }}
+
     env:
         AWS_ACCESS_KEY_ID: ${{ secrets.R2_KEY }}
         AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET }}
@@ -122,7 +134,7 @@ jobs:
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
 
       - name: Download BE src folder
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: be-src
           path: ./be-src
@@ -165,7 +177,7 @@ jobs:
         run: echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ vars.DOCKER_USERNAME }} ${{ vars.DOCKER_REGISTRY }} --password-stdin
 
       - name: Download BE src folder
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: be-src
           path: ./be-src
@@ -252,7 +264,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Download BE src folder
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: be-src
           path: ./be-src
@@ -260,7 +272,7 @@ jobs:
         run: |
           dotnet publish ./be-src/web/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} ${{ needs.build-fe.outputs.msbuild_args }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.id }}
           path: ./Publish
@@ -283,7 +295,7 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Download BE src folder
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           name: be-src
           path: ./be-src
@@ -291,7 +303,7 @@ jobs:
         run: |
           dotnet publish ./be-src/web/Chats.BE.csproj -c Release -o ./Publish ${{ matrix.args }} /p:DeleteExistingFiles=True ${{ needs.build-fe.outputs.msbuild_args }}
       - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.id }}
           path: ./Publish
@@ -306,13 +318,13 @@ jobs:
 
   create-release:
     if: github.ref_name == 'main'
-    needs: [build-binaries, build-primary-container, build-fe]
+    needs: [build-binaries, build-primary-container, build-fe, upload-fe-to-r2]
     runs-on: ubuntu-24.04
     outputs:
       release_id: ${{ steps.create_release.outputs.release_id }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
@@ -390,7 +402,7 @@ jobs:
           artifacts: "*.zip, sha256sum.txt"
       
   deploy:
-    runs-on: host7-runner
+    runs-on: [self-hosted, Linux, X64, home-runner]
     needs: [build-primary-container, build-fe]
     steps:
       - run: |

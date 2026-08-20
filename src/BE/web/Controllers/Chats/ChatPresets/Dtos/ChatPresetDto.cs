@@ -12,6 +12,8 @@ public record ChatPresetDto
 
     public required DateTime UpdatedAt { get; init; }
 
+    public required bool IsSystem { get; init; }
+
     public required ChatSpanDto[] Spans { get; init; }
 
     public static ChatPresetDto FromDB(ChatPreset preset, IUrlEncryptionService idEncryption)
@@ -26,20 +28,23 @@ public record ChatPresetDto
             Id = idEncryption.EncryptChatPresetId(preset.Id),
             Name = preset.Name,
             UpdatedAt = preset.UpdatedAt,
+            IsSystem = preset.IsSystem,
             Spans = [.. preset.ChatPresetSpans.Select(x => new ChatSpanDto
             {
                 SpanId = x.SpanId,
                 Enabled = x.Enabled,
                 SystemPrompt = x.ChatConfig.SystemPrompt,
                 ModelId = x.ChatConfig.ModelId,
-                ModelName = x.ChatConfig.Model.Name,
-                ModelProviderId = x.ChatConfig.Model.ModelKey.ModelProviderId,
+                ModelName = x.ChatConfig.Model.CurrentSnapshot.Name,
+                ModelProviderId = x.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                 Temperature = x.ChatConfig.Temperature,
                 WebSearchEnabled = x.ChatConfig.WebSearchEnabled,
                 CodeExecutionEnabled = x.ChatConfig.CodeExecutionEnabled,
                 MaxOutputTokens = x.ChatConfig.MaxOutputTokens,
-                ReasoningEffort = x.ChatConfig.ReasoningEffort,
+                ReasoningEffort = x.ChatConfig.Effort,
                 ImageSize = x.ChatConfig.ImageSize,
+                Format = x.ChatConfig.Format,
+                Compression = x.ChatConfig.Compression,
                 ThinkingBudget = x.ChatConfig.ThinkingBudget,
                 Mcps = [.. x.ChatConfig.ChatConfigMcps.Select(mcp => new ChatSpanMcp
                 {

@@ -14,7 +14,6 @@ import { IChatGroup } from '@/types/group';
 import SidebarActionButton from '../Button/SidebarActionButton';
 import {
   IconCheck,
-
   IconChevronRight,
   IconDots,
   IconPencil,
@@ -30,6 +29,11 @@ import {
   DropdownMenuTrigger,
 } from '../ui/dropdown-menu';
 import { Input } from '../ui/input';
+import {
+  SidebarGroupAction,
+  SidebarGroupLabel,
+  SidebarMenuButton,
+} from '../ui/sidebar';
 
 interface Props {
   currentFolder: IChatGroup;
@@ -97,11 +101,11 @@ const Folder = ({
 
   return (
     <>
-      <div className="relative flex items-center">
+      <div className="relative flex items-center group/folder">
         {isRenaming ? (
-          <div className="flex h-10 w-full items-center gap-2 rounded-lg bg-background p-3">
+          <div className="flex w-full items-center gap-2 rounded-lg bg-background px-3 py-2 border border-input">
             <Input
-              className="mr-12 flex-1 overflow-hidden overflow-ellipsis border-neutral-400 bg-transparent text-left text-[12.5px] leading-3 outline-none border-none text-black dark:text-white"
+              className="flex-1 overflow-hidden overflow-ellipsis bg-transparent text-left text-sm outline-none border-none text-foreground"
               type="text"
               value={renameValue}
               onChange={(e) => setRenameValue(e.target.value)}
@@ -110,30 +114,29 @@ const Folder = ({
             />
           </div>
         ) : (
-          <Button
+          <SidebarMenuButton
             draggable
             onDragStart={(e) => handleDragStart(e)}
-            variant="ghost"
-            className="flex w-full gap-3 rounded-lg p-2 pr-11"
             onClick={handleClickFolder}
+            className="font-medium text-sidebar-foreground/70 rounded-lg px-3 py-2 h-9 transition-colors hover:bg-sidebar-accent"
           >
-            <div 
-              className="transition-transform duration-300 ease-in-out"
+            <div
+              className="transition-transform duration-200 ease-in-out shrink-0"
               style={{ transform: isOpen ? 'rotate(90deg)' : 'rotate(0deg)' }}
             >
-              <IconChevronRight size={18} stroke="#6b7280" />
+              <IconChevronRight size={14} />
             </div>
 
-            <div className="relative flex-1 overflow-hidden text-ellipsis whitespace-nowrap break-all text-left text-sm font-medium text-gray-500">
+            <span className="flex-1 truncate text-sm">
               {currentFolder.name === UngroupedChatName
                 ? t('All chats')
                 : currentFolder.name}
-            </div>
-          </Button>
+            </span>
+          </SidebarMenuButton>
         )}
 
         {(isDeleting || isRenaming) && (
-          <div className="absolute right-1 z-10 flex text-gray-300">
+          <div className="absolute right-1 z-10 flex text-muted-foreground">
             <SidebarActionButton
               handleClick={(e) => {
                 e.stopPropagation();
@@ -163,49 +166,49 @@ const Folder = ({
         )}
 
         {!isDeleting && !isRenaming && showActions && (
-          <div className="absolute right-[0.6rem] z-10 flex text-gray-300">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="focus:outline-none p-[6px]">
-                <IconDots
-                  className="hover:opacity-50"
-                  size={16}
-                  stroke="#6b7280"
-                />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="w-42 border-none">
-                <DropdownMenuItem
-                  className="flex justify-start gap-3"
-                  onClick={() => {
-                    onNewGroupChat && onNewGroupChat(currentFolder.id);
-                  }}
-                >
-                  <IconPlus size={18} />
-                  {t('New chat')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="flex justify-start gap-3"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsRenaming(true);
-                    setRenameValue(currentFolder.name);
-                  }}
-                >
-                  <IconPencil size={18} />
-                  {t('Edit')}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="flex justify-start gap-3"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setIsDeleting(true);
-                  }}
-                >
-                  <IconTrash size={18} />
-                  {t('Delete')}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <SidebarGroupAction>
+                <IconDots size={14} />
+              </SidebarGroupAction>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              className="w-48"
+              side="right"
+              align="start"
+            >
+              <DropdownMenuItem
+                className="flex justify-start gap-3"
+                onClick={() => {
+                  onNewGroupChat && onNewGroupChat(currentFolder.id);
+                }}
+              >
+                <IconPlus size={18} />
+                {t('New chat')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex justify-start gap-3"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsRenaming(true);
+                  setRenameValue(currentFolder.name);
+                }}
+              >
+                <IconPencil size={18} />
+                {t('Edit')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                className="flex justify-start gap-3"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsDeleting(true);
+                }}
+              >
+                <IconTrash size={18} />
+                {t('Delete')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         )}
       </div>
 

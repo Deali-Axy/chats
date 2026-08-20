@@ -3,37 +3,41 @@ import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
 
-import {
-  UnassignedUserDto,
-  AssignedUserDetailsDto,
-  AssignUsersToMcpRequest,
-  AssignedUserInfo,
-} from '@/types/clientApis';
+import { isEmptyOrJsonObject } from '@/utils/json';
 
 import {
-  IconPlus,
-  IconSearch,
-  IconX,
-} from '@/components/Icons';
+  AssignUsersToMcpRequest,
+  AssignedUserDetailsDto,
+  AssignedUserInfo,
+  UnassignedUserDto,
+} from '@/types/clientApis';
+
+import { IconPlus, IconSearch, IconX } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import { Textarea } from '@/components/ui/textarea';
 
 import {
-  getUnassignedUsers,
-  getAssignedUserDetails,
   assignUsersToMcp,
+  getAssignedUserDetails,
+  getUnassignedUsers,
 } from '@/apis/clientApis';
-import { isEmptyOrJsonObject } from '@/utils/json';
 
 interface AssignUsersModalProps {
   isOpen: boolean;
@@ -41,19 +45,36 @@ interface AssignUsersModalProps {
   mcpId: number | null;
   onSuccess: () => void;
   isAdmin: boolean;
+  /** Assigner's current ShowShortcut; new users default to this value. */
+  defaultShowShortcut?: boolean;
 }
 
 interface AssignedUser extends AssignedUserDetailsDto {
-  originalCustomHeaders?: string; // 用于跟踪原始值
-  isNew?: boolean; // 标记是否为新分配的用户
+  originalCustomHeaders?: string;
+  originalShowShortcut?: boolean;
+  isNew?: boolean;
 }
 
-const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: AssignUsersModalProps) => {
+const AssignUsersModal = ({
+  isOpen,
+  onClose,
+  mcpId,
+  onSuccess,
+  isAdmin,
+  defaultShowShortcut = false,
+}: AssignUsersModalProps) => {
   const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState('');
-  const [unassignedUsers, setUnassignedUsers] = useState<UnassignedUserDto[]>([]);
+  const [unassignedUsers, setUnassignedUsers] = useState<UnassignedUserDto[]>(
+    [],
+  );
   const [assignedUsers, setAssignedUsers] = useState<AssignedUser[]>([]);
-  const [originalAssignedUserIds, setOriginalAssignedUserIds] = useState<Set<number>>(new Set());
+  const [locallyUnassignedUsers, setLocallyUnassignedUsers] = useState<
+    AssignedUser[]
+  >([]);
+  const [originalAssignedUserIds, setOriginalAssignedUserIds] = useState<
+    Set<number>
+  >(new Set());
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -61,12 +82,10 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
   useEffect(() => {
     if (isOpen && mcpId) {
       loadData();
-      // 初始搜索
       searchUsers('');
     }
   }, [isOpen, mcpId]);
 
-  // 搜索用户的防抖效果
   useEffect(() => {
     const timer = setTimeout(() => {
       if (mcpId) {
@@ -82,19 +101,19 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
 
     setLoading(true);
     try {
-      // 只加载已分配用户详情
       const assigned = await getAssignedUserDetails(mcpId);
 
-      // 为已分配用户添加原始customHeaders用于变更跟踪
-      const assignedWithOriginal = assigned.map(user => ({
+      const assignedWithOriginal = assigned.map((user) => ({
         ...user,
+        showShortcut: user.showShortcut ?? false,
         originalCustomHeaders: user.customHeaders,
-        isNew: false
+        originalShowShortcut: user.showShortcut ?? false,
+        isNew: false,
       }));
       setAssignedUsers(assignedWithOriginal);
+      setLocallyUnassignedUsers([]);
 
-      // 记录原始已分配用户ID
-      const originalIds = new Set(assigned.map(user => user.id));
+      const originalIds = new Set(assigned.map((user) => user.id));
       setOriginalAssignedUserIds(originalIds);
     } catch (error) {
       console.error('Failed to load user data:', error);
@@ -123,37 +142,47 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
   };
 
   const handleAssignUser = (user: UnassignedUserDto) => {
-    // 从未分配列表移除
-    setUnassignedUsers(prev => prev.filter(u => u.id !== user.id));
+    setUnassignedUsers((prev) => prev.filter((u) => u.id !== user.id));
+    const locallyUnassignedUser = locallyUnassignedUsers.find(
+      (u) => u.id === user.id,
+    );
+    setLocallyUnassignedUsers((prev) => prev.filter((u) => u.id !== user.id));
 
-    // 添加到已分配列表的第一位
-    const newAssignedUser: AssignedUser = {
+    // Restore a locally removed user with their unsaved settings. Only users
+    // returned by the API are initialized as a new assignment.
+    const assignedUser: AssignedUser = locallyUnassignedUser ?? {
       id: user.id,
       userName: user.userName,
       customHeaders: '',
-      originalCustomHeaders: undefined, // 标记为新添加
-      isNew: true
+      showShortcut: defaultShowShortcut,
+      originalCustomHeaders: undefined,
+      originalShowShortcut: undefined,
+      isNew: true,
     };
-    setAssignedUsers(prev => [newAssignedUser, ...prev]);
+    setAssignedUsers((prev) => [assignedUser, ...prev]);
   };
 
   const handleUnassignUser = (user: AssignedUser) => {
-    // 从已分配列表移除
-    setAssignedUsers(prev => prev.filter(u => u.id !== user.id));
-
-    // 如果是原本就存在的用户，重新搜索用户列表以包含这个用户
-    if (!user.isNew) {
-      searchUsers(searchTerm);
-    }
+    setAssignedUsers((prev) => prev.filter((u) => u.id !== user.id));
+    setLocallyUnassignedUsers((prev) => [
+      user,
+      ...prev.filter((u) => u.id !== user.id),
+    ]);
   };
 
   const handleCustomHeadersChange = (userId: number, customHeaders: string) => {
-    setAssignedUsers(prev =>
-      prev.map(user =>
-        user.id === userId
-          ? { ...user, customHeaders }
-          : user
-      )
+    setAssignedUsers((prev) =>
+      prev.map((user) =>
+        user.id === userId ? { ...user, customHeaders } : user,
+      ),
+    );
+  };
+
+  const handleShowShortcutChange = (userId: number, showShortcut: boolean) => {
+    setAssignedUsers((prev) =>
+      prev.map((user) =>
+        user.id === userId ? { ...user, showShortcut } : user,
+      ),
     );
   };
 
@@ -162,28 +191,28 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
     const toUpdateUsers: AssignedUserInfo[] = [];
     const toDeleteUserIds: number[] = [];
 
-    // 获取当前已分配用户的ID集合
-    const currentAssignedIds = new Set(assignedUsers.map(user => user.id));
+    const currentAssignedIds = new Set(assignedUsers.map((user) => user.id));
 
-    // 检查所有当前已分配的用户
-    assignedUsers.forEach(user => {
+    assignedUsers.forEach((user) => {
       if (user.isNew) {
-        // 新分配的用户
         toAssignedUsers.push({
           id: user.id,
-          customHeaders: user.customHeaders || undefined
+          customHeaders: user.customHeaders || undefined,
+          showShortcut: user.showShortcut,
         });
-      } else if (user.customHeaders !== user.originalCustomHeaders) {
-        // 修改过customHeaders的用户
+      } else if (
+        user.customHeaders !== user.originalCustomHeaders ||
+        user.showShortcut !== user.originalShowShortcut
+      ) {
         toUpdateUsers.push({
           id: user.id,
-          customHeaders: user.customHeaders || undefined
+          customHeaders: user.customHeaders || undefined,
+          showShortcut: user.showShortcut,
         });
       }
     });
 
-    // 找出被删除的用户（原本分配但现在不在当前分配列表中的）
-    originalAssignedUserIds.forEach(originalId => {
+    originalAssignedUserIds.forEach((originalId) => {
       if (!currentAssignedIds.has(originalId)) {
         toDeleteUserIds.push(originalId);
       }
@@ -192,7 +221,7 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
     return {
       toAssignedUsers,
       toUpdateUsers,
-      toDeleteUserIds
+      toDeleteUserIds,
     };
   };
 
@@ -201,7 +230,6 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
 
     const changes = getChanges();
 
-    // 校验每个用户的 Custom Headers：必须为空白或合法 JSON 对象
     for (const u of assignedUsers) {
       if (u.customHeaders && !isEmptyOrJsonObject(u.customHeaders)) {
         toast.error(t('Headers must be empty or a valid JSON object'));
@@ -209,10 +237,11 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
       }
     }
 
-    // 如果没有任何变更，直接关闭
-    if (changes.toAssignedUsers.length === 0 &&
+    if (
+      changes.toAssignedUsers.length === 0 &&
       changes.toUpdateUsers.length === 0 &&
-      changes.toDeleteUserIds.length === 0) {
+      changes.toDeleteUserIds.length === 0
+    ) {
       toast.success(t('No changes to save'));
       onClose();
       return;
@@ -233,15 +262,30 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
   };
 
   const handleClose = () => {
-    // 重置状态
     setSearchTerm('');
     setUnassignedUsers([]);
     setAssignedUsers([]);
+    setLocallyUnassignedUsers([]);
     setOriginalAssignedUserIds(new Set());
     onClose();
   };
 
   if (!isOpen || !mcpId) return null;
+
+  const normalizedSearchTerm = searchTerm.trim().toLowerCase();
+  const matchingLocallyUnassignedUsers = locallyUnassignedUsers.filter((user) =>
+    user.userName.toLowerCase().includes(normalizedSearchTerm),
+  );
+  const locallyUnassignedUserIds = new Set(
+    matchingLocallyUnassignedUsers.map((user) => user.id),
+  );
+  const availableUsers: UnassignedUserDto[] = [
+    ...matchingLocallyUnassignedUsers.map((user) => ({
+      id: user.id,
+      userName: user.userName,
+    })),
+    ...unassignedUsers.filter((user) => !locallyUnassignedUserIds.has(user.id)),
+  ];
 
   return (
     <Dialog open={isOpen} onOpenChange={handleClose}>
@@ -251,11 +295,12 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
         </DialogHeader>
 
         <div className="flex-1 flex gap-4 min-h-0">
-          {/* 左侧 - 未分配用户搜索 (仅管理员可见) */}
           {isAdmin && (
             <div className="w-1/3 flex flex-col">
               <div className="mb-4">
-                <h3 className="text-sm font-medium mb-2">{t('Available Users')}</h3>
+                <h3 className="text-sm font-medium mb-2">
+                  {t('Available Users')}
+                </h3>
                 <div className="flex items-center space-x-2">
                   <IconSearch size={16} />
                   <Input
@@ -268,18 +313,21 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
               </div>
 
               <div className="flex-1 overflow-y-auto border rounded-md p-2">
-                {searchLoading ? (
+                {searchLoading && availableUsers.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
                     {t('Loading...')}
                   </div>
-                ) : unassignedUsers.length === 0 ? (
+                ) : availableUsers.length === 0 ? (
                   <div className="text-center py-4 text-muted-foreground">
                     {searchTerm ? t('No users found') : t('No available users')}
                   </div>
                 ) : (
                   <div className="space-y-2">
-                    {unassignedUsers.map((user) => (
-                      <div key={user.id} className="flex items-center justify-between p-2 border rounded hover:bg-muted/50">
+                    {availableUsers.map((user) => (
+                      <div
+                        key={user.id}
+                        className="flex items-center justify-between p-2 border rounded hover:bg-muted/50"
+                      >
                         <span className="text-sm">{user.userName}</span>
                         <Button
                           variant="ghost"
@@ -297,51 +345,109 @@ const AssignUsersModal = ({ isOpen, onClose, mcpId, onSuccess, isAdmin }: Assign
             </div>
           )}
 
-          {/* 右侧 - 已分配用户 */}
           <div className="flex-1 flex flex-col">
             <div className="mb-4">
-              <h3 className="text-sm font-medium">{t('Assigned Users')} ({assignedUsers.length})</h3>
+              <h3 className="text-sm font-medium">
+                {t('Assigned Users')} ({assignedUsers.length})
+              </h3>
             </div>
 
-            <div className="flex-1 overflow-y-auto border rounded-md p-2">
-              {assignedUsers.length === 0 ? (
+            <div className="flex-1 min-h-0 overflow-y-auto border rounded-md">
+              {loading ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  {t('Loading...')}
+                </div>
+              ) : assignedUsers.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   {t('No users assigned yet')}
                 </div>
               ) : (
-                <div className="space-y-2">
-                  {assignedUsers.map((user) => (
-                    <Card key={user.id} className="p-2">
-                      <div className="flex items-start justify-between mb-1">
-                        <div className="flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="font-medium text-sm">{user.userName}</span>
+                <Table
+                  className="table-fixed"
+                  containerClassName="overflow-visible"
+                >
+                  <TableHeader className="sticky top-0 z-10 bg-background">
+                    <TableRow>
+                      <TableHead className="w-[28%]">{t('User')}</TableHead>
+                      <TableHead>{t('Request Headers')}</TableHead>
+                      <TableHead className="w-24 px-2">
+                        {t('Shortcut')}
+                      </TableHead>
+                      <TableHead className="w-16 text-center">
+                        {t('Actions')}
+                      </TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {assignedUsers.map((user) => {
+                      const hasInvalidHeaders =
+                        !!user.customHeaders &&
+                        !isEmptyOrJsonObject(user.customHeaders);
+
+                      return (
+                        <TableRow key={user.id}>
+                          <TableCell
+                            className="truncate whitespace-nowrap py-2 font-medium"
+                            title={user.userName}
+                          >
+                            {user.userName}
+                          </TableCell>
+                          <TableCell className="px-2 py-2">
+                            <Textarea
+                              value={user.customHeaders || ''}
+                              onChange={(e) =>
+                                handleCustomHeadersChange(
+                                  user.id,
+                                  e.target.value,
+                                )
+                              }
+                              placeholder={t(
+                                'Optional custom headers (JSON format)',
+                              )}
+                              title={
+                                hasInvalidHeaders
+                                  ? t(
+                                      'Headers must be empty or a valid JSON object',
+                                    )
+                                  : undefined
+                              }
+                              aria-invalid={hasInvalidHeaders}
+                              className={`h-9 min-h-9 resize-none overflow-y-auto py-2 text-xs leading-5 ${
+                                hasInvalidHeaders
+                                  ? 'border-red-500 focus:border-red-500'
+                                  : ''
+                              }`}
+                              rows={1}
+                            />
+                          </TableCell>
+                          <TableCell className="px-2 py-2">
+                            <Switch
+                              checked={!!user.showShortcut}
+                              onCheckedChange={(checked) =>
+                                handleShowShortcutChange(user.id, checked)
+                              }
+                              aria-label={t('Show Shortcut')}
+                              title={t(
+                                'Show this MCP as a shortcut button in chat input',
+                              )}
+                            />
+                          </TableCell>
+                          <TableCell className="py-2 text-center">
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => handleUnassignUser(user)}
                               title={t('Remove')}
+                              aria-label={t('Remove')}
                             >
                               <IconX size={14} />
                             </Button>
-                          </div>
-                          <div className="mt-1">
-                            <Textarea
-                              value={user.customHeaders || ''}
-                              onChange={(e) => handleCustomHeadersChange(user.id, e.target.value)}
-                              placeholder={t('Optional custom headers (JSON format)')}
-                              className={`text-xs min-h-[60px] resize-none ${user.customHeaders && !isEmptyOrJsonObject(user.customHeaders) ? 'border-red-500 focus:border-red-500' : ''}`}
-                              rows={3}
-                            />
-                            {user.customHeaders && !isEmptyOrJsonObject(user.customHeaders) && (
-                              <p className="text-xs text-red-500 mt-1">{t('Headers must be empty or a valid JSON object')}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </Card>
-                  ))}
-                </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
               )}
             </div>
           </div>

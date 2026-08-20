@@ -8,6 +8,7 @@ import { PutMoveChatGroupParams } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
 
 import Folder from '@/components/Folder/Folder';
+import { SidebarGroup } from '@/components/ui/sidebar';
 
 import { setChatGroup, setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
@@ -171,7 +172,7 @@ const ChatGroups = ({ onShowMore }: Props) => {
     const groupByUpdatedChats = chatsGroupByUpdatedAt(chatList);
     return (
       <div
-        className={cn(!isUnGroupChat(chatGroup.id) && 'ml-4 gap-2 border-l')}
+        className={cn(!isUnGroupChat(chatGroup.id) && 'ml-3 border-l border-sidebar-border/50')}
       >
         <ChatList
           onDragItemStart={handleItemDragStart}
@@ -184,7 +185,7 @@ const ChatGroups = ({ onShowMore }: Props) => {
   };
 
   return (
-    <div className="flex w-full flex-col pt-2 bg-m">
+    <div className="flex w-full flex-col">
       {chatGroups.map((group, index) => {
         const isAllChatGroup = isUnGroupChat(group.id);
         return (
@@ -203,21 +204,23 @@ const ChatGroups = ({ onShowMore }: Props) => {
             }}
           >
             {isAllChatGroup ? (
-              <div className="pt-1">{ChatGroupsRender(group)}</div>
+              ChatGroupsRender(group)
             ) : (
-              <Folder
-                showActions={!isAllChatGroup}
-                defaultOpen={group.isExpanded}
-                currentFolder={group}
-                onClickGroup={handleClickGroup}
-                onDeleteGroup={(id: string) => {
-                  handleDeleteGroup(id, index);
-                }}
-                onRenameGroup={handRenameGroup}
-                onDragStart={handleGroupDragStart}
-                onNewGroupChat={handleGroupNewChat}
-                folderComponent={ChatGroupsRender(group)}
-              />
+              <SidebarGroup className="py-0">
+                <Folder
+                  showActions={!isAllChatGroup}
+                  defaultOpen={group.isExpanded}
+                  currentFolder={group}
+                  onClickGroup={handleClickGroup}
+                  onDeleteGroup={(id: string) => {
+                    handleDeleteGroup(id, index);
+                  }}
+                  onRenameGroup={handRenameGroup}
+                  onDragStart={handleGroupDragStart}
+                  onNewGroupChat={handleGroupNewChat}
+                  folderComponent={ChatGroupsRender(group)}
+                />
+              </SidebarGroup>
             )}
           </div>
         );

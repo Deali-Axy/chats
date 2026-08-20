@@ -21,6 +21,8 @@ using Chats.DockerInterface;
 using Microsoft.Extensions.Options;
 using Chats.BE.Services.Keycloak;
 using Chats.BE.Services.RequestTracing;
+using Chats.BE.Services.TitleSummary;
+using Chats.BE.Services.Mcp;
 
 namespace Chats.BE;
 
@@ -51,7 +53,7 @@ public class Program
         {
             builder.Services.AddHttpClient(clientName, httpClient =>
             {
-                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Sdcb-Chats/{CurrentVersion}");
+                httpClient.DefaultRequestHeaders.UserAgent.ParseAdd($"Ayaka-Chats/{CurrentVersion}");
             })
             .AddHttpMessageHandler(() => new HttpClientNameStampHandler(clientName))
             .AddHttpMessageHandler<OutboundRequestTraceHandler>();
@@ -89,6 +91,7 @@ public class Program
         builder.Services.AddSingleton<Services.Models.ChatServices.Anthropic.MimoAnthropicService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MimoChatService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.MoonshotChatService>();
+        builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.NovitaChatService>();
 
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.ImageGenerationService>();
         builder.Services.AddSingleton<Services.Models.ChatServices.OpenAI.Special.AzureImageGenerationService>();
@@ -96,7 +99,6 @@ public class Program
         builder.Services.AddSingleton<IFileServiceFactory, FileServiceFactory>();
         builder.Services.AddSingleton<ChatStopService>();
         builder.Services.AddSingleton<FileImageInfoService>();
-        builder.Services.AddSingleton<AsyncClientInfoManager>();
         builder.Services.AddSingleton<AsyncCacheUsageManager>();
         builder.Services.AddSingleton<GitHubReleaseChecker>();
         builder.Services.AddSingleton<IRequestTraceConfigProvider, RequestTraceConfigProvider>();
@@ -113,8 +115,17 @@ public class Program
         builder.Services.AddScoped<ClientInfoManager>();
         builder.Services.AddScoped<FileUrlProvider>();
         builder.Services.AddScoped<ChatConfigService>();
+        builder.Services.AddSingleton<McpToolExecutionPlanner>();
+        builder.Services.AddSingleton<IMcpRetryDelay, McpRetryDelay>();
+        builder.Services.AddSingleton<IMcpToolClientFactory, McpToolClientFactory>();
+        builder.Services.AddScoped<IMcpToolAttemptExecutor, McpToolAttemptExecutor>();
+        builder.Services.AddScoped<McpToolExecutionService>();
+        builder.Services.AddSingleton<ChatRetryPolicy>();
+        builder.Services.AddScoped<ChatRunService>();
         builder.Services.AddScoped<DBFileService>();
         builder.Services.AddScoped<LoginRateLimiter>();
+        builder.Services.AddScoped<TitleSummaryConfigService>();
+        builder.Services.AddScoped<ChatTitleSummaryService>();
 
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
         builder.Services.Configure<RequestTraceQueueOptions>(builder.Configuration.GetSection("RequestTraceQueue"));

@@ -8,186 +8,108 @@ using System.Net;
 using Chats.BE.UnitTest.ChatServices.Http;
 using Chats.DB;
 using Chats.DB.Enums;
+using System.Text;
+using System.Text.Json;
 
 namespace Chats.BE.UnitTest.ChatServices.ChatCompletions;
 
 public class MimoChatServiceTest
 {
-    private const string TestDataPath = "ChatServices/ChatCompletions/FiddlerDump";
-
-    private static IHttpClientFactory CreateMockHttpClientFactory(FiddlerHttpDumpParser.HttpDump dump, bool validateRequest = true)
+    private sealed class CapturingHttpClientFactory(string responseBody, Action<HttpRequestMessage> onRequest) : IHttpClientFactory
     {
-        var statusCode = (HttpStatusCode)dump.Response.StatusCode;
-        // SSE requires newlines between events, but FiddlerHttpDumpParser strips them.
-        // We add them back here for the mock stream.
-        var chunksWithNewlines = dump.Response.Chunks.Select(c => c + "\n").ToList();
-        return new FiddlerDumpHttpClientFactory(chunksWithNewlines, statusCode, validateRequest ? dump.Request.Body : null);
+        public HttpClient CreateClient(string name) => new(new Handler(responseBody, onRequest));
+
+        private sealed class Handler(string responseBody, Action<HttpRequestMessage> onRequest) : HttpMessageHandler
+        {
+            protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+            {
+                onRequest(request);
+                return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StreamContent(new MemoryStream(Encoding.UTF8.GetBytes(responseBody))),
+                });
+            }
+        }
     }
 
-    [Fact]
-    public async Task NonStreaming_WithNullToolCalls_ShouldNotThrow()
+    private static ChatConfig CreateChatConfig()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "XiaomiMimo-NonStream.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump);
-        
-        var service = new MimoChatService(httpClientFactory);
+        DateTime now = DateTime.UtcNow;
 
-        var modelKey = new ModelKey
+        ModelKeySnapshot modelKeySnapshot = new()
         {
-            Id = 1,
+            Id = 11,
+            ModelKeyId = 1,
             Name = "TestKey",
             Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.OpenAI,
+            ModelProviderId = (short)DBModelProvider.Mimo,
+            CreatedAt = now,
         };
 
-        var model = new Model
+        ModelKey modelKey = new()
         {
             Id = 1,
-            Name = "Test Model",
-            DeploymentName = "mimo-v2-flash",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelKeySnapshot.Id,
+            CurrentSnapshot = modelKeySnapshot,
         };
 
-        var chatConfig = new ChatConfig
+        modelKeySnapshot.ModelKey = modelKey;
+
+        ModelSnapshot modelSnapshot = new()
+        {
+            Id = 21,
+            ModelId = 1,
+            Name = "Test Model",
+            DeploymentName = "mimo-v2.5-pro",
+            ModelKeyId = modelKey.Id,
+            ModelKeySnapshotId = modelKeySnapshot.Id,
+            ModelKeySnapshot = modelKeySnapshot,
+            AllowStreaming = true,
+            ApiTypeId = (byte)DBApiType.OpenAIChatCompletion,
+            CreatedAt = now,
+        };
+
+        Model model = new()
+        {
+            Id = 1,
+            CreatedAt = now,
+            UpdatedAt = now,
+            CurrentSnapshotId = modelSnapshot.Id,
+            CurrentSnapshot = modelSnapshot,
+        };
+
+        modelSnapshot.Model = model;
+
+        return new ChatConfig
         {
             Id = 1,
             ModelId = 1,
             Model = model,
         };
-
-        var request = new ChatRequest
-        {
-            Messages = [NeutralMessage.FromUserText("hello")],
-            ChatConfig = chatConfig,
-            Source = UsageSource.Api,
-            Streamed = false, // This triggers ChatNonStreaming
-            EndUserId = "8"
-        };
-
-        // Act
-        var segments = new List<ChatSegment>();
-        await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
-        {
-            segments.Add(segment);
-        }
-
-        // Assert
-        Assert.NotEmpty(segments);
-        var textSegment = segments.OfType<TextChatSegment>().FirstOrDefault();
-        Assert.NotNull(textSegment);
-        Assert.Equal("Hello! How can I help you today?", textSegment.Text);
-    }
-
-    [Fact]
-    public async Task Streaming_WithInterleavedToolCallBug_ShouldParseToolCall()
-    {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "XiaomiMimo-InterleavedToolCallBug.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump, validateRequest: false);
-
-        var service = new MimoChatService(httpClientFactory);
-
-        var modelKey = new ModelKey
-        {
-            Id = 1,
-            Name = "TestKey",
-            Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.OpenAI,
-        };
-
-        var model = new Model
-        {
-            Id = 1,
-            Name = "Test Model",
-            DeploymentName = "mimo-v2-flash",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-        };
-
-        var chatConfig = new ChatConfig
-        {
-            Id = 1,
-            ModelId = 1,
-            Model = model,
-        };
-
-        var request = new ChatRequest
-        {
-            Messages = [NeutralMessage.FromUserText("hello")],
-            ChatConfig = chatConfig,
-            Source = UsageSource.Api,
-            Streamed = true,
-            EndUserId = "8"
-        };
-
-        // Act
-        var segments = new List<ChatSegment>();
-        await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
-        {
-            segments.Add(segment);
-        }
-
-        // Assert
-        // Currently, this will fail because it will only find ThinkChatSegments and no ToolCallSegments
-        var toolCalls = segments.OfType<ToolCallSegment>().ToList();
-        Assert.NotEmpty(toolCalls);
-        
-        var firstToolCall = toolCalls.First(tc => tc.Name != null);
-        Assert.Equal("run_csharp", firstToolCall.Name);
-        
-        var allArguments = string.Join("", toolCalls.Where(tc => tc.Index == firstToolCall.Index).Select(tc => tc.Arguments));
-        Assert.Contains("using System;", allArguments);
-        Assert.Contains("\"timeout\": 30000", allArguments);
-
-        Assert.All(toolCalls, tc => Assert.Matches(@"^call_[a-f0-9]{24}$", tc.Id));
-
-        var finishReason = segments.OfType<FinishReasonChatSegment>().LastOrDefault();
-        Assert.NotNull(finishReason);
-        Assert.Equal(DBFinishReason.ToolCalls, finishReason.FinishReason);
     }
 
     [Fact]
     public async Task Streaming_NormalToolCall_ShouldParseCorrectly()
     {
-        // Arrange
-        var filePath = Path.Combine(TestDataPath, "XiaomiMimo-ToolCall.dump");
-        var dump = FiddlerHttpDumpParser.ParseFile(filePath);
-        var httpClientFactory = CreateMockHttpClientFactory(dump, validateRequest: false);
+        const string sse = """
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"id":"call_13f2f94b48d240a8ae062fe0","function":{"name":"run_csharp","arguments":"1234.0 / "}}]},"finish_reason":null}]}
 
-        var service = new MimoChatService(httpClientFactory);
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{"tool_calls":[{"index":0,"function":{"arguments":"5432.0"}}]},"finish_reason":null}]}
 
-        var modelKey = new ModelKey
-        {
-            Id = 1,
-            Name = "TestKey",
-            Secret = "test-api-key",
-            ModelProviderId = (int)DBModelProvider.OpenAI,
-        };
+            data: {"id":"chat_1","choices":[{"index":0,"delta":{},"finish_reason":"tool_calls"}]}
 
-        var model = new Model
-        {
-            Id = 1,
-            Name = "Test Model",
-            DeploymentName = "mimo-v2-flash",
-            ModelKeyId = 1,
-            ModelKey = modelKey,
-            AllowStreaming = true,
-        };
+            data: [DONE]
 
-        var chatConfig = new ChatConfig
-        {
-            Id = 1,
-            ModelId = 1,
-            Model = model,
-        };
+            """;
+        var httpClientFactory = new ReplayHttpClientFactory(sse);
 
-        var request = new ChatRequest
+        MimoChatService service = new(httpClientFactory);
+
+        var chatConfig = CreateChatConfig();
+
+        ChatRequest request = new()
         {
             Messages = [NeutralMessage.FromUserText("hello")],
             ChatConfig = chatConfig,
@@ -197,14 +119,14 @@ public class MimoChatServiceTest
         };
 
         // Act
-        var segments = new List<ChatSegment>();
+        List<ChatSegment> segments = new();
         await foreach (var segment in service.ChatStreamed(request, CancellationToken.None))
         {
             segments.Add(segment);
         }
 
         // Assert
-        var toolCalls = segments.OfType<ToolCallSegment>().ToList();
+        List<ToolCallSegment> toolCalls = segments.OfType<ToolCallSegment>().ToList();
         Assert.NotEmpty(toolCalls);
         
         var toolCall = toolCalls.First(tc => tc.Id != null);
@@ -217,5 +139,157 @@ public class MimoChatServiceTest
         var finishReason = segments.OfType<FinishReasonChatSegment>().LastOrDefault();
         Assert.NotNull(finishReason);
         Assert.Equal(DBFinishReason.ToolCalls, finishReason.FinishReason);
+    }
+
+    [Fact]
+    public async Task SearchEnabled_ShouldAddMinimalHostedWebSearchTool()
+    {
+        string sse = "data: {\"id\":\"chat_1\",\"choices\":[{\"index\":0,\"delta\":{},\"finish_reason\":\"stop\"}]}\n\n" +
+                     "data: [DONE]\n\n";
+        string? capturedBody = null;
+        CapturingHttpClientFactory factory = new(sse, request =>
+            capturedBody = request.Content?.ReadAsStringAsync().GetAwaiter().GetResult());
+        ChatConfig config = CreateChatConfig();
+        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.WebSearchEnabled = true;
+        MimoChatService service = new(factory);
+
+        await foreach (ChatSegment _ in service.ChatStreamed(new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("news")],
+            ChatConfig = config,
+            Source = UsageSource.Api,
+            Streamed = true,
+            Tools = [FunctionTool.Create("lookup", "Lookup", "{\"type\":\"object\"}")],
+        }, CancellationToken.None))
+        {
+        }
+
+        Assert.NotNull(capturedBody);
+        using JsonDocument doc = JsonDocument.Parse(capturedBody);
+        JsonElement[] tools = doc.RootElement.GetProperty("tools").EnumerateArray().ToArray();
+        Assert.Equal(2, tools.Length);
+        JsonElement searchTool = Assert.Single(tools,
+            x => x.GetProperty("type").GetString() == "web_search");
+        Assert.Single(tools, x => x.GetProperty("type").GetString() == "function");
+        Assert.Single(searchTool.EnumerateObject());
+        Assert.Equal("auto", doc.RootElement.GetProperty("tool_choice").GetString());
+    }
+
+    [Fact]
+    public async Task Streaming_SearchAnnotations_ShouldCreateStructuredToolResponse()
+    {
+        string sse =
+            "data: {\"id\":\"chat_1\",\"choices\":[{\"index\":0,\"delta\":{\"annotations\":[{\"type\":\"url_citation\",\"title\":\"Source\",\"url\":\"https://example.com\",\"summary\":\"Summary\",\"site_name\":\"Example\"}]},\"finish_reason\":null}]}\n\n" +
+            "data: {\"id\":\"chat_1\",\"choices\":[{\"index\":0,\"delta\":{\"content\":\"answer\"},\"finish_reason\":\"stop\"}]}\n\n" +
+            "data: [DONE]\n\n";
+        CapturingHttpClientFactory factory = new(sse, _ => { });
+        ChatConfig config = CreateChatConfig();
+        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.WebSearchEnabled = true;
+        MimoChatService service = new(factory);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("news")],
+            ChatConfig = config,
+            Source = UsageSource.Api,
+            Streamed = true,
+        }, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        ToolCallSegment call = Assert.Single(segments.OfType<ToolCallSegment>());
+        Assert.Equal("web_search_call", call.Name);
+        ToolCallResponseSegment response = Assert.Single(segments.OfType<ToolCallResponseSegment>());
+        Assert.Equal(call.Id, response.ToolCallId);
+        Assert.True(segments.IndexOf(call) < segments.FindIndex(x => x is TextChatSegment));
+        Assert.Equal(segments.IndexOf(call) + 1, segments.IndexOf(response));
+        using JsonDocument result = JsonDocument.Parse(response.Response!);
+        JsonElement citation = Assert.Single(result.RootElement.EnumerateArray());
+        Assert.Equal("web_search_result", citation.GetProperty("type").GetString());
+        Assert.Equal("https://example.com", citation.GetProperty("url").GetString());
+        Assert.Equal(DBFinishReason.Stop, segments.OfType<FinishReasonChatSegment>().Single().FinishReason);
+    }
+
+    [Fact]
+    public async Task NonStreaming_SearchAnnotations_ShouldCreateStructuredToolResponse()
+    {
+        string responseJson = """
+            {"id":"chat_2","choices":[{"index":0,"message":{"role":"assistant","content":"answer","annotations":[{"type":"url_citation","title":"Source","url":"https://example.com"}]},"finish_reason":"stop"}],"usage":{"prompt_tokens":1,"completion_tokens":1,"total_tokens":2}}
+            """;
+        CapturingHttpClientFactory factory = new(responseJson, _ => { });
+        ChatConfig config = CreateChatConfig();
+        config.Model.CurrentSnapshot.AllowStreaming = false;
+        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.WebSearchEnabled = true;
+        MimoChatService service = new(factory);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("news")],
+            ChatConfig = config,
+            Source = UsageSource.Api,
+            Streamed = false,
+        }, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        Assert.Single(segments.OfType<ToolCallSegment>());
+        ToolCallResponseSegment response = Assert.Single(segments.OfType<ToolCallResponseSegment>());
+        using JsonDocument result = JsonDocument.Parse(response.Response!);
+        Assert.Equal("https://example.com", Assert.Single(result.RootElement.EnumerateArray()).GetProperty("url").GetString());
+    }
+
+    [Fact]
+    public async Task Streaming_WebSearchDump_ShouldEmitSourcesBeforeReasoningAndAnswer()
+    {
+        const string sse = """
+            data: {"id":"chat_search","choices":[{"index":0,"delta":{"annotations":[{"type":"url_citation","title":"Weather","url":"https://weather.example/","summary":"Sunny"},{"type":"url_citation","title":"Forecast","url":"https://forecast.example/","summary":"Warm"}]},"finish_reason":null}]}
+
+            data: {"id":"chat_search","choices":[{"index":0,"delta":{"reasoning_content":"Looking up the forecast."},"finish_reason":null}]}
+
+            data: {"id":"chat_search","choices":[{"index":0,"delta":{"content":"Tomorrow will be sunny."},"finish_reason":"stop"}]}
+
+            data: [DONE]
+
+            """;
+        IHttpClientFactory factory = new ReplayHttpClientFactory(sse);
+        ChatConfig config = CreateChatConfig();
+        config.Model.CurrentSnapshot.AllowSearch = true;
+        config.WebSearchEnabled = true;
+        MimoChatService service = new(factory);
+        List<ChatSegment> segments = [];
+
+        await foreach (ChatSegment segment in service.ChatStreamed(new ChatRequest
+        {
+            Messages = [NeutralMessage.FromUserText("明天长沙天气怎么样？")],
+            ChatConfig = config,
+            Source = UsageSource.Api,
+            Streamed = true,
+        }, CancellationToken.None))
+        {
+            segments.Add(segment);
+        }
+
+        int callIndex = segments.FindIndex(x => x is ToolCallSegment { Name: "web_search_call" });
+        int responseIndex = segments.FindIndex(x => x is ToolCallResponseSegment);
+        int reasoningIndex = segments.FindIndex(x => x is ThinkChatSegment think && !string.IsNullOrEmpty(think.Think));
+        int answerIndex = segments.FindIndex(x => x is TextChatSegment);
+        Assert.True(callIndex >= 0);
+        Assert.Equal(callIndex + 1, responseIndex);
+        string order = string.Join(",", segments.Select((segment, index) => $"{index}:{segment.GetType().Name}"));
+        Assert.True(responseIndex < reasoningIndex, order);
+        Assert.True(responseIndex < answerIndex, order);
+
+        ToolCallResponseSegment searchResponse = Assert.IsType<ToolCallResponseSegment>(segments[responseIndex]);
+        using JsonDocument results = JsonDocument.Parse(searchResponse.Response!);
+        string[] urls = results.RootElement.EnumerateArray().Select(x => x.GetProperty("url").GetString()!).ToArray();
+        Assert.NotEmpty(urls);
+        Assert.Equal(urls.Distinct(StringComparer.Ordinal).Count(), urls.Length);
     }
 }

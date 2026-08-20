@@ -8,6 +8,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { IconCheck, IconClipboard, IconArrowsDiagonal } from '@/components/Icons/index';
 import { MermaidFullscreenDialog } from './MermaidFullscreenDialog';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { copyTextToClipboard } from '@/utils/clipboard';
 // Removed chat status dependency to always attempt rendering
 import { CodeBlockCore } from './CodeBlockCore';
 
@@ -239,6 +240,7 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
                 }
               });
           }
+
         }
       } else {
         // code changed during timer; skip render
@@ -335,33 +337,26 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
 
   
 
-  const copyToClipboard = (e: React.MouseEvent) => {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
-    }
-
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true);
-
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
-    });
+  const copyToClipboard = async (e: React.MouseEvent) => {
     e.stopPropagation();
+
+    if (!(await copyTextToClipboard(value))) return;
+
+    setIsCopied(true);
+
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
   };
 
-  const handleCopy = () => {
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
-    }
+  const handleCopy = async () => {
+    if (!(await copyTextToClipboard(value))) return;
 
-    navigator.clipboard.writeText(value).then(() => {
-      setIsCopied(true);
+    setIsCopied(true);
 
-      setTimeout(() => {
-        setIsCopied(false);
-      }, 2000);
-    });
+    setTimeout(() => {
+      setIsCopied(false);
+    }, 2000);
   };
 
   // 只有在没有任何 SVG 可展示时才回退到代码块
@@ -372,20 +367,21 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
 
   return (
     <>
-      <div className="codeblock relative font-sans text-base group">
-        <div className="relative bg-white dark:bg-gray-900 rounded-lg overflow-hidden">
-          <div className="absolute right-2 top-2 z-10 flex items-center gap-1 opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 group-hover:pointer-events-auto">
+      <div className="codeblock relative font-sans text-base group my-4 border rounded-md bg-white dark:bg-gray-900 overflow-hidden">
+        <div className="flex items-center justify-between px-4 py-1.5 bg-muted/60 text-xs text-muted-foreground border-b mb-2">
+          <span className="font-mono uppercase tracking-wider text-[10px]">MERMAID</span>
+          <div className="flex items-center gap-3">
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="flex items-center rounded bg-none p-1 text-xs text-muted-foreground hover:bg-muted/60"
+                    className="flex items-center hover:text-foreground transition-colors"
                     onClick={copyToClipboard}
                   >
                     {isCopied ? (
-                      <IconCheck stroke={'currentColor'} size={16} />
+                      <IconCheck stroke={'currentColor'} size={14} />
                     ) : (
-                      <IconClipboard stroke={'currentColor'} size={16} />
+                      <IconClipboard stroke={'currentColor'} size={14} />
                     )}
                   </button>
                 </TooltipTrigger>
@@ -399,10 +395,10 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
               <Tooltip>
                 <TooltipTrigger asChild>
                   <button
-                    className="flex items-center rounded bg-none p-1 text-xs text-muted-foreground hover:bg-muted/60"
+                    className="flex items-center hover:text-foreground transition-colors"
                     onClick={() => setIsFullscreenOpen(true)}
                   >
-                    <IconArrowsDiagonal stroke={'currentColor'} size={16} />
+                    <IconArrowsDiagonal stroke={'currentColor'} size={14} />
                   </button>
                 </TooltipTrigger>
                 <TooltipContent>
@@ -411,20 +407,16 @@ export const MermaidBlock: FC<Props> = memo(({ value }) => {
               </Tooltip>
             </TooltipProvider>
           </div>
+        </div>
 
-          <div className="absolute right-2 bottom-2 z-10 text-xs uppercase text-muted-foreground opacity-0 pointer-events-none transition-opacity duration-150 group-hover:opacity-100 group-hover:pointer-events-auto">
-            MERMAID
-          </div>
-
+        <div
+          className="p-4 overflow-x-auto flex justify-center items-center"
+          style={{ minHeight: '100px' }}
+        >
           <div
-            className="p-4 overflow-x-auto flex justify-center items-center"
-            style={{ minHeight: '100px' }}
-          >
-            <div
-              dangerouslySetInnerHTML={{ __html: svgCode }}
-              className="mermaid-diagram max-w-full"
-            />
-          </div>
+            dangerouslySetInnerHTML={{ __html: svgCode }}
+            className="mermaid-diagram max-w-full"
+          />
         </div>
       </div>
 

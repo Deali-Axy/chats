@@ -40,9 +40,9 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                 SpanId = x.SpanId,
                 Usage = x.IsUser || x.Steps.First().Usage == null ? null : new ChatMessageTempUsage()
                 {
-                    ModelId = x.Steps.First().Usage!.ModelId,
-                    ModelName = x.Steps.First().Usage!.Model.Name,
-                    ModelProviderId = x.Steps.First().Usage!.Model.ModelKey.ModelProviderId,
+                    ModelId = x.Steps.First().Usage!.ModelSnapshot.ModelId,
+                    ModelName = x.Steps.First().Usage!.ModelSnapshot.Name,
+                    ModelProviderId = x.Steps.First().Usage!.ModelSnapshot.ModelKeySnapshot.ModelProviderId,
                 },
                 Reaction = x.ReactionId,
             })
@@ -50,7 +50,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             .Select(x => x.ToDto(urlEncryption, fup))
             .ToArrayAsync(cancellationToken);
 
-        if (EtagCacheHelper.TryHandleNotModified(this, "messages-turns", messages))
+        if (EtagCacheHelper.TryHandleNotModified(this, "messages-turns", messages, CreateDownloadUrlRequest.GetCurrentRefreshBucket()))
         {
             return StatusCode(StatusCodes.Status304NotModified);
         }
@@ -237,7 +237,7 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentFile)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCall)
             .Include(x => x.Steps).ThenInclude(x => x.StepContents).ThenInclude(x => x.StepContentToolCallResponse)
-            .Include(x => x.Steps).ThenInclude(x => x.Usage!.Model.ModelKey)
+            .Include(x => x.Steps).ThenInclude(x => x.Usage!).ThenInclude(x => x.ModelSnapshot).ThenInclude(x => x.ModelKeySnapshot)
             .FirstOrDefaultAsync(x => x.Id == urlEncryption.DecryptTurnId(turnId), cancellationToken);
         if (message == null)
         {
@@ -260,7 +260,8 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
         ContentRequestItem[] newContent = [.. ContentRequestItem.FromDB([.. message.Steps.SelectMany(x => x.StepContents)], urlEncryption, textContent.Id, content)];
 
         StepContent[] stepContents = await StepContentExtensions.FromRequest(newContent, fup, cancellationToken);
-        ClientInfo clientInfo = await clientInfoManager.GetClientInfo(cancellationToken);
+        int clientInfoId = await clientInfoManager.GetClientInfoId(cancellationToken);
+        UserModelUsage? sourceUsage = message.Steps.First().Usage;
         ChatTurn turn = new()
         {
             SpanId = message.SpanId,
@@ -273,16 +274,17 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                 Edited = true, // Mark as edited since we are creating a new message
                 ChatRoleId = message.IsUser ? (byte)DBChatRole.User : (byte)DBChatRole.Assistant,
                 CreatedAt = DateTime.UtcNow,
-                Usage = message.Steps.First().Usage != null ? new UserModelUsage()
+                Usage = sourceUsage != null ? new UserModelUsage()
                 {
-                    ModelId = message.Steps.First().Usage!.ModelId,
+                    ModelSnapshotId = sourceUsage.ModelSnapshotId,
+                    ModelSnapshot = sourceUsage.ModelSnapshot,
                     UserId = currentUser.Id,
                     FinishReasonId = (byte)DBFinishReason.Success,
                     SegmentCount = 1,
-                    InputFreshTokens = message.Steps.First().Usage!.InputFreshTokens,
-                    InputCachedTokens = message.Steps.First().Usage!.InputCachedTokens,
+                    InputFreshTokens = sourceUsage.InputFreshTokens,
+                    InputCachedTokens = sourceUsage.InputCachedTokens,
                     OutputTokens = ChatService.Tokenizer.CountTokens(content.Text),
-                    ClientInfoId = clientInfo.Id, // Use FK instead of navigation property to avoid EF Core collection modification issue
+                    ClientInfoId = clientInfoId, // Use FK instead of navigation property to avoid EF Core collection modification issue
                     ReasoningTokens = 0,
                     IsUsageReliable = false,
                     PreprocessDurationMs = 0,
@@ -294,9 +296,10 @@ public class MessagesController(ChatsDB db, CurrentUser currentUser, IUrlEncrypt
                     InputCachedCost = 0,
                     BalanceTransactionId = null,
                     UsageTransactionId = null,
+                    SourceId = sourceUsage.SourceId,
                 } : null,
             })],
-            ChatConfigId = message.ChatConfigId,
+            ChatConfigSnapshotId = message.ChatConfigSnapshotId,
         };
         db.ChatTurns.Add(turn);
         message.Chat.UpdatedAt = DateTime.UtcNow;

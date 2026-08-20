@@ -10,7 +10,16 @@ import { SiteInfoConfig } from '@/types/config';
 import { LoginType } from '@/types/user';
 
 import { Button } from '@/components/ui/button';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { cn } from '@/lib/utils';
 
 import AccountLoginCard from '@/components/login/AccountLoginCard';
 import KeyCloakLogin from '@/components/login/KeyCloakLogin';
@@ -26,6 +35,16 @@ enum TabKeys {
   ACCOUNT = 'account',
 }
 
+const LOGIN_SHOWCASE_IMAGES = [
+  '/images/snapmixer/ayaka1.avif',
+  '/images/snapmixer/ayaka2.avif',
+  '/images/snapmixer/ayaka3.avif',
+  '/images/snapmixer/ayaka4.avif',
+];
+
+const LOGIN_SHOWCASE_INTERVAL = 5000;
+const PRODUCT_CONTACT_QR = '/images/wechat-offical-qrcode.webp';
+
 type LoginHeader = {
   [key in TabKeys]: { title: string; description: string };
 };
@@ -35,6 +54,7 @@ const getFeVersion = () => process.env.FE_VERSION || 'local';
 export default function LoginPage() {
   const { t } = useTranslation();
   const [isClient, setIsClient] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
   const [webSiteInfo, setWebSiteInfo] = useState<SiteInfoConfig>();
   const [feVersion, setFeVersion] = useState<string>(getFeVersion);
   const LoginHeaders: LoginHeader = {
@@ -94,11 +114,103 @@ export default function LoginPage() {
     setFeVersion(getFeVersion());
   }, []);
 
+  useEffect(() => {
+    if (LOGIN_SHOWCASE_IMAGES.length <= 1) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % LOGIN_SHOWCASE_IMAGES.length);
+    }, LOGIN_SHOWCASE_INTERVAL);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
   const openLoading = () => setLoginLoading(true);
   const closeLoading = () => setTimeout(() => setLoginLoading(false), 600);
 
   const hasLoginType = (type: LoginType) =>
     !!loginConfigs.find((x) => x.type === type);
+
+  const renderProductIntro = ({
+    compact = false,
+    className,
+  }: {
+    compact?: boolean;
+    className?: string;
+  } = {}) => (
+    <div
+      className={cn(
+        'rounded-xl border text-left',
+        compact
+          ? 'border-border/70 bg-muted/20 px-4 py-3'
+          : 'max-w-sm border-white/20 bg-black/20 px-5 py-4 text-white shadow-lg backdrop-blur-md dark:border-zinc-900/10 dark:bg-white/55 dark:text-zinc-900',
+        className,
+      )}
+    >
+      <div className="space-y-1.5">
+        <p
+          className={cn(
+            'font-medium leading-5',
+            compact ? 'text-sm' : 'text-base',
+          )}
+        >
+          {t('Web chat and LLM API gateway, now in invite-only preview')}
+        </p>
+        <p
+          className={cn(
+            'leading-5',
+            compact
+              ? 'text-xs text-muted-foreground'
+              : 'text-sm text-white/80 dark:text-zinc-800/80',
+          )}
+        >
+          {t(
+            'Chats brings together a polished web chat experience and an LLM API gateway. The service is currently in invite-only preview. If you would like access, please contact the product team to get the QR code.',
+          )}
+        </p>
+      </div>
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button
+            type="button"
+            variant="link"
+            className={cn(
+              'mt-2 h-auto p-0',
+              compact
+                ? 'text-xs'
+                : 'text-sm font-medium text-white hover:text-white/85 dark:text-zinc-900 dark:hover:text-zinc-700',
+            )}
+          >
+            {t('Contact product team')}
+          </Button>
+        </DialogTrigger>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{t('Scan to get an invite code')}</DialogTitle>
+            <DialogDescription>
+              {t(
+                'Scan the official account QR code below, then leave a message with AyakaChat in the account chat to request your invite code.',
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col items-center gap-3">
+            <img
+              src={PRODUCT_CONTACT_QR}
+              alt={t('AyakaChat official account QR code')}
+              className="h-64 w-64 rounded-lg border bg-white object-contain p-2"
+              loading="lazy"
+            />
+            <p className="text-center text-xs leading-5 text-muted-foreground">
+              {t(
+                'After scanning, leave a message with AyakaChat in the official account backend to get your invite code.',
+              )}
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
 
   const renderTabsList = () => {
     return hasLoginType(LoginType.Phone) ? (
@@ -135,9 +247,29 @@ export default function LoginPage() {
     <>
       {!loading && isClient && (
         <div className="container relative h-screen flex-col items-center justify-center md:grid lg:max-w-none lg:grid-cols-2 lg:px-0">
-          <div className="relative hidden h-full flex-col  p-10 text-white dark:text-black lg:flex dark:border-r">
-            <div className="absolute inset-0 dark:bg-gray-50 bg-zinc-900 bg-[url('/images/login_bg.avif')] bg-cover" />
-            <div className="relative z-20 flex items-center text-lg font-medium text-white">
+          <div className="relative hidden h-full flex-col overflow-hidden p-10 text-white dark:text-black lg:flex dark:border-r">
+            <div className="absolute inset-0 bg-zinc-900 dark:bg-gray-50">
+              {LOGIN_SHOWCASE_IMAGES.map((src, index) => (
+                <div
+                  key={src}
+                  className={`absolute inset-0 transition-opacity duration-1000 ease-in-out ${
+                    activeSlide === index ? 'opacity-100' : 'opacity-0'
+                  }`}
+                >
+                  <Image
+                    src={src}
+                    alt=""
+                    fill
+                    priority={index === 0}
+                    sizes="50vw"
+                    className="object-cover"
+                  />
+                </div>
+              ))}
+              <div className="absolute inset-0 bg-zinc-950/45 dark:bg-gray-50/30" />
+              <div className="absolute inset-x-0 bottom-0 top-1/3 bg-gradient-to-t from-zinc-950/70 via-zinc-950/15 to-transparent dark:from-gray-100/75 dark:via-gray-100/15 dark:to-transparent" />
+            </div>
+            <div className="relative z-20 flex items-center text-lg font-medium text-white dark:text-zinc-900">
               <Image
                 src="/icons/logo.png"
                 width={32}
@@ -147,6 +279,29 @@ export default function LoginPage() {
                 priority
               />
               Chats
+            </div>
+            <div className="relative z-20 mt-10">
+              {renderProductIntro()}
+            </div>
+            <div className="relative z-20 mt-auto flex items-center justify-center gap-2">
+              {LOGIN_SHOWCASE_IMAGES.map((src, index) => {
+                const isActive = activeSlide === index;
+                return (
+                  <button
+                    key={`${src}-indicator`}
+                    type="button"
+                    aria-label={t('Go to slide {{index}}', { index: index + 1 })}
+                    aria-current={isActive ? 'true' : undefined}
+                    aria-pressed={isActive}
+                    className={`h-2.5 rounded-full transition-all duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/80 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent dark:focus-visible:ring-zinc-900/80 ${
+                      isActive
+                        ? 'w-8 bg-white dark:bg-zinc-900'
+                        : 'w-2.5 bg-white/50 hover:bg-white/75 dark:bg-zinc-900/45 dark:hover:bg-zinc-900/70'
+                    }`}
+                    onClick={() => setActiveSlide(index)}
+                  />
+                );
+              })}
             </div>
           </div>
           <div className="lg:px-8 lg:pt-8 pb-4 h-screen">
@@ -231,6 +386,9 @@ export default function LoginPage() {
                           <KeyCloakLogin loading={loginLoading} />
                         )}
                       </div>
+                      <div className="mx-auto mt-4 w-full max-w-md lg:hidden">
+                        {renderProductIntro({ compact: true })}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -253,7 +411,7 @@ export default function LoginPage() {
                   variant="link"
                   onClick={redirectToGithub}
                 >
-                  Sdcb Chats
+                  AyakaChat
                 </Button>
                 . All Rights Reserved.
               </div>

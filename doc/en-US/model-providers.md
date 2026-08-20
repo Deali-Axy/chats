@@ -2,7 +2,7 @@
 
 **English** | [简体中文](../zh-CN/model-providers.md)
 
-Sdcb Chats supports 21+ mainstream AI model providers. Here is the complete list:
+Ayaka Chats supports 22+ mainstream AI model providers. Here is the complete list:
 
 | Id  | Name             | Added                                                       | Interleaved Thinking |
 | --- | ---------------- | ----------------------------------------------------------- | -------------------- |
@@ -28,6 +28,7 @@ Sdcb Chats supports 21+ mainstream AI model providers. Here is the complete list
 | 19  | Token Pony       | [2025-11-07](https://github.com/sdcb/chats/commit/32e4a0d5) | ❓                    |
 | 20  | Anthropic        | [2025-11-24](https://github.com/sdcb/chats/commit/22ebef98) | ✅                    |
 | 21  | Xiaomi Mimo      | [2025-12-17](https://github.com/sdcb/chats/commit/026f1a4e) | ✅                    |
+| 22  | Novita AI        | [2026-03-13](https://github.com/sdcb/chats/commit/cecfc66d) | ✅                    |
 
 ## Notes
 
@@ -111,6 +112,10 @@ Supports OpenAI's image editing protocol.
 Since Chats supports the multiple standard API protocols mentioned above, you can add any custom model provider compatible with these protocols, including but not limited to:
 
 - Locally deployed open-source models (via Ollama, vLLM, LM Studio, etc.)
-- Third-party API proxy services (such as OpenRouter, One API, etc.)
+- User-configured third-party API proxy services (such as OpenRouter, One API, etc.)
 - Enterprise internal model services
 - Self-hosted model inference services
+
+These services can be configured directly by users. Local deployments and self-hosted inference services are not considered relay services under this policy; whether they are added as built-in providers, and their maintenance priority, remains subject to the policy below.
+
+> **Maintenance and new-provider policy**: the maintainer primarily uses Xiaomi MiMo, DeepSeek, and Azure AI Foundry. MiMo and DeepSeek are used mainly because of their lower cost, while Azure AI Foundry currently has sponsorship support, so these three providers receive more day-to-day validation. All other providers are maintained on a best-effort basis. Local and self-hosted inference services such as Ollama are supported, but their compatibility is also maintained on a best-effort basis because the maintainer does not use them frequently; DeepSeek is generally the better choice when you want a path with more real-world validation. Requests for new built-in providers may cover companies that directly provide model inference services as well as local or self-hosted inference solutions, but services that only relay or aggregate third-party APIs are not accepted at this time, with OpenRouter as the sole exception. For related requests, please join the WeChat or QQ group linked from the project homepage whenever possible.

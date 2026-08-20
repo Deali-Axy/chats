@@ -1,0 +1,74 @@
+import { ReactNode } from 'react';
+import type { Components as MarkdownComponents } from 'react-markdown';
+import type {
+  CodeProps,
+  ReactMarkdownProps,
+  TableDataCellProps,
+  TableHeaderCellProps,
+} from 'react-markdown/lib/ast-to-react';
+
+import { CodeBlock } from './CodeBlock';
+
+const BLOCK_MATH_REGEX = /(^|[^\\])\$\$[\s\S]+?\$\$/;
+
+export const hasMathMarkdown = (value: string) => BLOCK_MATH_REGEX.test(value);
+
+export const markdownComponents = {
+  pre({ children }: ReactMarkdownProps) {
+    return <div className="not-prose my-2">{children}</div>;
+  },
+  code({ className, inline, children, ...props }: CodeProps) {
+    const match = /language-(\w+)/.exec(className || '');
+
+    return !inline ? (
+      <CodeBlock
+        language={(match && match[1]) || ''}
+        value={String(children).replace(/\n$/, '')}
+        {...props}
+      />
+    ) : (
+      <code className={className} {...props}>
+        {children}
+      </code>
+    );
+  },
+  p({ children }: ReactMarkdownProps) {
+    return <p className="md-p">{children}</p>;
+  },
+  table({ children }: ReactMarkdownProps) {
+    return (
+      <div className="not-prose my-2 w-full max-w-full overflow-x-auto">
+        <table className="w-full border-collapse border border-black dark:border-white">
+          {children}
+        </table>
+      </div>
+    );
+  },
+  th({ children }: TableHeaderCellProps) {
+    return (
+      <th className="break-words border border-black bg-gray-500 px-3 py-1 text-white dark:border-white">
+        {children}
+      </th>
+    );
+  },
+  td({ children }: TableDataCellProps) {
+    return (
+      <td className="break-words border border-black px-3 py-1 dark:border-white">
+        {children}
+      </td>
+    );
+  },
+} as unknown as MarkdownComponents;
+
+export const MarkdownLoadingFallback = ({
+  children,
+}: {
+  children?: ReactNode;
+}) => (
+  <div className="space-y-2">
+    <div className="h-4 w-4/5 animate-pulse rounded bg-muted" />
+    <div className="h-4 w-full animate-pulse rounded bg-muted" />
+    <div className="h-4 w-3/5 animate-pulse rounded bg-muted" />
+    {children}
+  </div>
+);

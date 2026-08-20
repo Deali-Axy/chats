@@ -1,5 +1,4 @@
 ﻿using Chats.DB;
-using Chats.DB.Enums;
 using Chats.BE.Controllers.Chats.Messages.Dtos;
 using System.Text.Json.Serialization;
 
@@ -34,6 +33,16 @@ public record ChatsResponse
     [JsonPropertyName("updatedAt")]
     public required DateTime UpdatedAt { get; init; }
 
+    /// <summary>
+    /// 是否为临时聊天
+    /// </summary>
+    [JsonPropertyName("isTemp")]
+    public bool IsTemp { get; init; }
+
+    [JsonPropertyName("matchedContent")]
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public string? MatchedContent { get; init; }
+
     public ChatsResponseWithMessage WithMessages(TurnDto[] messages)
     {
         return new ChatsResponseWithMessage
@@ -47,6 +56,7 @@ public record ChatsResponse
             Tags = Tags,
             LeafTurnId = LeafTurnId,
             UpdatedAt = UpdatedAt,
+            IsTemp = IsTemp,
             Messages = messages,
         };
     }
@@ -91,10 +101,16 @@ public record ChatSpanDto
     public required int? MaxOutputTokens { get; init; }
 
     [JsonPropertyName("reasoningEffort")]
-    public required DBReasoningEffort? ReasoningEffort { get; init; }
+    public required string? ReasoningEffort { get; init; }
 
     [JsonPropertyName("imageSize")]
     public required string? ImageSize { get; init; }
+
+    [JsonPropertyName("format")]
+    public required string? Format { get; init; }
+
+    [JsonPropertyName("compression")]
+    public required byte? Compression { get; init; }
 
     [JsonPropertyName("thinkingBudget")]
     public required int? ThinkingBudget { get; init; }
@@ -108,14 +124,16 @@ public record ChatSpanDto
         Enabled = span.Enabled,
         SystemPrompt = span.ChatConfig.SystemPrompt,
         ModelId = span.ChatConfig.ModelId,
-        ModelName = span.ChatConfig.Model.Name,
-        ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+        ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
+        ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
         Temperature = span.ChatConfig.Temperature,
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
         CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-        ReasoningEffort = span.ChatConfig.ReasoningEffort,
+        ReasoningEffort = span.ChatConfig.Effort,
         ImageSize = span.ChatConfig.ImageSize,
+        Format = span.ChatConfig.Format,
+        Compression = span.ChatConfig.Compression,
         ThinkingBudget = span.ChatConfig.ThinkingBudget,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp
@@ -131,14 +149,16 @@ public record ChatSpanDto
         Enabled = span.Enabled,
         SystemPrompt = span.ChatConfig.SystemPrompt,
         ModelId = span.ChatConfig.ModelId,
-        ModelName = span.ChatConfig.Model.Name,
-        ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+        ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
+        ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
         Temperature = span.ChatConfig.Temperature,
         WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
         CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
         MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-        ReasoningEffort = span.ChatConfig.ReasoningEffort,
+        ReasoningEffort = span.ChatConfig.Effort,
         ImageSize = span.ChatConfig.ImageSize,
+        Format = span.ChatConfig.Format,
+        Compression = span.ChatConfig.Compression,
         ThinkingBudget = span.ChatConfig.ThinkingBudget,
         Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
             x => new ChatSpanMcp

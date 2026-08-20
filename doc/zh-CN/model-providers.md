@@ -2,7 +2,7 @@
 
 [English](../en-US/model-providers.md) | **简体中文**
 
-Sdcb Chats 支持 21+ 主流 AI 模型服务商，以下是完整列表：
+Ayaka Chats 支持 22+ 主流 AI 模型服务商，以下是完整列表：
 
 | Id  | Name             | 加入时间                                                    | 交错思考 |
 | --- | ---------------- | ----------------------------------------------------------- | -------- |
@@ -28,6 +28,7 @@ Sdcb Chats 支持 21+ 主流 AI 模型服务商，以下是完整列表：
 | 19  | 小马算力         | [2025-11-07](https://github.com/sdcb/chats/commit/32e4a0d5) | ❓        |
 | 20  | Anthropic        | [2025-11-24](https://github.com/sdcb/chats/commit/22ebef98) | ✅        |
 | 21  | 小米Mimo         | [2025-12-17](https://github.com/sdcb/chats/commit/026f1a4e) | ✅        |
+| 22  | Novita AI        | [2026-03-13](https://github.com/sdcb/chats/commit/cecfc66d) | ✅        |
 
 ## 注意事项
 
@@ -111,6 +112,10 @@ Chats 支持多种 AI 模型 API 协议，为不同的应用场景提供灵活�
 由于 Chats 支持上述多种标准 API 协议，您可以添加任何兼容这些协议的自定义模型提供商，包括但不限于：
 
 - 本地部署的开源模型（通过 Ollama、vLLM、LM Studio 等）
-- 第三方 API 代理服务（如 OpenRouter、One API 等）
+- 用户自行配置的第三方 API 代理服务（如 OpenRouter、One API 等）
 - 企业内部的模型服务
 - 自建的模型推理服务
+
+以上服务均可由用户自行配置接入，本地部署和自建推理服务不属于本文所指的中转站；是否增加为项目内置提供商及其维护优先级，仍遵循下方的维护说明。
+
+> **维护与新增提供商说明**：项目维护者日常主要使用小米 MiMo、DeepSeek 和 Azure AI Foundry，其中 MiMo、DeepSeek 主要因为价格较低，Azure AI Foundry 目前有 sponsorship 支持，因此这三家会得到相对更多的实际使用验证；其它提供商均按 best effort 方式维护。本地或自建推理服务（例如 Ollama）属于支持范围，但由于维护者日常使用较少，相关兼容性也按 best effort 处理；如果希望获得相对充分的实际验证，通常建议优先选择 DeepSeek。新增内置模型提供商的请求可以考虑直接提供大模型推理服务的厂商以及本地、自建推理方案，但暂不接受仅转发或聚合第三方 API 的中转站（OpenRouter 除外）。如有相关需求，请优先加入项目首页的微信群或 QQ 群沟通。

@@ -4,6 +4,8 @@ using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using Chats.BE.Controllers.Common.Dtos;
 using Chats.BE.Infrastructure;
 using Chats.BE.Services;
+using Chats.BE.Services.Models;
+using Chats.BE.Services.TitleSummary;
 using Chats.BE.Services.UrlEncryption;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -35,14 +37,16 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.Name,
-                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
+                    ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps
                         .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders })
@@ -50,6 +54,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
+                IsTemp = x.IsTemp,
             })
             .FirstOrDefaultAsync(cancellationToken);
 
@@ -87,19 +92,22 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     Enabled = span.Enabled,
                     SystemPrompt = span.ChatConfig.SystemPrompt,
                     ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.Name,
-                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
+                    ModelName = span.ChatConfig.Model.CurrentSnapshot.Name,
+                    ModelProviderId = span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
                     Temperature = span.ChatConfig.Temperature,
                     WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
                     CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
                     MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
+                    ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
+                    Format = span.ChatConfig.Format,
+                    Compression = span.ChatConfig.Compression,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray(),
                 }).ToArray(),
                 LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
                 UpdatedAt = x.UpdatedAt,
+                IsTemp = x.IsTemp,
             })
             .OrderByDescending(x => x.Id), request, cancellationToken);
         return Ok(result);
@@ -114,41 +122,84 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             .ThenByDescending(x => x.UpdatedAt);
         if (!string.IsNullOrWhiteSpace(request.Query))
         {
-            query = query.Where(x => x.Title.Contains(request.Query) || x.ChatTags.Any(t => t.Name == request.Query));
+            query = query.Where(x =>
+                x.Title.Contains(request.Query) ||
+                x.ChatTags.Any(t => t.Name == request.Query) ||
+                x.ChatTurns.Any(turn =>
+                    turn.Steps.Any(step =>
+                        step.StepContents.Any(content =>
+                            content.ContentTypeId == (byte)DBStepContentType.Text &&
+                            content.StepContentText != null &&
+                            content.StepContentText.Content.Contains(request.Query)
+                        )
+                    )
+                )
+            );
         }
 
-        PagedResult<ChatsResponse> result = await PagedResult.FromQuery(query
-            .Select(x => new ChatsResponse()
+        // 获取匹配的会话列表（包含关联数据；Model 走 snapshot）
+        List<Chat> chatList = await query
+            .Include(x => x.ChatTags)
+            .Include(x => x.ChatSpans)
+                .ThenInclude(span => span.ChatConfig)
+                    .ThenInclude(config => config.ChatConfigMcps)
+            .Include(x => x.ChatSpans)
+                .ThenInclude(span => span.ChatConfig)
+                    .ThenInclude(config => config.Model)
+                        .ThenInclude(model => model.CurrentSnapshot)
+                            .ThenInclude(snapshot => snapshot.ModelKeySnapshot)
+            .Include(x => x.ChatShares)
+            .Include(x => x.ChatTurns)
+                .ThenInclude(turn => turn.Steps)
+                    .ThenInclude(step => step.StepContents)
+                        .ThenInclude(content => content.StepContentText)
+            .ToListAsync(cancellationToken);
+
+        // 构建响应，包含匹配的内容片段（保留搜索高亮 + 临时聊天字段）
+        List<ChatsResponse> responses = new();
+        foreach (Chat chat in chatList)
+        {
+            string? matchedContent = null;
+            if (!string.IsNullOrWhiteSpace(request.Query))
             {
-                Id = idEncryption.EncryptChatId(x.Id),
-                Title = x.Title,
-                IsTopMost = x.IsTopMost,
-                IsShared = x.ChatShares.Count != 0,
-                GroupId = idEncryption.EncryptChatGroupId(x.ChatGroupId),
-                Tags = x.ChatTags.Select(x => x.Name).ToArray(),
-                Spans = x.ChatSpans.Select(span => new ChatSpanDto
-                {
-                    SpanId = span.SpanId,
-                    Enabled = span.Enabled,
-                    SystemPrompt = span.ChatConfig.SystemPrompt,
-                    ModelId = span.ChatConfig.ModelId,
-                    ModelName = span.ChatConfig.Model.Name,
-                    ModelProviderId = span.ChatConfig.Model.ModelKey.ModelProviderId,
-                    Temperature = span.ChatConfig.Temperature,
-                    WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
-                    CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
-                    MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-                    ReasoningEffort = (DBReasoningEffort)span.ChatConfig.ReasoningEffortId,
-                    ImageSize = span.ChatConfig.ImageSize,
-                    ThinkingBudget = span.ChatConfig.ThinkingBudget,
-                    Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray()
-                }).ToArray(),
-                LeafTurnId = idEncryption.EncryptTurnId(x.LeafTurnId),
-                UpdatedAt = x.UpdatedAt,
-            }),
-            request,
-            cancellationToken);
-        return result;
+                // 查找第一个匹配的内容片段
+                matchedContent = chat.ChatTurns
+                    .SelectMany(turn => turn.Steps)
+                    .SelectMany(step => step.StepContents)
+                    .Where(content =>
+                        content.ContentTypeId == (byte)DBStepContentType.Text &&
+                        content.StepContentText != null &&
+                        content.StepContentText.Content.Contains(request.Query))
+                    .Select(content => content.StepContentText!.Content)
+                    .FirstOrDefault();
+            }
+
+            responses.Add(new ChatsResponse()
+            {
+                Id = idEncryption.EncryptChatId(chat.Id),
+                Title = chat.Title,
+                IsTopMost = chat.IsTopMost,
+                IsShared = chat.ChatShares.Any(),
+                GroupId = idEncryption.EncryptChatGroupId(chat.ChatGroupId),
+                Tags = chat.ChatTags.Select(x => x.Name).ToArray(),
+                Spans = chat.ChatSpans.Select(span => ChatSpanDto.FromDB(span)).ToArray(),
+                LeafTurnId = idEncryption.EncryptTurnId(chat.LeafTurnId),
+                UpdatedAt = chat.UpdatedAt,
+                IsTemp = chat.IsTemp,
+                MatchedContent = matchedContent,
+            });
+        }
+
+        // 应用分页
+        int totalCount = responses.Count;
+        int skip = request.Skip;
+        ChatsResponse[] pagedResponses = responses.Skip(skip).Take(request.PageSize).ToArray();
+
+        return new PagedResult<ChatsResponse>
+        {
+            Rows = pagedResponses,
+            Count = totalCount,
+        };
     }
 
     [HttpPost]
@@ -181,6 +232,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             CreatedAt = DateTime.UtcNow,
             IsArchived = false,
             UpdatedAt = DateTime.UtcNow,
+            IsTemp = request.IsTemp,
         };
 
         Chat? lastChat = await db.Chats
@@ -220,7 +272,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                         WebSearchEnabled = false,
                         CodeExecutionEnabled = false,
                         MaxOutputTokens = null,
-                        ReasoningEffortId = 0,
+                        Effort = null,
                         SystemPrompt = defaultPrompt.Content,
                     }
                 }
@@ -240,6 +292,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             Spans = [.. chat.ChatSpans.Select(ChatSpanDto.FromDB)],
             LeafTurnId = idEncryption.EncryptTurnId(chat.LeafTurnId),
             UpdatedAt = chat.UpdatedAt,
+            IsTemp = chat.IsTemp,
         });
     }
 
@@ -278,6 +331,37 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
         return NoContent();
     }
 
+    /// <summary>
+    /// 删除临时聊天（硬删除，不归档）
+    /// </summary>
+    [HttpDelete("{encryptedChatId}/temp")]
+    public async Task<IActionResult> DeleteTempChat(string encryptedChatId, CancellationToken cancellationToken)
+    {
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+
+        // 验证是临时聊天且属于当前用户
+        bool isTempChat = await db.Chats.AnyAsync(x => x.Id == chatId && x.UserId == currentUser.Id && x.IsTemp, cancellationToken);
+        if (!isTempChat)
+        {
+            return NotFound();
+        }
+
+        // Deassociate docker sessions before deleting chat
+        await db.ChatDockerSessions
+            .Where(x => x.OwnerChatId == chatId)
+            .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerChatId, (int?)null), cancellationToken);
+
+        await db.ChatDockerSessions
+            .Where(x => x.OwnerTurn!.ChatId == chatId)
+            .ExecuteUpdateAsync(x => x.SetProperty(p => p.OwnerTurnId, (int?)null), cancellationToken);
+
+        await db.Chats
+            .Where(x => x.Id == chatId)
+            .ExecuteDeleteAsync(cancellationToken);
+
+        return NoContent();
+    }
+
     [HttpPut("{encryptedChatId}")]
     public async Task<IActionResult> UpdateChats(string encryptedChatId, [FromBody] UpdateChatsRequest request, CancellationToken cancellationToken)
     {
@@ -309,6 +393,103 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             await db.SaveChangesAsync(cancellationToken);
         }
         return NoContent();
+    }
+
+    [HttpPost("{encryptedChatId}/title-summary")]
+    public async Task<ActionResult<ChatTitleSummaryResponseDto>> GenerateTitleSummary(
+        string encryptedChatId,
+        [FromServices] ChatTitleSummaryService chatTitleSummaryService,
+        [FromServices] UserModelManager userModelManager,
+        CancellationToken cancellationToken)
+    {
+        int chatId = idEncryption.DecryptChatId(encryptedChatId);
+
+        Chat? chat = await db.Chats
+            .Include(x => x.ChatSpans)
+                .ThenInclude(x => x.ChatConfig)
+                    .ThenInclude(x => x.Model)
+            .Include(x => x.ChatTurns.Where(t => t.Steps.Any()))
+                .ThenInclude(x => x.Steps)
+                    .ThenInclude(x => x.StepContents)
+                        .ThenInclude(x => x.StepContentText)
+            .FirstOrDefaultAsync(x => x.Id == chatId && x.UserId == currentUser.Id, cancellationToken);
+        if (chat == null)
+        {
+            return NotFound();
+        }
+
+        ChatSpan? firstEnabledSpan = chat.ChatSpans
+            .Where(x => x.Enabled)
+            .OrderBy(x => x.SpanId)
+            .FirstOrDefault();
+        if (firstEnabledSpan == null)
+        {
+            return BadRequest("No enabled spans");
+        }
+
+        UserModel? userModel = await userModelManager.GetUserModel(currentUser.Id, firstEnabledSpan.ChatConfig.ModelId, cancellationToken);
+        if (userModel == null)
+        {
+            return BadRequest("Invalid model permission");
+        }
+
+        string chatHistory = BuildChatHistory(chat);
+        if (string.IsNullOrWhiteSpace(chatHistory))
+        {
+            return Ok(new ChatTitleSummaryResponseDto { Title = chat.Title });
+        }
+
+        string title = await chatTitleSummaryService.GenerateTitleAsync(
+            chat.Id,
+            firstEnabledSpan.ChatConfig.SystemPrompt,
+            userModel,
+            chatHistory,
+            cancellationToken);
+
+        if (!string.Equals(chat.Title, title, StringComparison.Ordinal))
+        {
+            chat.Title = title;
+            chat.UpdatedAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        return Ok(new ChatTitleSummaryResponseDto { Title = title });
+    }
+
+    private static string BuildChatHistory(Chat chat)
+    {
+        return string.Join(
+            "\n\n",
+            chat.ChatTurns
+                .Where(x => x.Steps.Count > 0)
+                .OrderBy(x => x.Steps.Min(s => s.CreatedAt))
+                .Select(BuildTurnHistoryLine)
+                .Where(x => !string.IsNullOrWhiteSpace(x))!);
+    }
+
+    private static string? BuildTurnHistoryLine(ChatTurn turn)
+    {
+        Step? latestStep = turn.Steps
+            .OrderBy(x => x.CreatedAt)
+            .LastOrDefault();
+        if (latestStep == null)
+        {
+            return null;
+        }
+
+        string text = string.Join(
+            "",
+            latestStep.StepContents
+                .Where(x => x.ContentTypeId == (byte)DBStepContentType.Text && x.StepContentText != null)
+                .Select(x => x.StepContentText!.Content))
+            .Trim();
+
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return null;
+        }
+
+        return $"{(turn.IsUser ? "User" : "Assistant")}: {text}";
     }
 
     [HttpGet("{encryptedChatId}/share")]

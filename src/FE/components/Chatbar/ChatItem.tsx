@@ -42,6 +42,7 @@ import ChatbarContext from '../Chatbar/Chatbar.context';
 
 import { deleteChats, putChats } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
+import { highlightText } from '@/utils/highlight';
 
 interface Props {
   chat: IChat;
@@ -66,7 +67,7 @@ const ChatItem = ({ chat, onDragItemStart }: Props) => {
   const status = selectedChat?.status;
   const chatting = status === ChatStatus.Chatting;
 
-  const { handleDeleteChat } = useContext(ChatbarContext);
+  const { handleDeleteChat, searchTerm } = useContext(ChatbarContext);
 
   const [title, setTitle] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
@@ -241,7 +242,7 @@ const ChatItem = ({ chat, onDragItemStart }: Props) => {
               selectChatId === chat.id ? 'pr-12' : 'pr-1'
             }`}
           >
-            {chat.title}
+            {highlightText(chat.title, searchTerm || '')}
           </div>
         </a>
       )}

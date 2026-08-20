@@ -31,8 +31,8 @@ public record JsonTokenBalance
                 CreatedAt = DateTime.UtcNow,
                 CountAmount = Counts - existingItem.CountBalance,
                 TokenAmount = Tokens - existingItem.TokenBalance,
-                ModelId = ModelId,
-                TransactionTypeId = (byte)DBTransactionType.Charge,
+                ModelSnapshotId = existingItem.Model.CurrentSnapshotId,
+                TransactionTypeId = (byte)DBTransactionType.AdminCharge,
             };
             ApplyCreditUser(existingItem, creditUserId, usageTransaction);
         }

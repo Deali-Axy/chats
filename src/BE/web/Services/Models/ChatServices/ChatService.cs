@@ -20,7 +20,7 @@ public abstract partial class ChatService
 
     public abstract IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, CancellationToken cancellationToken);
 
-    public virtual Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken) => Task.FromResult(Array.Empty<string>());
+    public virtual Task<string[]> ListModels(ModelKeySnapshot modelKey, CancellationToken cancellationToken) => Task.FromResult(Array.Empty<string>());
 
     public virtual Task<int> CountTokenAsync(ChatRequest request, CancellationToken cancellationToken)
     {
@@ -32,7 +32,7 @@ public abstract partial class ChatService
         ChatRequest finalRequest = await PreProcess(request, fup, cancellationToken);
         IAsyncEnumerable<ChatSegment> stream = ChatStreamed(finalRequest, cancellationToken);
 
-        if (request.ChatConfig.Model.ThinkTagParserEnabled)
+        if (request.ChatConfig.Model.CurrentSnapshot.ThinkTagParserEnabled)
         {
             stream = ApplyThinkTagParser(stream, cancellationToken);
         }
@@ -62,44 +62,13 @@ public abstract partial class ChatService
     {
         ChatRequest final = request;
 
-        // Apply system prompt template replacements
-        if (request.Source == UsageSource.WebChat)
-        {
-            string? effectiveSystemPrompt = final.GetEffectiveSystemPrompt();
-            if (effectiveSystemPrompt != null)
-            {
-                string processedPrompt = effectiveSystemPrompt
-                    .Replace("{{MODEL_NAME}}", request.ChatConfig.Model.Name)
-                    .Replace("{{CURRENT_DATE}}", DateTime.UtcNow.ToString("yyyy/MM/dd"))
-                    .Replace("{{CURRENT_TIME}}", DateTime.UtcNow.ToString("HH:mm:ss"));
-
-                // If we have a System property, update it; otherwise update ChatConfig.SystemPrompt
-                if (final.System != null)
-                {
-                    // For now, just update the first content block with the processed prompt
-                    // A more sophisticated approach could preserve cache control settings
-                    final = final with
-                    {
-                        System = NeutralSystemMessage.FromText(processedPrompt)
-                    };
-                }
-                else
-                {
-                    final = final with
-                    {
-                        ChatConfig = final.ChatConfig.WithSystemPrompt(processedPrompt)
-                    };
-                }
-            }
-        }
-
         float? temperature = final.ChatConfig.Temperature;
-        byte reasoningEffortId = final.ChatConfig.ReasoningEffortId;
+        string? effort = final.ChatConfig.Effort;
         if (request.Source == UsageSource.WebChat)
         {
             temperature = request.ChatConfig.Model.ClampTemperature(temperature);
-            reasoningEffortId = request.ChatConfig.Model.ClampReasoningEffortId(reasoningEffortId);
-            if (request.ChatConfig.Model.ApiType == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
+            effort = request.ChatConfig.Model.ClampEffort(effort);
+            if ((DBApiType)request.ChatConfig.Model.CurrentSnapshot.ApiTypeId == DBApiType.AnthropicMessages && final.ChatConfig.ThinkingBudget != null)
             {
                 // invalid_request_error
                 // `temperature` may only be set to 1 when thinking is enabled.
@@ -111,108 +80,153 @@ public abstract partial class ChatService
 
         final = final with
         {
-            ChatConfig = final.ChatConfig.WithClamps(temperature, reasoningEffortId),
-            Messages = await (request.Source == UsageSource.WebChat
-                    ? RemoveNonCurrentTurnThinkingBlocks(final.Messages)
-                    : final.Messages)
-                .ToAsyncEnumerable()
-                .Select(async (m, ct) => await FilterVision(request.ChatConfig.Model.SupportsVisionLink, request.ChatConfig.Model.AllowVision, m, fup, ct))
-                .ToListAsync(cancellationToken)
+            ChatConfig = final.ChatConfig.WithClamps(temperature, effort),
+            Messages = await RewriteVisionMessages(
+                request.ChatConfig.Model.CurrentSnapshot.SupportsVisionLink,
+                request.ChatConfig.Model.CurrentSnapshot.AllowVision,
+                final.Messages,
+                fup,
+                cancellationToken)
         };
 
         return final;
     }
 
-    /// <summary>
-    /// WebChat 场景下，历史 turn 的 thinking 对继续对话基本无用，
-    /// 还会增加 prompt 体积；部分上游（例如 Anthropic thinking 规则）
-    /// 也会对 thinking 的出现位置更敏感。
-    /// 因此只保留「最后一个 user 消息之后（含 tool call 循环）」的 thinking，
-    /// 其它（即历史 turn）消息中的 thinking 全部移除。
-    /// </summary>
-    internal static IList<NeutralMessage> RemoveNonCurrentTurnThinkingBlocks(IList<NeutralMessage> messages)
+    protected virtual async Task<IList<NeutralMessage>> RewriteVisionMessages(bool supportsVisionLink, bool allowVision, IList<NeutralMessage> messages, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        if (messages.Count == 0)
-        {
-            return messages;
-        }
+        List<NeutralMessage> filteredMessages = new(messages.Count);
 
-        // DeepSeek (thinking mode + tool calls) requires reasoning_content to be passed back
-        // during the same user turn. Therefore, only remove thinking content from messages
-        // BEFORE the last user message (i.e., previous turns). Keep everything after it.
-        int lastUserIndex = -1;
-        for (int i = messages.Count - 1; i >= 0; i--)
-        {
-            if (messages[i].Role == NeutralChatRole.User)
-            {
-                lastUserIndex = i;
-                break;
-            }
-        }
-
-        if (lastUserIndex <= 0)
-        {
-            return messages;
-        }
-
-        List<NeutralMessage>? updated = null;
         for (int i = 0; i < messages.Count; i++)
         {
-            NeutralMessage msg = messages[i];
-
-            if (i < lastUserIndex && msg.Contents.Any(c => c is NeutralThinkContent))
+            NeutralMessage message = messages[i];
+            if (message.Role == NeutralChatRole.Tool)
             {
-                updated ??= [.. messages];
-                updated[i] = msg with
+                filteredMessages.Add(message with
                 {
-                    Contents = [.. msg.Contents.Where(c => c is not NeutralThinkContent)]
-                };
+                    Contents = await FilterToolMessageContents(messages, i, message, supportsVisionLink, allowVision, fup, cancellationToken)
+                });
+                continue;
             }
+
+            List<NeutralContent> processedContents = [];
+
+            foreach (NeutralContent content in message.Contents)
+            {
+                NeutralContent? toAdd = await FilterSingleContent(
+                    content,
+                    supportsVisionLink,
+                    allowVision && message.Role == NeutralChatRole.User,
+                    fup,
+                    cancellationToken);
+
+                if (toAdd != null)
+                {
+                    processedContents.Add(toAdd);
+                }
+            }
+
+            filteredMessages.Add(message with { Contents = processedContents });
         }
 
-        return updated ?? messages;
-    }
+        return filteredMessages;
 
-    protected virtual async Task<NeutralMessage> FilterVision(bool supportsVisionLink, bool allowVision, NeutralMessage message, FileUrlProvider fup, CancellationToken cancellationToken)
-    {
-        List<NeutralContent> processedContents = [];
-
-        foreach (NeutralContent content in message.Contents)
+        async Task<List<NeutralContent>> FilterToolMessageContents(
+            IList<NeutralMessage> allMessages,
+            int toolMessageIndex,
+            NeutralMessage toolMessage,
+            bool supportsVisionLink,
+            bool allowVision,
+            FileUrlProvider fileUrlProvider,
+            CancellationToken ct)
         {
-            NeutralContent? toAdd = content switch
+            List<NeutralContent> contents = [];
+            IReadOnlyList<NeutralToolResponseGroup> groups = toolMessage.GetToolResponseGroups();
+
+            if (groups.Count == 0)
             {
-                NeutralFileContent file => allowVision switch
+                foreach (NeutralContent toolContent in toolMessage.Contents)
                 {
-                    true => file.File.MediaType switch
+                    NeutralContent? filtered = await FilterSingleContent(toolContent, supportsVisionLink, allowVision: false, fileUrlProvider, ct);
+                    if (filtered != null)
                     {
-                        var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x ?? "") => supportsVisionLink switch
-                        {
-                            true => fup.CreateNeutralImagePart(file.File),
-                            false => fup.CreateNeutralImagePartForceDownload(file.File),
-                        },
-                        _ => null
-                    },
-                    false => fup.CreateNeutralTextUrl(file.File),
-                },
-                NeutralFileUrlContent fileUrl => allowVision switch
+                        contents.Add(filtered);
+                    }
+                }
+
+                return contents;
+            }
+
+            foreach (NeutralToolResponseGroup group in groups)
+            {
+                contents.Add(group.ToolResponse);
+
+                bool allowGroupImages = allowVision
+                    && IsViewImageResponse(allMessages, toolMessageIndex, group.ToolResponse.ToolCallId);
+
+                foreach (NeutralContent attachedContent in group.AttachedContents)
                 {
-                    true => supportsVisionLink switch
+                    NeutralContent? filtered = await FilterSingleContent(attachedContent, supportsVisionLink, allowGroupImages, fileUrlProvider, ct);
+                    if (filtered != null)
                     {
-                        true => content,
-                        false => await DownloadImagePart(fileUrl.Url, cancellationToken),
-                    },
-                    false => NeutralTextContent.Create(fileUrl.Url),
+                        contents.Add(filtered);
+                    }
+                }
+            }
+
+            return contents;
+        }
+
+        async Task<NeutralContent?> FilterSingleContent(
+            NeutralContent content,
+            bool supportsVisionLink,
+            bool allowVision,
+            FileUrlProvider fileUrlProvider,
+            CancellationToken ct)
+        {
+            return content switch
+            {
+                NeutralFileContent file when allowVision => file.File.MediaType switch
+                {
+                    var x when SupportedContentTypes.Contains("*") || SupportedContentTypes.Contains(x ?? "") => supportsVisionLink
+                        ? fileUrlProvider.CreateNeutralImagePart(file.File)
+                        : fileUrlProvider.CreateNeutralImagePartForceDownload(file.File),
+                    _ => null
                 },
+                NeutralFileContent => null,
+                NeutralFileUrlContent fileUrl when allowVision => supportsVisionLink
+                    ? content
+                    : await DownloadImagePart(fileUrl.Url, ct),
+                NeutralFileUrlContent => null,
                 _ => content
             };
-
-            if (toAdd != null)
-            {
-                processedContents.Add(toAdd);
-            }
         }
 
-        return message with { Contents = processedContents };
+        static bool IsViewImageResponse(IList<NeutralMessage> allMessages, int toolMessageIndex, string toolCallId)
+        {
+            if (string.IsNullOrWhiteSpace(toolCallId) || toolMessageIndex <= 0)
+            {
+                return false;
+            }
+
+            for (int i = toolMessageIndex - 1; i >= 0; i--)
+            {
+                NeutralMessage previous = allMessages[i];
+                if (previous.Role != NeutralChatRole.Assistant)
+                {
+                    continue;
+                }
+
+                NeutralToolCallContent? toolCall = previous.Contents
+                    .OfType<NeutralToolCallContent>()
+                    .FirstOrDefault(x => string.Equals(x.Id, toolCallId, StringComparison.Ordinal));
+                if (toolCall != null)
+                {
+                    return string.Equals(toolCall.Name, "view_image", StringComparison.Ordinal);
+                }
+            }
+
+            return false;
+        }
 
         async Task<NeutralContent> DownloadImagePart(string url, CancellationToken cancellationToken)
         {

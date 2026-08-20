@@ -23,7 +23,9 @@ public partial class ChatConfig
 
     public int? MaxOutputTokens { get; set; }
 
-    public byte ReasoningEffortId { get; set; }
+    [StringLength(50)]
+    [Unicode(false)]
+    public string? Effort { get; set; }
 
     public bool CodeExecutionEnabled { get; set; }
 
@@ -32,8 +34,11 @@ public partial class ChatConfig
 
     public int? ThinkingBudget { get; set; }
 
-    [InverseProperty("ChatConfig")]
-    public virtual ChatConfigArchived? ChatConfigArchived { get; set; }
+    [StringLength(20)]
+    [Unicode(false)]
+    public string? Format { get; set; }
+
+    public byte? Compression { get; set; }
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();
@@ -43,9 +48,6 @@ public partial class ChatConfig
 
     [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
-
-    [InverseProperty("ChatConfig")]
-    public virtual ICollection<ChatTurn> ChatTurns { get; set; } = new List<ChatTurn>();
 
     [ForeignKey("ModelId")]
     [InverseProperty("ChatConfigs")]

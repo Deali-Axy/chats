@@ -48,10 +48,8 @@ import {
   ResponseMessageTempId,
   SseResponseKind,
   SseResponseLine,
-  getMessageContents,
 } from '@/types/chatMessage';
 import { ChatSpanDto } from '@/types/clientApis';
-import { Prompt } from '@/types/prompt';
 
 import {
   setChats,
@@ -73,7 +71,6 @@ import NoModel from './NoModel';
 
 import {
   deleteMessage,
-  getTurnGenerateInfo,
   putChats,
   putMessageReactionClear,
   putMessageReactionUp,
@@ -82,7 +79,6 @@ import {
   responseContentToRequest,
 } from '@/apis/clientApis';
 import { streamGeneralChat, streamRegenerateAssistant, streamRegenerateAllAssistant, ChatApiError } from '@/apis/chatApi';
-import { cn } from '@/lib/utils';
 
 const ChatView = memo(() => {
   const { t } = useTranslation();
@@ -94,13 +90,15 @@ const ChatView = memo(() => {
       models,
       modelMap,
       showChatBar,
-      showChatInput,
+      effectiveChatBarWidth,
       isMessagesLoading,
     },
     selectedChat,
     hasModel,
     chatDispatch,
     messageDispatch,
+    tempChat,
+    setTempChat,
   } = useContext(HomeContext);
   const chatsRef = useRef<IChat[]>(chats);
   useEffect(() => {
@@ -437,6 +435,15 @@ const ChatView = memo(() => {
     (title: string, append: boolean = false) => {
       if (!selectedChat) return;
 
+      // 临时对话需要更新 tempChat 而非 chats 数组
+      if (selectedChat.isTemp && tempChat) {
+        const nextTitle = append
+          ? `${tempChat.title ?? ''}${title}`
+          : title;
+        setTempChat({ ...tempChat, title: nextTitle } as IChat);
+        return;
+      }
+
       updateChatsState((prevChats) =>
         prevChats.map((chat) => {
           if (chat.id !== selectedChat.id) {
@@ -451,12 +458,18 @@ const ChatView = memo(() => {
         }),
       );
     },
-    [selectedChat, updateChatsState],
+    [selectedChat, updateChatsState, tempChat, setTempChat],
   );
 
   const changeSelectedChatStatus = useCallback(
     (status: ChatStatus) => {
       if (!selectedChat) return;
+
+      // 临时对话不在 chats 数组中，需要单独更新 tempChat 状态
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, status } as IChat);
+        return;
+      }
 
       updateChatsState((prevChats) =>
         prevChats.map((chat) =>
@@ -464,7 +477,7 @@ const ChatView = memo(() => {
         ),
       );
     },
-    [selectedChat, updateChatsState],
+    [selectedChat, updateChatsState, tempChat, setTempChat],
   );
 
   const startChat = useCallback(() => {
@@ -505,15 +518,6 @@ const ChatView = memo(() => {
   };
 
   // Helper to add a new step to a message (used when EndStep is received)
-  const addNewStepToMessage = (
-    msg: IChatMessage,
-    stepData: IStep,
-  ): IChatMessage => {
-    return {
-      ...msg,
-      steps: [...msg.steps, { ...stepData, contents: [] }],
-    };
-  };
 
   // Handle EndStep event: finalize current step and start a new one
   const changeSelectedResponseEndStep = (
@@ -770,6 +774,8 @@ const ChatView = memo(() => {
     toolCallId: string,
     toolName: string,
     parameters: string,
+    displayName?: string,
+    completed?: boolean,
   ): IChatMessage[][] => {
     const lastMessageGroupIndex = selectedMsgs.length - 1;
     const messageList = selectedMsgs[lastMessageGroupIndex];
@@ -792,7 +798,9 @@ const ChatView = memo(() => {
           newContent[callIndex] = {
             ...existingToolCall,
             n: toolName || existingToolCall.n,
+            d: displayName || existingToolCall.d,
             p: (existingToolCall.p || '') + parameters,
+            completed: existingToolCall.completed || completed || undefined,
           };
         } else {
           // 插入新的工具调用；如果结果已先到，则把调用插到结果前面，确保参数在上方
@@ -801,7 +809,9 @@ const ChatView = memo(() => {
             $type: MessageContentType.toolCall,
             u: toolCallId,
             n: toolName,
+            d: displayName,
             p: parameters,
+            completed: completed || undefined,
           };
           if (respIndex >= 0) {
             newContent.splice(respIndex, 0, toolCallContent);
@@ -1076,7 +1086,7 @@ const ChatView = memo(() => {
     if (!selectedChat) return;
     if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
     startChat();
-    let { id: chatId, spans: chatSpans } = selectedChat;
+    let { id: chatId } = selectedChat;
     let index = selectedMessages.findIndex(
       (x) => x.findIndex((m) => m.id === messageId) !== -1,
     );
@@ -1184,7 +1194,7 @@ const ChatView = memo(() => {
           selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
         } else if (value.k === SseResponseKind.CallingTool) {
           // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
-          const { u, r: toolName, p: parameters, i: spanId } = value;
+          const { u, r: toolName, p: parameters, d: displayName, c: completed, i: spanId } = value;
           if (u) {
             currentToolCallIdBySpan.set(spanId, u);
           }
@@ -1202,6 +1212,8 @@ const ChatView = memo(() => {
             toolCallId,
             toolName ?? '',
             parameters ?? '',
+            displayName,
+            completed,
           );
         } else if (value.k === SseResponseKind.ToolCompleted) {
           const { u: toolCallId, r: result, i: spanId } = value as any;
@@ -1251,13 +1263,18 @@ const ChatView = memo(() => {
       );
 
       const updatedAt = currentISODateString();
-      updateChatsState((prevChats) =>
-        prevChats.map((x) =>
-          x.id === selectedChat.id
-            ? { ...x, leafMessageId, updatedAt }
-            : x,
-        ),
-      );
+      // 临时对话需要更新 tempChat 而非 chats 数组
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((x) =>
+            x.id === selectedChat.id
+              ? { ...x, leafMessageId, updatedAt }
+              : x,
+          ),
+        );
+      }
       messageDispatch(setSelectedMessages(selectedMsgs));
       messageDispatch(setMessages(messageList));
       changeSelectedChatStatus(ChatStatus.None);
@@ -1275,7 +1292,7 @@ const ChatView = memo(() => {
     ],
   );
 
-  const handleChangePrompt = (prompt: Prompt) => {
+  const handleChangePrompt = () => {
     // to do
   };
 
@@ -1295,17 +1312,21 @@ const ChatView = memo(() => {
 
     const updatedAt = currentISODateString();
     // 更新selectedChat的leafMessageId
-    updateChatsState((prevChats) =>
-      prevChats.map((x) =>
-        x.id === selectedChat.id
-          ? {
-            ...x,
-            leafMessageId: leafId,
-            updatedAt,
-          }
-          : x,
-      ),
-    );
+    if (selectedChat.isTemp && tempChat) {
+      setTempChat({ ...tempChat, leafMessageId: leafId, updatedAt } as IChat);
+    } else {
+      updateChatsState((prevChats) =>
+        prevChats.map((x) =>
+          x.id === selectedChat.id
+            ? {
+              ...x,
+              leafMessageId: leafId,
+              updatedAt,
+            }
+            : x,
+        ),
+      );
+    }
 
     putChats(selectedChat.id, {
       setsLeafMessageId: true,
@@ -1423,13 +1444,17 @@ const ChatView = memo(() => {
 
       const updatedAt = currentISODateString();
       // 更新chats中的leafMessageId
-      updateChatsState((prevChats) =>
-        prevChats.map((chat) =>
-          chat.id === selectedChat.id
-            ? { ...chat, leafMessageId: copyMsg!.id, updatedAt }
-            : chat,
-        ),
-      );
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId: copyMsg!.id, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((chat) =>
+            chat.id === selectedChat.id
+              ? { ...chat, leafMessageId: copyMsg!.id, updatedAt }
+              : chat,
+          ),
+        );
+      }
     }
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -1551,13 +1576,17 @@ const ChatView = memo(() => {
     // 更新chats中的leafMessageId
     if (selectedChat && leafId) {
       const updatedAt = currentISODateString();
-      updateChatsState((prevChats) =>
-        prevChats.map((x) =>
-          x.id === selectedChat.id
-            ? { ...x, leafMessageId: leafId, updatedAt }
-            : x,
-        ),
-      );
+      if (selectedChat.isTemp && tempChat) {
+        setTempChat({ ...tempChat, leafMessageId: leafId, updatedAt } as IChat);
+      } else {
+        updateChatsState((prevChats) =>
+          prevChats.map((x) =>
+            x.id === selectedChat.id
+              ? { ...x, leafMessageId: leafId, updatedAt }
+              : x,
+          ),
+        );
+      }
     }
 
     messageDispatch(setSelectedMessages(selectedMsgs));
@@ -1668,10 +1697,10 @@ const ChatView = memo(() => {
   }
 
   return (
-    <div className="relative flex-1">
-      <div className="flex flex-col">
-        <div className="relative h-16"><ChatHeader /></div>
-        <div className="relative h-[calc(100vh-64px)] w-0 min-w-full">
+    <div className={`relative flex-1 min-w-0${selectedChat.isTemp ? ' bg-amber-50/40 dark:bg-amber-950/15' : ''}`}>
+      <div className="flex flex-col h-full">
+        <div className="sticky top-0 z-10"><ChatHeader /></div>
+        <div className="relative flex-1 min-h-0">
           <div
             className="h-full overflow-x-hidden scroll-container"
             ref={chatContainerRef}
@@ -1681,12 +1710,7 @@ const ChatView = memo(() => {
               <ChatMessagesSkeleton selectedChat={selectedChat} />
             ) : (
               <>
-                <div
-                  className="sm:w-full chat-container"
-                  style={{
-                    width: `calc(100vw - ${showChatBar ? 280 : 0}px)`,
-                  }}
-                >
+                <div className="sm:w-full chat-container w-full">
                   {selectedMessages.length === 0 && <ChatPresetList />}
                 </div>
 
@@ -1694,6 +1718,7 @@ const ChatView = memo(() => {
                   selectedChat={selectedChat}
                   selectedMessages={selectedMessages}
                   models={models}
+                  enableGroupImagePreview={true}
                   responseMessageMinHeight={responseMessageMinHeight}
                   responseMessageMinHeightGroupIndex={responseMessageMinHeightGroupIndex}
                   onChangeChatLeafMessageId={handleChangeChatLeafMessageId}

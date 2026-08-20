@@ -51,7 +51,7 @@ export interface AdminModelDto {
   inputFreshTokenPrice1M: number;
   outputTokenPrice1M: number;
   inputCachedTokenPrice1M: number;
-  
+
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
@@ -60,17 +60,21 @@ export interface AdminModelDto {
   allowCodeExecution: boolean;
   allowToolCall: boolean;
   thinkTagParserEnabled: boolean;
-  
+
   minTemperature: number;
   maxTemperature: number;
-  
+
   contextWindow: number;
   maxResponseTokens: number;
   maxThinkingBudget: number | null;
-  
-  reasoningEffortOptions: number[];
+
+  supportedEfforts: string[];
   supportedImageSizes: string[];
-  
+  supportedFormats: string[];
+  overrideUrl: string | null;
+  customHeaders: string | null;
+  customBody: string | null;
+
   apiType: number;
   useAsyncApi: boolean;
   useMaxCompletionTokens: boolean;
@@ -85,7 +89,7 @@ export interface UpdateModelDto {
   inputFreshTokenPrice1M: number;
   outputTokenPrice1M: number;
   inputCachedTokenPrice1M: number;
-  
+
   // === 1.8.0 新增字段（全部必填）===
   allowSearch: boolean;
   allowVision: boolean;
@@ -94,17 +98,21 @@ export interface UpdateModelDto {
   allowCodeExecution: boolean;
   allowToolCall: boolean;
   thinkTagParserEnabled: boolean;
-  
+
   minTemperature: number;
   maxTemperature: number;
-  
+
   contextWindow: number;
   maxResponseTokens: number;
   maxThinkingBudget: number | null;
-  
-  reasoningEffortOptions: number[];
+
+  supportedEfforts: string[];
   supportedImageSizes: string[];
-  
+  supportedFormats: string[];
+  overrideUrl: string | null;
+  customHeaders: string | null;
+  customBody: string | null;
+
   apiType: number;
   useAsyncApi: boolean;
   useMaxCompletionTokens: boolean;
@@ -115,10 +123,18 @@ export interface PostUserParams {
   username: string;
   password: string;
   role: string;
+  enabled?: boolean;
+  phone?: string | null;
+  email?: string | null;
 }
 
-export interface PutUserParams extends PostUserParams {
+export interface PutUserParams
+  extends Partial<Omit<PostUserParams, 'password'>> {
   id: string;
+  password?: string;
+  confirmPassword?: string;
+  sub?: string;
+  apiKeyEnabled?: boolean;
 }
 
 export interface PutUserBalanceParams {
@@ -127,19 +143,43 @@ export interface PutUserBalanceParams {
 }
 
 export interface GetUsersParams {
-  query?: string;
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
   page: number;
   pageSize: number;
 }
+
+export interface GetUsersExportParams {
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
+  columns?: string;
+}
+
+export interface GetUsersForPermissionParams extends Paging {
+  id?: string;
+  username?: string;
+  phone?: string;
+  email?: string;
+  loginType?: 'password' | 'phone' | 'keycloak';
+}
+
 export interface GetUsersResult {
   id: string;
   account: string;
   username: string;
   role: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   balance: number;
-  provider: string;
+  provider: string | null;
+  sub: string | null;
+  apiKeyEnabled: boolean;
   createdAt: string;
   updatedAt: string;
   enabled: boolean;
@@ -149,8 +189,10 @@ export interface GetUsersResult {
 export interface UserModelPermissionUserDto {
   id: number;
   username: string;
+  account: string;
   email: string | null;
   phone: string | null;
+  provider: string | null;
   enabled: boolean;
   userModelCount: number;
   modelProviderCount: number;
@@ -424,6 +466,8 @@ export class GetModelKeysResult {
   totalModelCount: number;
   host: string | null;
   secret: string | null;
+  customHeaders: string | null;
+  customBody: string | null;
   createdAt: string;
 
   constructor(dto: any) {
@@ -434,6 +478,8 @@ export class GetModelKeysResult {
     this.totalModelCount = dto.totalModelCount;
     this.host = dto.host;
     this.secret = dto.secret;
+    this.customHeaders = dto.customHeaders;
+    this.customBody = dto.customBody;
     this.createdAt = dto.createdAt;
   }
 
@@ -445,6 +491,12 @@ export class GetModelKeysResult {
     if (this.secret !== null) {
       configs.secret = this.secret;
     }
+    if (this.customHeaders !== null) {
+      configs.customHeaders = this.customHeaders;
+    }
+    if (this.customBody !== null) {
+      configs.customBody = this.customBody;
+    }
     return configs;
   }
 }
@@ -454,6 +506,8 @@ export interface PostModelKeysParams {
   name: string;
   host: string | null;
   secret: string | null;
+  customHeaders: string | null;
+  customBody: string | null;
 }
 
 export interface PostPromptParams {
@@ -473,6 +527,11 @@ export interface PostAndPutConfigParams {
   key: string;
   value: string;
   description: string;
+}
+
+export interface TitleSummaryAdminSettingsDto {
+  config: import('./clientApis').TitleSummaryConfig | null;
+  defaultPromptTemplate: string;
 }
 
 export interface GetInvitationCodeResult {
@@ -500,6 +559,8 @@ export interface GetUserInitialConfigResult {
   invitationCodeId: string;
   invitationCode: string;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface PostUserInitialConfigParams {
@@ -508,6 +569,8 @@ export interface PostUserInitialConfigParams {
   loginType: string;
   invitationCodeId: string | null;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface PutUserInitialConfigParams {
@@ -517,6 +580,8 @@ export interface PutUserInitialConfigParams {
   loginType: string;
   invitationCodeId: string | null;
   models: UserInitialModel[];
+  mcps: UserInitialMcp[];
+  apiKeyEnabled: boolean;
 }
 
 export interface UserInitialModel {
@@ -524,6 +589,12 @@ export interface UserInitialModel {
   tokens: number;
   counts: number;
   expires: string;
+}
+
+export interface UserInitialMcp {
+  mcpServerId: number;
+  showShortcut: boolean;
+  customHeaders: string | null;
 }
 
 export interface UserModelDisplayDto {
@@ -643,5 +714,5 @@ export interface ChatCountStatisticsByDateResult {
 export interface ReorderRequest {
   sourceId: number;
   previousId: number | null; // 新位置的前一个元素
-  nextId: number | null;     // 新位置的后一个元素
+  nextId: number | null; // 新位置的后一个元素
 }

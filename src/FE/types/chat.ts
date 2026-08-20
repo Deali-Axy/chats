@@ -92,7 +92,9 @@ export type ToolCallContent = {
   $type: MessageContentType.toolCall;
   u: string; // ToolCallId
   n: string; // Name
+  d?: string; // DisplayName
   p: string; // Parameters
+  completed?: boolean; // Tool execution finished; the presentation result may arrive later
 };
 
 export type StdOutToolProgressDelta = {
@@ -153,6 +155,8 @@ export interface IChat {
   tags: string[];
   updatedAt: string;
   selected?: boolean;
+  /** 是否为临时聊天，临时聊天在用户切换离开时自动删除 */
+  isTemp?: boolean;
 }
 
 export interface IGroupedChat {
@@ -203,6 +207,7 @@ export enum MessageContentType {
 export const EMPTY_ID = 'EMPTY_ID';
 
 export enum UsageSource {
-  Web = 1,
-  API = 2,
+  WebChat = 1,
+  Api = 2,
+  Summary = 3,
 }

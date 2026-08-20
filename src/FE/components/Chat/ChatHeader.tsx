@@ -5,11 +5,11 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { isMobile } from '@/utils/common';
 
-import { ChatStatus, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
+import { ChatStatus, IChat, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
+import { IconBolt, IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -40,6 +40,9 @@ const ChatHeader = () => {
     state: { models, defaultPrompt, showChatBar, chats },
     selectedChat,
     chatDispatch,
+    handleEndTempChat,
+    tempChat,
+    setTempChat,
   } = useContext(HomeContext);
 
   const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
@@ -54,7 +57,12 @@ const ChatHeader = () => {
     selectedChat.spans.filter((x) => x.enabled).length === 1;
 
   // 直接修改chats数组中的chat数据的辅助函数
+  // 临时聊天不在 chats 数组中，需要更新 tempChat 状态
   const updateChatInChats = (updatedChat: typeof selectedChat) => {
+    if (selectedChat.isTemp && tempChat) {
+      setTempChat(updatedChat as IChat);
+      return;
+    }
     const updatedChats = chats.map((chat) =>
       chat.id === selectedChat.id ? updatedChat : chat
     );
@@ -83,6 +91,8 @@ const ChatHeader = () => {
           reasoningEffort: span?.reasoningEffort,
           systemPrompt: defaultPrompt?.content!,
           imageSize: span?.imageSize || null,
+          format: span?.format || null,
+          compression: span?.compression ?? null,
           mcps: span?.mcps || [],
           thinkingBudget: span?.thinkingBudget ?? null,
         }))
@@ -117,7 +127,13 @@ const ChatHeader = () => {
                 temperature: data.temperature,
                 webSearchEnabled: data.webSearchEnabled,
                 codeExecutionEnabled: data.codeExecutionEnabled,
+                reasoningEffort: data.reasoningEffort,
+                maxOutputTokens: data.maxOutputTokens,
+                imageSize: data.imageSize,
+                format: data.format,
+                compression: data.compression,
                 thinkingBudget: data.thinkingBudget,
+                mcps: data.mcps,
               };
             }
             return s;
@@ -212,17 +228,17 @@ const ChatHeader = () => {
 
   return (
     <>
-      <div className="absolute top-0 left-0 w-full border-transparent bg-background">
+      <div className="sticky top-0 left-0 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
         <div
           className={cn(
-            'stretch mt-2 flex flex-row mx-4 rounded-md',
+            'stretch flex flex-row mx-4 rounded-lg',
             !showChatBar && 'mx-2',
           )}
         >
-          <div className="relative flex w-full flex-grow flex-col rounded-md bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:shadow-[0_0_15px_rgba(0,0,0,0.10)] overflow-hidden">
+          <div className="relative flex w-full flex-grow flex-col rounded-lg bg-card shadow-sm overflow-hidden">
             <div
               className={cn(
-                'flex justify-between select-none items-center custom-scrollbar overflow-x-auto px-3',
+                'flex justify-between select-none items-center scroller overflow-x-auto px-3',
               )}
             >
               <div
@@ -231,6 +247,29 @@ const ChatHeader = () => {
                   !showChatBar && 'pl-16',
                 )}
               >
+                {/* 临时聊天标识 */}
+                {selectedChat.isTemp && (
+                  <>
+                    <Tips
+                      trigger={
+                        <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+                          <IconBolt size={16} />
+                          <span className="text-xs font-medium">{t('Temporary')}</span>
+                        </div>
+                      }
+                      content={t('This chat will not be saved')}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 px-2 text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 hover:bg-yellow-500/10"
+                      onClick={handleEndTempChat}
+                    >
+                      <IconX size={14} className="mr-1" />
+                      {t('End Temporary Chat')}
+                    </Button>
+                  </>
+                )}
                 <div
                   className={cn(
                     'flex gap-1 items-center',

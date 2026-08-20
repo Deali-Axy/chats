@@ -1,4 +1,6 @@
-﻿using System.Text.Json.Serialization;
+using Chats.BE.Controllers.Common.Dtos;
+using System.Text.Json.Serialization;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Chats.BE.Controllers.Admin.AdminUser.Dtos;
 
@@ -31,14 +33,17 @@ public record AdminUserDto
     [JsonPropertyName("provider")]
     public required string? Provider { get; init; }
 
+    [JsonPropertyName("sub")]
+    public required string? Sub { get; init; }
+
+    [JsonPropertyName("apiKeyEnabled")]
+    public required bool ApiKeyEnabled { get; init; }
+
     [JsonPropertyName("enabled")]
     public required bool Enabled { get; init; }
 
     [JsonPropertyName("createdAt")]
     public required DateTime CreatedAt { get; init; }
-
-    //[JsonPropertyName("userModelId")]
-    //public required Guid UserModelId { get; init; }
 
     [JsonPropertyName("userModelCount")]
     public required int UserModelCount { get; init; }
@@ -55,6 +60,8 @@ public record AdminUserDtoTemp
     public required string? Phone { get; init; }
     public required string? Email { get; init; }
     public required string? Provider { get; init; }
+    public required string? Sub { get; init; }
+    public required bool ApiKeyEnabled { get; init; }
     public required bool Enabled { get; init; }
     public required DateTime CreatedAt { get; init; }
     public required int UserModelCount { get; init; }
@@ -70,8 +77,49 @@ public record AdminUserDtoTemp
         Phone = Phone,
         Email = Email,
         Provider = Provider,
+        Sub = Sub,
+        ApiKeyEnabled = ApiKeyEnabled,
         Enabled = Enabled,
         CreatedAt = CreatedAt,
         UserModelCount = UserModelCount,
     };
+}
+
+public record AdminUserQuery : PagingRequest
+{
+    [FromQuery(Name = "id")]
+    public string? Id { get; init; }
+
+    [FromQuery(Name = "username")]
+    public string? Username { get; init; }
+
+    [FromQuery(Name = "phone")]
+    public string? Phone { get; init; }
+
+    [FromQuery(Name = "email")]
+    public string? Email { get; init; }
+
+    [FromQuery(Name = "loginType")]
+    public string? LoginType { get; init; }
+}
+
+public record AdminUserExportQuery
+{
+    [FromQuery(Name = "id")]
+    public string? Id { get; init; }
+
+    [FromQuery(Name = "username")]
+    public string? Username { get; init; }
+
+    [FromQuery(Name = "phone")]
+    public string? Phone { get; init; }
+
+    [FromQuery(Name = "email")]
+    public string? Email { get; init; }
+
+    [FromQuery(Name = "loginType")]
+    public string? LoginType { get; init; }
+
+    [FromQuery(Name = "columns")]
+    public string? Columns { get; init; }
 }

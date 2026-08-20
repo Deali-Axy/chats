@@ -10,6 +10,7 @@ import {
   IconCode,
   IconLogout,
   IconMessage,
+  IconMoneybag,
   IconSettings,
   IconUserCog,
 } from '@/components/Icons/index';
@@ -60,9 +61,7 @@ const UserMenuPopover = ({
 
   return (
     <Popover onOpenChange={handleOpenChange}>
-      <PopoverTrigger className="w-full hover:bg-muted rounded-md">
-        {trigger}
-      </PopoverTrigger>
+      <PopoverTrigger asChild>{trigger}</PopoverTrigger>
       <PopoverContent
         side="top"
         align="start"
@@ -91,7 +90,7 @@ const UserMenuPopover = ({
             }}
           />
         )}
-        {pageType !== PageType.Build && (
+        {pageType !== PageType.Build && user?.apiKeyEnabled && (
           <SidebarLink
             text="API"
             href="/build/api-key"
@@ -109,6 +108,15 @@ const UserMenuPopover = ({
           onClick={(e) => {
             e.preventDefault();
             router.push('/settings');
+          }}
+        />
+        <SidebarLink
+          text={t('Model Prices')}
+          href="/model-prices"
+          icon={<IconMoneybag />}
+          onClick={(e) => {
+            e.preventDefault();
+            router.push('/model-prices');
           }}
         />
         <Separator className="my-2" />

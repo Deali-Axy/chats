@@ -5,10 +5,10 @@ namespace Chats.BE.Services.Models.ChatServices.OpenAI;
 
 public class OpenRouterChatService(IHttpClientFactory httpClientFactory, HostUrlService hostUrlService) : ChatCompletionService(httpClientFactory)
 {
-    protected override void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
+    protected override void AddAuthorizationHeader(HttpRequestMessage request, ModelKeySnapshot modelKey)
     {
         base.AddAuthorizationHeader(request, modelKey);
-        request.Headers.Add("X-Title", "Sdcb Chats");
+        request.Headers.Add("X-Title", "Ayaka Chats");
         request.Headers.Add("HTTP-Referer", hostUrlService.GetFEUrl());
     }
 
@@ -19,7 +19,7 @@ public class OpenRouterChatService(IHttpClientFactory httpClientFactory, HostUrl
         body["reasoning"] = new JsonObject();
         body["provider"] = new JsonObject { ["sort"] = "throughput" };
 
-        if (request.ChatConfig.Model.AllowSearch && request.ChatConfig.WebSearchEnabled)
+        if (request.ChatConfig.Model.CurrentSnapshot.AllowSearch && request.ChatConfig.WebSearchEnabled)
         {
             body["plugins"] = new JsonArray
             {

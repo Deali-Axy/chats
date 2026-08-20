@@ -16,6 +16,7 @@ import { Switch } from '@/components/ui/switch';
 import useTranslation from '@/hooks/useTranslation';
 import { cn } from '@/lib/utils';
 import { RequestTraceDetails } from '@/types/adminApis';
+import { copyTextToClipboard } from '@/utils/clipboard';
 import { formatDateTime } from '@/utils/date';
 
 import {
@@ -137,24 +138,20 @@ const CompareCopyButton = ({ value, className }: { value: string; className?: st
     };
   }, []);
 
-  const handleCopy = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleCopy = async (event: React.MouseEvent<HTMLButtonElement>) => {
     event.stopPropagation();
 
-    if (!navigator.clipboard || !navigator.clipboard.writeText) {
-      return;
+    if (!(await copyTextToClipboard(value))) return;
+
+    setCopied(true);
+
+    if (timeoutRef.current !== null) {
+      window.clearTimeout(timeoutRef.current);
     }
 
-    navigator.clipboard.writeText(value).then(() => {
-      setCopied(true);
-
-      if (timeoutRef.current !== null) {
-        window.clearTimeout(timeoutRef.current);
-      }
-
-      timeoutRef.current = window.setTimeout(() => {
-        setCopied(false);
-      }, 1200);
-    });
+    timeoutRef.current = window.setTimeout(() => {
+      setCopied(false);
+    }, 1200);
   };
 
   return (
@@ -242,7 +239,7 @@ export default function RequestTraceCompareDialog({
         </div>
 
         {loading ? (
-          <div className="custom-scrollbar min-h-0 h-full overflow-y-auto pr-1">
+          <div className="scroller min-h-0 h-full overflow-y-auto pr-1">
             <div className="space-y-2 py-4">
               {Array.from({ length: 6 }).map((_, idx) => (
                 <Skeleton key={idx} className="h-8 w-full" />
@@ -250,7 +247,7 @@ export default function RequestTraceCompareDialog({
             </div>
           </div>
         ) : (
-          <div className="custom-scrollbar min-h-0 h-full overflow-x-auto overflow-y-scroll pr-1">
+          <div className="scroller min-h-0 h-full overflow-x-auto overflow-y-scroll pr-1">
             <div className="space-y-2">
               {rows.map((row) => {
                 const different = row.a !== row.b;

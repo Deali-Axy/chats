@@ -45,7 +45,7 @@ git clone https://github.com/sdcb/chats.git
 
 #### 1. 使用 Visual Studio 打开解决方案
 
-在根目录下找到 `Chats.sln` 解决方案文件并打开。在 Visual Studio 中，您将看到一个名为 `Chats.BE` 的网站项目。
+在根目录下找到 `Chats.slnx` 解决方案文件并打开。在 Visual Studio 中，您将看到一个名为 `Chats.BE` 的网站项目。
 
 #### 2. 运行项目
 
@@ -174,9 +174,6 @@ echo "API_URL=http://localhost:5146" > .env.local
 # 安装依赖
 npm install
 
-# 或使用 pnpm（推荐，速度更快）
-# pnpm install
-
 # 启动开发服务器
 npm run dev
 ```
@@ -233,10 +230,10 @@ Remove-Item -Path "chats-fe.zip"
 
 ```bash
 # Linux/macOS
-curl -L -O https://chats.sdcb.pub/release/latest/chats-fe.zip
+curl -L -O https://chats.io.sdcb.ai/release/latest/chats-fe.zip
 
 # Windows PowerShell
-Invoke-WebRequest -Uri "https://chats.sdcb.pub/release/latest/chats-fe.zip" -OutFile "chats-fe.zip"
+Invoke-WebRequest -Uri "https://chats.io.sdcb.ai/release/latest/chats-fe.zip" -OutFile "chats-fe.zip"
 ```
 
 > **📌 注意事项**：
@@ -255,7 +252,7 @@ dotnet run
 
 **使用 Visual Studio：**
 
-1. 打开 `Chats.sln` 解决方案
+1. 打开 `Chats.slnx` 解决方案
 2. 选择 `Chats.BE` 项目
 3. 按 `F5` 启动调试
 

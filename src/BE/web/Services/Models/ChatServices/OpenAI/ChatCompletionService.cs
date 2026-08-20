@@ -25,7 +25,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         "image/webp",
     ];
 
-    public override async Task<string[]> ListModels(ModelKey modelKey, CancellationToken cancellationToken)
+    public override async Task<string[]> ListModels(ModelKeySnapshot modelKey, CancellationToken cancellationToken)
     {
         ArgumentException.ThrowIfNullOrWhiteSpace(modelKey.Secret, nameof(modelKey.Secret));
 
@@ -59,7 +59,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return [.. models];
     }
 
-    protected virtual string GetEndpoint(ModelKey modelKey)
+    protected virtual string GetEndpoint(ModelKeySnapshot modelKey)
     {
         string? host = modelKey.Host;
         if (string.IsNullOrWhiteSpace(host))
@@ -69,12 +69,17 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return host?.TrimEnd('/') ?? "";
     }
 
-    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKey modelKey)
+    protected virtual string GetEndpoint(Model model)
+    {
+        return ModelRequestOverrides.ResolveEndpoint(model.CurrentSnapshot);
+    }
+
+    protected virtual void AddAuthorizationHeader(HttpRequestMessage request, ModelKeySnapshot modelKey)
     {
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
     }
 
-    protected virtual string ReasoningContentPropertyName => "reasoning_content";
+    private static readonly string[] ReasoningContentPropertyNames = ["reasoning_content", "reasoning"];
 
     /// <summary>
     /// Controls how to persist thinking/reasoning content returned from upstream.
@@ -95,8 +100,6 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     /// <summary>
     /// Controls how to persist thinking/reasoning content returned from upstream, with an optional signature.
-    /// Some providers (e.g., MiniMax `reasoning_details`) return structured reasoning payloads that should be
-    /// preserved in history for interleaved thinking.
     /// Default behavior ignores the signature and uses <see cref="TryCreateThinkingSegmentForStorage(string, out ChatSegment?)"/>.
     /// </summary>
     protected virtual bool TryCreateThinkingSegmentForStorage(string thinkingContent, string? thinkingSignature, out ChatSegment? segment)
@@ -116,21 +119,6 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         out string? thinkingContent)
     {
         thinkingContent = null;
-        return false;
-    }
-
-    /// <summary>
-    /// Controls how to send thinking/reasoning content back to upstream in the next request.
-    /// Use this when the upstream expects a structured reasoning payload (e.g., MiniMax `reasoning_details`).
-    /// Default behavior returns false.
-    /// </summary>
-    protected virtual bool TryBuildThinkingNodeForRequest(
-        NeutralMessage message,
-        IReadOnlyList<NeutralThinkContent> thinkingContents,
-        IReadOnlyList<NeutralToolCallContent> toolCalls,
-        out JsonNode? thinkingNode)
-    {
-        thinkingNode = null;
         return false;
     }
 
@@ -161,19 +149,58 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     private (string? text, string? signature) TryGetThinkingPayload(JsonElement obj)
     {
-        if (!obj.TryGetProperty(ReasoningContentPropertyName, out JsonElement rc))
+        foreach (string propertyName in ReasoningContentPropertyNames)
         {
-            return (null, null);
+            if (!obj.TryGetProperty(propertyName, out JsonElement rc))
+            {
+                continue;
+            }
+
+            string? text = ExtractThinkingText(rc);
+            if (string.IsNullOrEmpty(text))
+            {
+                continue;
+            }
+
+            string? signature = rc.ValueKind is JsonValueKind.Array or JsonValueKind.Object ? rc.GetRawText() : null;
+            return (text, signature);
         }
 
-        string? text = ExtractThinkingText(rc);
-        string? signature = rc.ValueKind is JsonValueKind.Array or JsonValueKind.Object ? rc.GetRawText() : null;
-        return (text, signature);
+        return (null, null);
+    }
+
+    /// <summary>
+    /// Returns the first choice object from an OpenAI-compatible payload when the shape is valid.
+    /// Some providers emit `choices` as null, non-array, or an empty array in usage-only/final chunks.
+    /// </summary>
+    private static bool TryGetFirstChoice(JsonElement payload, out JsonElement choice)
+    {
+        choice = default;
+        if (!payload.TryGetProperty("choices", out JsonElement choices) || choices.ValueKind != JsonValueKind.Array || choices.GetArrayLength() == 0)
+        {
+            return false;
+        }
+
+        choice = choices[0];
+        return choice.ValueKind == JsonValueKind.Object;
+    }
+
+    /// <summary>
+    /// Returns a delta/message object only when the upstream payload really contains a JSON object.
+    /// This avoids InvalidOperationException for providers that omit the property or send null.
+    /// </summary>
+    private static bool TryGetObjectProperty(JsonElement element, string propertyName, out JsonElement value)
+    {
+        value = default;
+        return element.ValueKind == JsonValueKind.Object &&
+            element.TryGetProperty(propertyName, out JsonElement propertyValue) &&
+            propertyValue.ValueKind == JsonValueKind.Object &&
+            (value = propertyValue).ValueKind == JsonValueKind.Object;
     }
 
     public override async IAsyncEnumerable<ChatSegment> ChatStreamed(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        if (!request.ChatConfig.Model.AllowStreaming || !request.Streamed)
+        if (!request.ChatConfig.Model.CurrentSnapshot.AllowStreaming || !request.Streamed)
         {
             await foreach (ChatSegment segment in ChatNonStreaming(request, cancellationToken))
             {
@@ -182,12 +209,16 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             yield break;
         }
 
-        string url = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        Model model = request.ChatConfig.Model;
+        ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
+        string url = GetEndpoint(model);
         JsonObject requestBody = BuildRequestBody(request, stream: true);
+        ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/chat/completions");
-        AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+        AddAuthorizationHeader(httpRequest, modelKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+        ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
         httpRequest.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("text/event-stream"));
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceOpenAI);
@@ -196,13 +227,14 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            throw await RawChatServiceException.CreateAsync(response, cancellationToken);
         }
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
         DBFinishReason? finishReason = null;
+        string? responseId = null;
+        bool emittedHostedWebSearch = false;
 
         await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
         {
@@ -216,13 +248,19 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             {
                 json = JsonDocument.Parse(sseItem.Data).RootElement;
             }
+
             catch (JsonException)
             {
                 continue;
             }
 
+            if (json.TryGetProperty("id", out JsonElement responseIdEl) && responseIdEl.ValueKind == JsonValueKind.String)
+            {
+                responseId = responseIdEl.GetString();
+            }
+
             // Parse choices
-            if (!json.TryGetProperty("choices", out JsonElement choices) || choices.GetArrayLength() == 0)
+            if (!TryGetFirstChoice(json, out JsonElement choice))
             {
                 if (json.TryGetProperty("usage", out JsonElement usageOnly))
                 {
@@ -238,18 +276,31 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                 continue;
             }
 
-            JsonElement choice = choices[0];
-            JsonElement delta = choice.TryGetProperty("delta", out JsonElement d) ? d : default;
+            JsonElement delta = TryGetObjectProperty(choice, "delta", out JsonElement d) ? d : default;
+
+            if (delta.ValueKind == JsonValueKind.Object
+                && delta.TryGetProperty("annotations", out JsonElement annotationsEl))
+            {
+                JsonArray hostedResults = ParseHostedWebSearchAnnotations(annotationsEl);
+                if (!emittedHostedWebSearch && hostedResults.Count > 0)
+                {
+                    foreach (ChatSegment segment in CreateHostedWebSearchSegments(responseId, hostedResults))
+                    {
+                        yield return segment;
+                    }
+                    emittedHostedWebSearch = true;
+                }
+            }
 
             // Parse content
-            string? content = delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
+            string? content = delta.ValueKind == JsonValueKind.Object && delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
 
             // Parse reasoning content (for models like DeepSeek-R1)
-            (string? reasoningContent, string? reasoningSignature) = TryGetThinkingPayload(delta);
+            (string? reasoningContent, string? reasoningSignature) = delta.ValueKind == JsonValueKind.Object ? TryGetThinkingPayload(delta) : (null, null);
 
             // Parse tool calls
             List<ToolCallSegment> toolCallSegments = [];
-            if (delta.TryGetProperty("tool_calls", out JsonElement toolCalls) && toolCalls.ValueKind == JsonValueKind.Array)
+            if (delta.ValueKind == JsonValueKind.Object && delta.TryGetProperty("tool_calls", out JsonElement toolCalls) && toolCalls.ValueKind == JsonValueKind.Array)
             {
                 foreach (JsonElement tc in toolCalls.EnumerateArray())
                 {
@@ -294,14 +345,16 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             }
 
             List<ChatSegment> items = [];
-            if (!string.IsNullOrEmpty(content))
-            {
-                items.Add(ChatSegment.FromText(content));
-            }
-
+            // Reasoning belongs before the visible answer even when upstream sends both in one delta.
+            // Yield thinking first so the UI does not render content and then append earlier reasoning after it.
             if (!string.IsNullOrEmpty(reasoningContent) && TryCreateThinkingSegmentForStorage(reasoningContent, reasoningSignature, out ChatSegment? thinkSegment) && thinkSegment != null)
             {
                 items.Add(thinkSegment);
+            }
+
+            if (!string.IsNullOrEmpty(content))
+            {
+                items.Add(ChatSegment.FromText(content));
             }
             items.AddRange(toolCallSegments);
 
@@ -332,11 +385,34 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
     private static int GetReasoningTokens(JsonElement usage)
     {
         if (usage.TryGetProperty("completion_tokens_details", out JsonElement ctd) &&
-            ctd.TryGetProperty("reasoning_tokens", out JsonElement rt))
+            ctd.ValueKind == JsonValueKind.Object &&
+            ctd.TryGetProperty("reasoning_tokens", out JsonElement rt) &&
+            rt.ValueKind == JsonValueKind.Number)
         {
             return rt.GetInt32();
         }
         return 0;
+    }
+
+    private static int GetOutputTokens(JsonElement usage)
+    {
+        int completionTokens = usage.TryGetProperty("completion_tokens", out JsonElement ct) && ct.ValueKind == JsonValueKind.Number
+            ? ct.GetInt32()
+            : 0;
+
+        // Some OpenAI-compatible providers(like Grok in Azure) report completion_tokens without reasoning tokens.
+        // total_tokens remains authoritative for the full output token count used by this app.
+        if (usage.TryGetProperty("total_tokens", out JsonElement total) && total.ValueKind == JsonValueKind.Number &&
+            usage.TryGetProperty("prompt_tokens", out JsonElement prompt) && prompt.ValueKind == JsonValueKind.Number)
+        {
+            int outputTokens = total.GetInt32() - prompt.GetInt32();
+            if (outputTokens >= 0)
+            {
+                return outputTokens;
+            }
+        }
+
+        return completionTokens;
     }
 
     protected virtual int GetCachedTokens(JsonElement usage)
@@ -360,8 +436,8 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         return new ChatTokenUsage
         {
-            InputTokens = usageElement.TryGetProperty("prompt_tokens", out JsonElement pt) ? pt.GetInt32() : 0,
-            OutputTokens = usageElement.TryGetProperty("completion_tokens", out JsonElement ct) ? ct.GetInt32() : 0,
+            InputTokens = usageElement.TryGetProperty("prompt_tokens", out JsonElement pt) && pt.ValueKind == JsonValueKind.Number ? pt.GetInt32() : 0,
+            OutputTokens = GetOutputTokens(usageElement),
             ReasoningTokens = GetReasoningTokens(usageElement),
             CacheTokens = GetCachedTokens(usageElement)
         };
@@ -370,12 +446,16 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     private async IAsyncEnumerable<ChatSegment> ChatNonStreaming(ChatRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
     {
-        string url = GetEndpoint(request.ChatConfig.Model.ModelKey);
+        Model model = request.ChatConfig.Model;
+        ModelKeySnapshot modelKey = model.CurrentSnapshot.ModelKeySnapshot;
+        string url = GetEndpoint(model);
         JsonObject requestBody = BuildRequestBody(request, stream: false);
+        ModelRequestOverrides.ApplyBody(requestBody, model.CurrentSnapshot);
 
         using HttpRequestMessage httpRequest = new(HttpMethod.Post, url + "/chat/completions");
-        AddAuthorizationHeader(httpRequest, request.ChatConfig.Model.ModelKey);
+        AddAuthorizationHeader(httpRequest, modelKey);
         httpRequest.Content = new StringContent(requestBody.ToJsonString(JSON.JsonSerializerOptions), Encoding.UTF8, "application/json");
+        ModelRequestOverrides.ApplyHeaders(httpRequest, model.CurrentSnapshot);
 
         using HttpClient httpClient = httpClientFactory.CreateClient(HttpClientNames.ChatServiceOpenAI);
         httpClient.Timeout = NetworkTimeout;
@@ -383,8 +463,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            throw await RawChatServiceException.CreateAsync(response, cancellationToken);
         }
 
         string jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -395,26 +474,43 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         DBFinishReason? finishReason = null;
         ChatTokenUsage? usage = null;
 
-        if (root.TryGetProperty("choices", out JsonElement choices) && choices.GetArrayLength() > 0)
+        if (TryGetFirstChoice(root, out JsonElement choice))
         {
-            JsonElement choice = choices[0];
-            if (choice.TryGetProperty("message", out JsonElement message))
+            if (TryGetObjectProperty(choice, "message", out JsonElement message))
             {
+                if (message.TryGetProperty("annotations", out JsonElement annotationsEl))
+                {
+                    JsonArray hostedResults = ParseHostedWebSearchAnnotations(annotationsEl);
+                    if (hostedResults.Count > 0)
+                    {
+                        string? responseId = root.TryGetProperty("id", out JsonElement responseIdEl)
+                            && responseIdEl.ValueKind == JsonValueKind.String
+                            ? responseIdEl.GetString()
+                            : null;
+                        items.AddRange(CreateHostedWebSearchSegments(responseId, hostedResults));
+                    }
+                }
+
+                string? text = null;
+
                 // Content
                 if (message.TryGetProperty("content", out JsonElement content) && content.ValueKind == JsonValueKind.String)
                 {
-                    string? text = content.GetString();
-                    if (!string.IsNullOrEmpty(text))
-                    {
-                        items.Add(ChatSegment.FromText(text));
-                    }
+                    text = content.GetString();
                 }
 
                 // Reasoning content
                 (string? reasoning, string? reasoningSignature) = TryGetThinkingPayload(message);
+                // Reasoning belongs before the visible answer even when upstream sends both in one message.
+                // Yield thinking first so the UI does not render content and then append earlier reasoning after it.
                 if (!string.IsNullOrEmpty(reasoning) && TryCreateThinkingSegmentForStorage(reasoning, reasoningSignature, out ChatSegment? thinkSegment) && thinkSegment != null)
                 {
                     items.Add(thinkSegment);
+                }
+
+                if (!string.IsNullOrEmpty(text))
+                {
+                    items.Add(ChatSegment.FromText(text));
                 }
 
                 // Tool calls
@@ -442,6 +538,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                         });
                     }
                 }
+
             }
 
             // Finish reason
@@ -454,13 +551,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         // Usage
         if (root.TryGetProperty("usage", out JsonElement u))
         {
-            usage = new ChatTokenUsage
-            {
-                InputTokens = u.TryGetProperty("prompt_tokens", out JsonElement pit) ? pit.GetInt32() : 0,
-                OutputTokens = u.TryGetProperty("completion_tokens", out JsonElement cot) ? cot.GetInt32() : 0,
-                ReasoningTokens = GetReasoningTokens(u),
-                CacheTokens = GetCachedTokens(u)
-            };
+            usage = ParseUsage(u);
         }
 
         foreach (ChatSegment item in items)
@@ -486,7 +577,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
     {
         JsonObject body = new()
         {
-            ["model"] = request.ChatConfig.Model.DeploymentName,
+            ["model"] = request.ChatConfig.Model.CurrentSnapshot.DeploymentName,
             ["messages"] = BuildMessages(request),
             ["stream"] = stream,
         };
@@ -503,7 +594,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (request.ChatConfig.MaxOutputTokens.HasValue)
         {
-            if (request.ChatConfig.Model.UseMaxCompletionTokens)
+            if (request.ChatConfig.Model.CurrentSnapshot.UseMaxCompletionTokens)
             {
                 body["max_completion_tokens"] = request.ChatConfig.MaxOutputTokens.Value;
             }
@@ -556,6 +647,34 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         return body;
     }
 
+    protected virtual JsonArray ParseHostedWebSearchAnnotations(JsonElement annotations)
+    {
+        return [];
+    }
+
+    private static IEnumerable<ChatSegment> CreateHostedWebSearchSegments(string? responseId, JsonArray results)
+    {
+        string callId = $"web_search_{responseId ?? "response"}";
+        yield return new ToolCallSegment
+        {
+            Index = 100000,
+            Id = callId,
+            Name = "web_search_call",
+            IsCompleted = true,
+            Arguments = new JsonObject
+            {
+                ["type"] = "web_search_call",
+                ["status"] = "completed",
+                ["action"] = new JsonObject { ["type"] = "search" },
+            }.ToJsonString(JSON.JsonSerializerOptions),
+        };
+        yield return ChatSegment.FromToolCallResponse(
+            callId,
+            results.ToJsonString(JSON.JsonSerializerOptions),
+            0,
+            true);
+    }
+
     private static JsonArray BuildFunctionToolsArray(IEnumerable<ChatTool> tools)
     {
         JsonArray result = [];
@@ -567,6 +686,11 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             }
         }
         return result;
+    }
+
+    private static string NormalizeToolCallArguments(string? parameters)
+    {
+        return string.IsNullOrWhiteSpace(parameters) ? "{}" : parameters;
     }
 
     protected virtual JsonArray BuildMessages(ChatRequest request)
@@ -587,10 +711,33 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         // User/Assistant messages
         foreach (NeutralMessage msg in request.Messages)
         {
-            messages.Add(ToOpenAIMessage(msg));
+            foreach (JsonObject upstreamMessage in ToOpenAIMessages(msg))
+            {
+                messages.Add(upstreamMessage);
+            }
         }
 
         return messages;
+    }
+
+    protected virtual IEnumerable<JsonObject> ToOpenAIMessages(NeutralMessage message)
+    {
+        if (message.Role != NeutralChatRole.Tool)
+        {
+            yield return ToOpenAIMessage(message);
+            yield break;
+        }
+
+        IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = message.GetToolResponseGroups();
+        if (toolResponseGroups.Count == 0)
+        {
+            throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message does not contain any tool response content.");
+        }
+
+        foreach (NeutralToolResponseGroup group in toolResponseGroups)
+        {
+            yield return ToOpenAIToolMessage(group);
+        }
     }
 
     protected virtual JsonObject ToOpenAIMessage(NeutralMessage message)
@@ -600,17 +747,18 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             NeutralChatRole.User => "user",
             NeutralChatRole.Assistant => "assistant",
             NeutralChatRole.Tool => "tool",
+            NeutralChatRole.System => "system",
             _ => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, $"Role {message.Role} is not supported")
         };
 
         if (message.Role == NeutralChatRole.Tool)
         {
-            NeutralToolCallResponseContent toolResp = (NeutralToolCallResponseContent)message.Contents.First();
-            return new JsonObject
+            IReadOnlyList<NeutralToolResponseGroup> toolResponseGroups = message.GetToolResponseGroups();
+            return toolResponseGroups.Count switch
             {
-                ["role"] = "tool",
-                ["tool_call_id"] = toolResp.ToolCallId,
-                ["content"] = toolResp.Response
+                0 => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message does not contain any tool response content."),
+                > 1 => throw new CustomChatServiceException(DBFinishReason.InternalConfigIssue, "Tool message contains multiple tool responses and must be split before conversion."),
+                _ => ToOpenAIToolMessage(toolResponseGroups[0])
             };
         }
 
@@ -658,22 +806,55 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                     ["function"] = new JsonObject
                     {
                         ["name"] = tc.Name,
-                        ["arguments"] = tc.Parameters
+                        ["arguments"] = NormalizeToolCallArguments(tc.Parameters)
                     }
                 });
             }
             msg["tool_calls"] = toolCallsArray;
         }
 
-        if (TryBuildThinkingNodeForRequest(message, thinkingContents, toolCalls, out JsonNode? thinkingNode) && thinkingNode != null)
+        if (TryBuildThinkingContentForRequest(message, thinkingContents, toolCalls, out string? thinkingContent) && !string.IsNullOrEmpty(thinkingContent))
         {
-            msg[ReasoningContentPropertyName] = thinkingNode;
-        }
-        else if (TryBuildThinkingContentForRequest(message, thinkingContents, toolCalls, out string? thinkingContent) && !string.IsNullOrEmpty(thinkingContent))
-        {
-            msg[ReasoningContentPropertyName] = thinkingContent;
+            msg["reasoning_content"] = thinkingContent;
         }
 
+        return msg;
+    }
+
+    private JsonObject ToOpenAIToolMessage(NeutralToolResponseGroup group)
+    {
+        JsonObject msg = new()
+        {
+            ["role"] = "tool",
+            ["tool_call_id"] = group.ToolResponse.ToolCallId,
+        };
+
+        if (group.AttachedContents.Count == 0)
+        {
+            msg["content"] = group.ToolResponse.Response;
+            return msg;
+        }
+
+        JsonArray contentArray = [];
+        if (!string.IsNullOrEmpty(group.ToolResponse.Response))
+        {
+            contentArray.Add(new JsonObject
+            {
+                ["type"] = "text",
+                ["text"] = group.ToolResponse.Response
+            });
+        }
+
+        foreach (NeutralContent attachedContent in group.AttachedContents)
+        {
+            JsonObject? part = ToOpenAIContentPart(attachedContent);
+            if (part != null)
+            {
+                contentArray.Add(part);
+            }
+        }
+
+        msg["content"] = contentArray.Count > 0 ? contentArray : group.ToolResponse.Response;
         return msg;
     }
 

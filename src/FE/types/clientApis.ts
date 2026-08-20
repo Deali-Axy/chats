@@ -15,6 +15,7 @@ export interface SingInResult {
   sessionId: string;
   username: string;
   role: string;
+  apiKeyEnabled: boolean;
 }
 
 export interface LoginConfigsResult {
@@ -68,6 +69,9 @@ export interface ChatResult {
   isTopMost: boolean;
   groupId: string | null;
   tags: string[];
+  matchedContent?: string | null;
+  /** 是否为临时聊天 */
+  isTemp?: boolean;
 }
 
 export interface ChatSpanMcp {
@@ -85,16 +89,49 @@ export interface ChatSpanDto {
   temperature: number | null;
   webSearchEnabled: boolean;
   codeExecutionEnabled: boolean;
-  reasoningEffort: number;
+  reasoningEffort: string | null;
   maxOutputTokens: number | null;
   imageSize: string | null;
+  format: string | null;
+  compression: number | null;
   thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
+}
+
+export type TitleSummaryModelMode = 'truncate' | 'current' | 'specified';
+
+export interface TitleSummaryConfig {
+  modelMode: TitleSummaryModelMode;
+  modelId: number | null;
+  promptTemplate: string | null;
+}
+
+export interface ResolvedTitleSummaryConfig {
+  enabled: boolean;
+  modelMode: TitleSummaryModelMode;
+  modelId: number | null;
+  promptTemplate: string;
+}
+
+export interface TitleSummarySettingsDto {
+  adminConfig: TitleSummaryConfig | null;
+  userConfig: TitleSummaryConfig | null;
+  resolvedConfig: ResolvedTitleSummaryConfig;
+}
+
+export interface TitleSummaryDefaultTemplateDto {
+  promptTemplate: string;
+}
+
+export interface ChatTitleSummaryResult {
+  title: string;
 }
 
 export interface PostChatParams {
   title: string;
   groupId: string | null;
+  /** 是否为临时聊天 */
+  isTemp?: boolean;
 }
 
 export interface PutChatParams {
@@ -139,6 +176,11 @@ export interface PostUserChatSpanParams {
   temperature?: number | null;
   webSearchEnabled?: boolean;
   codeExecutionEnabled?: boolean;
+  reasoningEffort?: string | null;
+  maxOutputTokens?: number | null;
+  imageSize?: string | null;
+  format?: string | null;
+  compression?: number | null;
   thinkingBudget?: number | null;
 }
 
@@ -148,12 +190,14 @@ export interface PostUserChatSpanResult {
   modelId: number;
   modelName: string;
   modelProviderId: number;
-  temperature: number;
+  temperature: number | null;
   webSearchEnabled: boolean;
   codeExecutionEnabled: boolean;
-  reasoningEffort: number;
-  maxOutputTokens: number;
+  reasoningEffort: string | null;
+  maxOutputTokens: number | null;
   imageSize: string | null;
+  format: string | null;
+  compression: number | null;
   thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
 }
@@ -169,6 +213,8 @@ interface GetUserChatResult {
   groupId: string | null;
   tags: string[];
   updatedAt: string;
+  /** 是否为临时聊天 */
+  isTemp?: boolean;
 }
 
 export interface GetUserChatGroupWithMessagesResult {
@@ -251,8 +297,10 @@ export interface PutChatSpanParams {
   webSearchEnabled?: boolean;
   codeExecutionEnabled?: boolean;
   maxOutputTokens: number | null;
-  reasoningEffort?: number | null;
+  reasoningEffort?: string | null;
   imageSize?: string | null;
+  format?: string | null;
+  compression?: number | null;
   thinkingBudget?: number | null;
   mcps?: ChatSpanMcp[];
 }
@@ -262,10 +310,12 @@ export interface GetChatPresetResult {
   name: string;
   updatedAt: string;
   spans: ChatSpanDto[];
+  isSystem: boolean;
 }
 
 export interface PutChatPresetParams {
   name: string;
+  isSystem?: boolean;
   spans: PutChatPresetSpanParams[];
 }
 
@@ -277,8 +327,10 @@ export interface PutChatPresetSpanParams {
   webSearchEnabled?: boolean;
   codeExecutionEnabled?: boolean;
   maxOutputTokens: number | null;
-  reasoningEffort?: number | null;
+  reasoningEffort?: string | null;
   imageSize?: string | null;
+  format?: string | null;
+  compression?: number | null;
   thinkingBudget?: number | null;
   mcps?: ChatSpanMcp[];
 }
@@ -286,13 +338,15 @@ export interface PutChatPresetSpanParams {
 export interface ChatPresetReorderRequest {
   sourceId: string;
   previousId: string | null; // 新位置的前一个元素
-  nextId: string | null;     // 新位置的后一个元素
+  nextId: string | null; // 新位置的后一个元素
 }
 
 export interface GetUsageParams {
   user?: string;
   kid?: string;
   provider?: string;
+  modelKey?: string;
+  model?: string;
   start?: string;
   end?: string;
   page?: number;
@@ -340,6 +394,7 @@ export interface GetUsageStatResult {
 
 export interface GetUserFilesParams extends Paging {
   skip?: number;
+  contentTypePrefix?: string;
 }
 
 export interface GetUserFilesResult {
@@ -352,18 +407,26 @@ export interface GetUserFilesResult {
 // MCP related types
 export interface McpToolBasicInfo {
   name: string;
-  description?: string;
-  parameters?: string;
+  title: string | null;
+  description: string | null;
+  parameters: string | null;
+  destructive: boolean;
+  idempotent: boolean;
+  openWorld: boolean;
+  readOnly: boolean;
 }
 
 export interface McpServerListItemDto {
   id: number;
-  label: string;
+  name: string;
+  displayName: string | null;
+  showShortcut: boolean;
 }
 
 export interface McpServerListManagementItemDto {
   id: number;
-  label: string;
+  name: string;
+  displayName: string | null;
   url: string;
   createdAt: string;
   updatedAt: string;
@@ -371,17 +434,22 @@ export interface McpServerListManagementItemDto {
   owner: string;
   editable: boolean;
   assignedUserCount: number;
+  assignedToMe: boolean;
+  showShortcut: boolean;
 }
 
 export interface McpServerDetailsDto extends McpServerListManagementItemDto {
   headers?: string;
+  serverInstructions?: string;
   tools: McpToolBasicInfo[];
 }
 
 export interface UpdateMcpServerRequest {
-  label: string;
+  name: string;
+  displayName?: string | null;
   url: string;
   headers?: string;
+  serverInstructions?: string;
   tools: McpToolBasicInfo[];
 }
 
@@ -390,10 +458,16 @@ export interface FetchToolsRequest {
   headers?: string;
 }
 
+export interface FetchToolsResponse {
+  tools: McpToolBasicInfo[];
+  serverInstructions?: string;
+}
+
 // MCP用户分配相关类型
 export interface AssignedUserInfo {
   id: number;
   customHeaders?: string;
+  showShortcut?: boolean;
 }
 
 export interface AssignUsersToMcpRequest {
@@ -411,6 +485,11 @@ export interface AssignedUserDetailsDto {
   id: number;
   userName: string;
   customHeaders?: string;
+  showShortcut: boolean;
+}
+
+export interface UpdateMyMcpAssignmentRequest {
+  showShortcut: boolean;
 }
 
 export interface AssignedUserNameDto {

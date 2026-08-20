@@ -1,0 +1,123 @@
+{
+  "version": "1.13.1",
+  "date": "2026-06-23",
+  "tagline": "全新功能与体验优化",
+  "features": [
+    {
+      "title": "海报",
+      "description": "添加 v1.13.0 版本更新海报生成功能"
+    },
+    {
+      "title": "临时聊天",
+      "description": "添加临时聊天功能"
+    },
+    {
+      "title": "搜索功能",
+      "description": "添加搜索结果弹窗，支持内容高亮"
+    },
+    {
+      "title": "代码块",
+      "description": "enhance CodeBlock and CodeBlockCore components with copy to clipboard functionality and expand/collapse feature"
+    },
+    {
+      "title": "添加前端 CORS 策略以支持新端口",
+      "description": "添加前端 CORS 策略以支持新端口"
+    },
+    {
+      "title": "center single-span c...",
+      "description": "center single-span chat layout on desktop"
+    },
+    {
+      "title": "update README and mo...",
+      "description": "update README and model provider documentation for version 1.11.0, add Novita AI support and enhance pricing transparency"
+    }
+  ],
+  "uiImprovements": [
+    {
+      "title": "侧边栏",
+      "description": "使用 shadcn sidebar 组件重新设计聊天侧边栏"
+    },
+    {
+      "title": "临时聊天",
+      "description": "优化临时聊天界面，用背景色区分替代横幅"
+    },
+    {
+      "title": "模型定价",
+      "description": "migrate model prices page to shared UI components"
+    },
+    {
+      "title": "extract getCopyableM...",
+      "description": "extract getCopyableMessageText function for support copy text/error, fix #127"
+    },
+    {
+      "title": "replace 'custom-scro...",
+      "description": "replace 'custom-scrollbar' with 'scroller' for consistent styling across components"
+    }
+  ],
+  "bugFixes": [
+    "修复前端构建的 TypeScript 类型错误",
+    "将构建脚本中的 npm 替换为 pnpm 以修复 node_modules 兼容性问题",
+    "修复 SidebarProvider 包裹 div 导致聊天记录无法显示的问题",
+    "修复消息加载竞态条件和临时聊天并发创建问题",
+    "修复搜索栏与菜单按钮互相遮挡无法点击的问题",
+    "修复图标导入错误",
+    "访问主页时不再自动选择第一个聊天",
+    "remove pure black background in ChatMessage, set darker background for codeblock",
+    "adjust styles for improved layout and responsiveness in ChatMessage and StepInfoBubble components",
+    "ensure UserMessage maintains full width in edit mode on mobile"
+  ],
+  "otherUpdates": [
+    {
+      "title": "构建",
+      "description": "update dependencies for Next.js, React, and TypeScript"
+    },
+    {
+      "title": "侧边栏",
+      "description": "@ refactor(FE): 使用 shadcn sidebar-01 block 美化首页框架"
+    },
+    {
+      "title": "临时聊天",
+      "description": "@ fix: 临时对话在侧边栏显示，切换时不再自动删除"
+    },
+    {
+      "title": "包管理",
+      "description": "remove pnpm lockfile and clean up build doc references"
+    },
+    {
+      "title": "模型定价",
+      "description": "Refine model prices page responsive UX, add API type filters, and clarify pricing/context display"
+    },
+    {
+      "title": "清理合并冲突标记",
+      "description": "清理合并冲突标记"
+    },
+    {
+      "title": "添加 .next 目录到忽略列表",
+      "description": "添加 .next 目录到忽略列表"
+    },
+    {
+      "title": "使用 goreman 并发启动前后端",
+      "description": "使用 goreman 并发启动前后端"
+    },
+    {
+      "title": "添加 Taskfile 一键启动和部署",
+      "description": "添加 Taskfile 一键启动和部署"
+    },
+    {
+      "title": "golden model snapsho...",
+      "description": "golden model snapshot migration plan"
+    },
+    {
+      "title": "add model-snapshot m...",
+      "description": "add model-snapshot migration plan"
+    },
+    {
+      "title": "playwright test: ens...",
+      "description": "playwright test: ensure chatconfig screenshot"
+    },
+    {
+      "title": "add capture project ...",
+      "description": "add capture project for autotest/screenshot capture"
+    }
+  ]
+}

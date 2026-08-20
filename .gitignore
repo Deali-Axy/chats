@@ -1,3 +1,11 @@
+logs/
+temp
+dist
+dist-docker
+.github/copilot-instructions.md
+.vscode
+.idea
+
 # See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
 
 # dependencies
@@ -51,14 +59,18 @@ logs.txt
 # backend
 /.vs
 *.user
-/src/**/obj
-/src/**/bin
 /src/BE/web/wwwroot
 /**/chats.db
 /**/chats.db-shm
 /**/chats.db-wal
+/**/chats.design.db
+/**/chats.design.db-shm
+/**/chats.design.db-wal
+/**/chats.db.bak*
 /Publish
 /src/BE/web/AppData/*
-/AzureFileMigrator/bin
-/AzureFileMigrator/obj
+**/bin
+**/obj
 .claude
+.fake
+**/artifacts

@@ -1,13 +1,13 @@
-import { useEffect, useReducer, useState, useMemo } from 'react';
+import { useEffect, useReducer, useRef, useState, useMemo } from 'react';
 
 import { useRouter } from 'next/router';
 
 import { useCreateReducer } from '@/hooks/useCreateReducer';
+import { useIsMobile } from '@/hooks/useMobile';
 import useTranslation from '@/hooks/useTranslation';
 
 import { currentISODateString } from '@/utils/date';
 import { findSelectedMessageByLeafId } from '@/utils/message';
-import { getSettings } from '@/utils/settings';
 import { getUserSession, redirectToLoginPage } from '@/utils/user';
 
 import {
@@ -36,6 +36,7 @@ import {
 import { setModelMap, setModels } from '@/actions/model.actions';
 import { setDefaultPrompt, setPrompts } from '@/actions/prompt.actions';
 import {
+  setChatBarWidth,
   setShowChatBar,
 } from '@/actions/setting.actions';
 import HomeContext, {
@@ -58,6 +59,8 @@ import Chat from '../Chat/ChatView';
 import Chatbar from '../Chatbar/Chatbar';
 
 import {
+  deleteChats,
+  deleteTempChats,
   getChatsByPaging,
   getDefaultPrompt,
   getUserChatGroupWithMessages,
@@ -67,10 +70,16 @@ import {
   postChats,
   stopChat,
 } from '@/apis/clientApis';
+import {
+  getDesktopChatbarMaxWidth,
+  getEffectiveChatbarWidth,
+  getSettings,
+} from '@/utils/settings';
 
 const HomeContent = () => {
   const router = useRouter();
   const { t } = useTranslation();
+  const isMobile = useIsMobile();
   const [chatState, chatDispatch] = useReducer(chatReducer, chatInitialState);
   const [messageState, messageDispatch] = useReducer(
     messageReducer,
@@ -88,9 +97,48 @@ const HomeContent = () => {
     promptReducer,
     promptInitialState,
   );
+  const [viewportWidth, setViewportWidth] = useState<number>(
+    typeof window !== 'undefined' ? window.innerWidth : 1200,
+  );
 
   const { chats, chatPaging, stopIds, selectedChatId, chatGroups } = chatState;
   const { models } = modelState;
+  const { showChatBar, chatBarWidth } = settingState;
+  const chatBarMaxWidth = useMemo(
+    () => getDesktopChatbarMaxWidth(viewportWidth),
+    [viewportWidth],
+  );
+  const effectiveChatBarWidth = useMemo(
+    () =>
+      getEffectiveChatbarWidth({
+        preferredWidth: chatBarWidth,
+        viewportWidth,
+        isMobileView: isMobile,
+        isOpen: showChatBar,
+      }),
+    [chatBarWidth, isMobile, showChatBar, viewportWidth],
+  );
+
+  /** 记录当前临时聊天ID，用于切换时删除 */
+  const tempChatIdRef = useRef<string | null>(null);
+  /** 持有临时聊天对象，让 selectedChat 能正确返回 */
+  const [tempChat, setTempChat] = useState<IChat | null>(null);
+  /** 使用 ref 持有最新 chats，避免异步回调闭包拿到旧值 */
+  const chatsRef = useRef<IChat[]>(chats);
+  /** 使用 ref 持有最新 selectedChatId，供异步消息加载校验 */
+  const selectedChatIdRef = useRef<string | undefined>(selectedChatId);
+  /** 消息加载请求版本号，用于丢弃过期响应 */
+  const messageLoadRequestRef = useRef(0);
+  /** 防止临时聊天被并发创建 */
+  const creatingTempChatRef = useRef(false);
+
+  useEffect(() => {
+    chatsRef.current = chats;
+  }, [chats]);
+
+  useEffect(() => {
+    selectedChatIdRef.current = selectedChatId;
+  }, [selectedChatId]);
 
   // 解析 hash 中的 chatId，例如 "#/abc" -> "abc"
   const getHashChatId = (): string | undefined => {
@@ -103,31 +151,64 @@ const HomeContent = () => {
   // 根据 selectedChatId 纯计算 selectedChat（无副作用）
   const selectedChat = useMemo(() => {
     if (!selectedChatId) return undefined;
+    // 优先检查临时聊天
+    if (tempChat && tempChat.id === selectedChatId) return tempChat;
     return chats.find((chat) => chat.id === selectedChatId);
-  }, [chats, selectedChatId]);
+  }, [chats, selectedChatId, tempChat]);
 
-  // 当 chats 就绪且还未选中任何聊天时，依据 URL 或默认规则初始化 selectedChatId
+  const invalidatePendingMessageLoad = () => {
+    messageLoadRequestRef.current += 1;
+  };
+
+  const loadMessagesForChat = (chatId: string, leafMessageId?: string) => {
+    const requestVersion = ++messageLoadRequestRef.current;
+    chatDispatch(setIsMessagesLoading(true));
+    messageDispatch(setMessages([]));
+    messageDispatch(setSelectedMessages([]));
+
+    getUserMessages(chatId)
+      .then((data) => {
+        const isLatestRequest = requestVersion === messageLoadRequestRef.current;
+        const isStillSelected = selectedChatIdRef.current === chatId;
+        if (!isLatestRequest || !isStillSelected) return;
+
+        if (data.length > 0) {
+          selectChatMessage(data, leafMessageId);
+        } else {
+          messageDispatch(setMessages([]));
+          messageDispatch(setSelectedMessages([]));
+        }
+        chatDispatch(setIsMessagesLoading(false));
+      })
+      .catch(() => {
+        const isLatestRequest = requestVersion === messageLoadRequestRef.current;
+        const isStillSelected = selectedChatIdRef.current === chatId;
+        if (!isLatestRequest || !isStillSelected) return;
+        chatDispatch(setIsMessagesLoading(false));
+      });
+  };
+
+  // 当 chats 就绪且还未选中任何聊天时，仅在 URL 中有 chatId 时才初始化 selectedChatId
   useEffect(() => {
     if (!chats.length) return;
     if (selectedChatId) return; // 已有选中，无需初始化
 
-    // 优先 URL 中的 chatId，其次未分组的第一个，最后列表第一个
+    // 仅当 URL 中有 chatId 时才自动选择，否则显示空界面（类似 ChatGPT）
     const urlChatId = getHashChatId();
-    const targetFromUrl = urlChatId
-      ? chats.find((c) => c.id === urlChatId)
-      : undefined;
-    const target =
-      targetFromUrl || chats.find((c) => c.groupId === null) || chats[0];
-    if (target) {
-      // 使用既有的选择逻辑，确保同步加载消息与选中路径
-      selectChat(chats, target.id);
+    if (urlChatId) {
+      const targetFromUrl = chats.find((c) => c.id === urlChatId);
+      if (targetFromUrl) {
+        selectChat(chats, targetFromUrl.id);
+      }
     }
   }, [chats, selectedChatId, router.asPath, chatDispatch]);
 
   // 当 selectedChatId 无效（对应的 chat 不在列表中）时，自动回退到有效的聊天
+  // 但如果当前选中的是临时对话，则不回退
   useEffect(() => {
     if (!chats.length) return;
     if (!selectedChatId) return;
+    if (tempChatIdRef.current && selectedChatId === tempChatIdRef.current) return;
     const exists = chats.some((c) => c.id === selectedChatId);
     if (exists) return;
 
@@ -184,22 +265,9 @@ const HomeContent = () => {
   function selectChat(chatList: IChat[], chatId?: string) {
     const chat = findChat(chatList, chatId);
     if (chat) {
+      selectedChatIdRef.current = chat.id;
       chatDispatch(setSelectedChatId(chat.id));
-      chatDispatch(setIsMessagesLoading(true));
-      messageDispatch(setMessages([]));
-      messageDispatch(setSelectedMessages([]));
-
-      getUserMessages(chat.id).then((data) => {
-        if (data.length > 0) {
-          selectChatMessage(data, chat.leafMessageId);
-        } else {
-          messageDispatch(setMessages([]));
-          messageDispatch(setSelectedMessages([]));
-        }
-        chatDispatch(setIsMessagesLoading(false));
-      }).catch(() => {
-        chatDispatch(setIsMessagesLoading(false));
-      });
+      loadMessagesForChat(chat.id, chat.leafMessageId);
     }
     return chat;
   }
@@ -211,9 +279,11 @@ const HomeContent = () => {
     }).then((data) => {
       const chat = supplyChatProperty(data);
       chat.groupId = groupId;
-      const chatList = [chat, ...chats];
+      const chatList = [chat, ...chatsRef.current];
       chatDispatch(setChats(chatList));
+      selectedChatIdRef.current = chat.id;
       chatDispatch(setSelectedChatId(chat.id));
+      invalidatePendingMessageLoad();
       messageDispatch(setMessages([]));
       messageDispatch(setSelectedMessages([]));
 
@@ -222,27 +292,97 @@ const HomeContent = () => {
     });
   };
 
+  /**
+   * 创建临时聊天
+   * 临时聊天不会出现在聊天列表中，切换离开时自动删除
+   */
+  const handleNewTempChat = () => {
+    if (creatingTempChatRef.current) return Promise.resolve();
+    creatingTempChatRef.current = true;
+
+    // 如果已有临时聊天，先删除（兼容 ref 丢失的情况）
+    const prevId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
+    const deletePrev = prevId
+      ? deleteTempChats(prevId).catch(() => {})
+      : Promise.resolve();
+
+    return deletePrev.then(() => {
+      // 从 chats 数组中清理旧的临时聊天
+      if (prevId) {
+        const cleaned = chatsRef.current.filter((c) => c.id !== prevId);
+        if (cleaned.length !== chatsRef.current.length) {
+          chatsRef.current = cleaned;
+          chatDispatch(setChats(cleaned));
+        }
+      }
+
+      return postChats({
+        title: t('Temporary Chat'),
+        groupId: null,
+        isTemp: true,
+      }).then((data) => {
+        const chat = supplyChatProperty(data);
+        chat.isTemp = true;
+        tempChatIdRef.current = chat.id;
+        setTempChat(chat);
+
+        // 临时聊天加入列表，使其立即显示在侧边栏
+        const nextChats = [chat, ...chatsRef.current.filter((c) => c.id !== chat.id)];
+        chatsRef.current = nextChats;
+        chatDispatch(setChats(nextChats));
+        selectedChatIdRef.current = chat.id;
+        chatDispatch(setSelectedChatId(chat.id));
+        invalidatePendingMessageLoad();
+        messageDispatch(setMessages([]));
+        messageDispatch(setSelectedMessages([]));
+
+        router.push('#/' + chat.id);
+      });
+    }).finally(() => {
+      creatingTempChatRef.current = false;
+    });
+  };
+
   const hasModel = () => {
     return models?.length > 0;
   };
 
   const handleSelectChat = (chat: IChat) => {
+    // 如果选中的是临时聊天，设置 tempChat 状态
+    if (chat.isTemp) {
+      tempChatIdRef.current = chat.id;
+      setTempChat(chat as IChat);
+    }
+
+    selectedChatIdRef.current = chat.id;
     chatDispatch(setSelectedChatId(chat.id));
-    chatDispatch(setIsMessagesLoading(true));
+    loadMessagesForChat(chat.id, chat.leafMessageId);
+    router.push('#/' + chat.id);
+  };
+
+  /** 结束临时对话：删除临时聊天并回到欢迎页面 */
+  const handleEndTempChat = () => {
+    // 兼容 tempChatIdRef 为空的情况（如页面刷新后 ref 丢失）
+    const tempId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
+    if (!tempId) return;
+
+    tempChatIdRef.current = null;
+    setTempChat(null);
+    deleteTempChats(tempId).catch(() => {});
+
+    // 从 chats 数组中移除临时聊天，防止被 useEffect 重新选中
+    const chatList = chatsRef.current.filter((c) => c.id !== tempId);
+    if (chatList.length !== chatsRef.current.length) {
+      chatsRef.current = chatList;
+      chatDispatch(setChats(chatList));
+    }
+
+    selectedChatIdRef.current = undefined;
+    chatDispatch(setSelectedChatId(undefined));
+    invalidatePendingMessageLoad();
     messageDispatch(setMessages([]));
     messageDispatch(setSelectedMessages([]));
-    getUserMessages(chat.id).then((data) => {
-      if (data.length > 0) {
-        selectChatMessage(data, chat.leafMessageId);
-      } else {
-        messageDispatch(setMessages([]));
-        messageDispatch(setSelectedMessages([]));
-      }
-      chatDispatch(setIsMessagesLoading(false));
-    }).catch(() => {
-      chatDispatch(setIsMessagesLoading(false));
-    });
-    router.push('#/' + chat.id);
+    router.push('#/');
   };
 
   const handleUpdateChat = (
@@ -344,7 +484,11 @@ const HomeContent = () => {
         chatList.push(...d.chats.rows);
       });
       
-      chatDispatch(setChats(chatList));
+      const mergedChats = tempChat
+        ? [tempChat, ...chatList.filter((c) => c.id !== tempChat.id)]
+        : chatList;
+      chatsRef.current = mergedChats;
+      chatDispatch(setChats(mergedChats));
       chatDispatch(setChatGroup(chatGroupList));
       chatDispatch(setChatPaging(chatPagingList));
     };
@@ -367,7 +511,11 @@ const HomeContent = () => {
       const mapRows = rows.map(
         (x) => ({ ...x, status: ChatStatus.None } as IChat),
       );
-      let chatList = chats.concat(mapRows);
+      let chatList = chatsRef.current.concat(mapRows);
+      if (tempChat) {
+        chatList = [tempChat, ...chatList.filter((c) => c.id !== tempChat.id)];
+      }
+      chatsRef.current = chatList;
       chatDispatch(setChats(chatList));
       const chatPagingList = chatPaging.map((x) =>
         x.groupId === groupId ? { ...x, page } : x,
@@ -378,8 +526,24 @@ const HomeContent = () => {
 
   useEffect(() => {
     // 加载设置
-    const { showChatBar } = getSettings();
-    settingDispatch(setShowChatBar(showChatBar));
+    const settings = getSettings();
+    settingDispatch(setShowChatBar(settings.showChatBar));
+    settingDispatch(setChatBarWidth(settings.chatBarWidth, false));
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+
+    const handleResize = () => {
+      setViewportWidth(window.innerWidth);
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
 
   useEffect(() => {
@@ -438,6 +602,8 @@ const HomeContent = () => {
           ...modelState,
           ...settingState,
           ...promptState,
+          effectiveChatBarWidth,
+          chatBarMaxWidth,
         },
         selectedChat,
         chatDispatch: chatDispatch,
@@ -447,6 +613,10 @@ const HomeContent = () => {
         promptDispatch: promptDispatch,
 
         handleNewChat,
+        handleNewTempChat,
+        handleEndTempChat,
+        tempChat,
+        setTempChat,
         handleStopChats,
         handleSelectChat,
         handleUpdateChat,
@@ -456,7 +626,7 @@ const HomeContent = () => {
         getChatsByGroup,
       }}
     >
-      <div className="flex h-screen w-screen flex-col text-sm">
+      <div className="flex h-screen w-screen flex-col overflow-hidden text-sm">
         <div className="flex h-full w-full bg-background chat-background">
           <Chatbar />
           <Chat />

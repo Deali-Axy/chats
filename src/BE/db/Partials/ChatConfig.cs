@@ -1,5 +1,4 @@
-﻿using Chats.DB.Enums;
-using System.Buffers.Binary;
+﻿using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 
@@ -7,8 +6,6 @@ namespace Chats.DB;
 
 public partial class ChatConfig
 {
-    public DBReasoningEffort ReasoningEffort => (DBReasoningEffort)ReasoningEffortId;
-
     public ChatConfig Clone()
     {
         return new ChatConfig
@@ -20,9 +17,11 @@ public partial class ChatConfig
             WebSearchEnabled = WebSearchEnabled,
             CodeExecutionEnabled = CodeExecutionEnabled,
             MaxOutputTokens = MaxOutputTokens,
-            ReasoningEffortId = ReasoningEffortId,
+            Effort = Effort,
             ImageSize = ImageSize,
             ThinkingBudget = ThinkingBudget,
+            Format = Format,
+            Compression = Compression,
             ChatConfigMcps = [..ChatConfigMcps.Select(x => new ChatConfigMcp
                 {
                     McpServerId = x.McpServerId,
@@ -100,9 +99,19 @@ public partial class ChatConfig
             AppendField(intBuffer);
         }
 
-        // 6. ReasoningEffort (byte): 用 1 字节表示
-        flagBuffer[0] = ReasoningEffortId;
-        AppendField(flagBuffer);
+        // 6. Effort (string?): 先写存在标志，再写 UTF-16 字节
+        string? effort = Effort;
+        ReasoningEfforts.ThrowIfInvalid(effort);
+        flagBuffer[0] = (byte)(effort is null ? 0 : 1);
+        AppendField(flagBuffer, withSeparator: false);
+        if (effort is not null)
+        {
+            BitConverter.TryWriteBytes(intBuffer, effort.Length);
+            AppendField(intBuffer);
+
+            ReadOnlySpan<byte> effortBytes = MemoryMarshal.AsBytes(effort.AsSpan());
+            AppendField(effortBytes);
+        }
 
         // 7. ImageSize (string?): 仅当非空时才包含以保持向后兼容
         if (!string.IsNullOrEmpty(ImageSize))
@@ -149,18 +158,37 @@ public partial class ChatConfig
             AppendField(intBuffer);
         }
 
+        if (!string.IsNullOrEmpty(Format))
+        {
+            int formatLength = Format.Length;
+            BitConverter.TryWriteBytes(intBuffer, formatLength);
+            AppendField(intBuffer);
+
+            ReadOnlySpan<byte> formatBytes = MemoryMarshal.AsBytes(Format.AsSpan());
+            AppendField(formatBytes);
+        }
+
+        flagBuffer[0] = (byte)(Compression.HasValue ? 1 : 0);
+        AppendField(flagBuffer, withSeparator: false);
+        if (Compression.HasValue)
+        {
+            flagBuffer[0] = Compression.Value;
+            AppendField(flagBuffer);
+        }
+
         // 计算 SHA256 哈希，取前 8 字节转换为 long 类型
         byte[] fullHash = incrementalHash.GetHashAndReset();
         long hashCode = BinaryPrimitives.ReadInt64LittleEndian(fullHash);
         return hashCode;
     }
 
-    public ChatConfig WithClamps(float? temperature, byte reasoningEffortId)
+    public ChatConfig WithClamps(float? temperature, string? effort)
     {
         ChatConfig cloned = Clone();
         cloned.Model = Model;
         cloned.Temperature = temperature;
-        cloned.ReasoningEffortId = reasoningEffortId;
+        ReasoningEfforts.ThrowIfInvalid(effort);
+        cloned.Effort = effort;
         return cloned;
     }
 

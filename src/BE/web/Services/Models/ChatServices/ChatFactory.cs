@@ -16,14 +16,14 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
 {
     public ChatService CreateChatService(Model model)
     {
-        DBModelProvider modelProvider = (DBModelProvider)model.ModelKey.ModelProviderId;
+        DBModelProvider modelProvider = (DBModelProvider)model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId;
         if (modelProvider == DBModelProvider.Test)
         {
             // Special case for Test model provider
             return sp.GetRequiredService<Test2ChatService>();
         }
 
-        DBApiType apiType = model.ApiType;
+        DBApiType apiType = (DBApiType)model.CurrentSnapshot.ApiTypeId;
 
         // 先按 API 类型分类，再按 ModelProvider 分类
         return apiType switch
@@ -44,9 +44,10 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
                 DBModelProvider.GithubModels => sp.GetRequiredService<GithubModelsChatService>(),
                 DBModelProvider.GoogleAI => sp.GetRequiredService<GoogleAI2ChatService>(),
                 DBModelProvider.SiliconFlow => sp.GetRequiredService<SiliconFlowChatService>(),
-                DBModelProvider.TokenPony => sp.GetRequiredService<TokenPonyChatService>(),
-                DBModelProvider.OpenRouter => sp.GetRequiredService<OpenRouterChatService>(),
-                _ => sp.GetRequiredService<ChatCompletionService>() // Fallback to OpenAI-compatible
+             DBModelProvider.TokenPony => sp.GetRequiredService<TokenPonyChatService>(),
+             DBModelProvider.OpenRouter => sp.GetRequiredService<OpenRouterChatService>(),
+             DBModelProvider.Novita => sp.GetRequiredService<NovitaChatService>(),
+             _ => sp.GetRequiredService<ChatCompletionService>() // Fallback to OpenAI-compatible
             },
 
             DBApiType.OpenAIResponse => modelProvider switch
@@ -76,9 +77,9 @@ public class ChatFactory(ILogger<ChatFactory> logger, IServiceProvider sp)
 
     public async Task<ModelValidateResult> ValidateModel(Model model, FileUrlProvider fup, CancellationToken cancellationToken)
     {
-        ChatService cs = CreateChatService(model);
         try
         {
+            ChatService cs = CreateChatService(model);
             await foreach (ChatSegment _ in cs.ChatEntry(ChatRequest.SimpleValidate("1+1=?", model), fup, cancellationToken))
             {
                 return ModelValidateResult.Success();

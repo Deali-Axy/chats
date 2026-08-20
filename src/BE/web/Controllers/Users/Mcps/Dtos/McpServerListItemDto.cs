@@ -5,7 +5,9 @@ namespace Chats.BE.Controllers.Users.Mcps.Dtos;
 public record McpServerListItemDto
 {
     [JsonPropertyName("id")] public required int Id { get; init; }
-    [JsonPropertyName("label")] public required string Label { get; init; }
+    [JsonPropertyName("name")] public required string Name { get; init; }
+    [JsonPropertyName("displayName")] public string? DisplayName { get; init; }
+    [JsonPropertyName("showShortcut")] public bool ShowShortcut { get; init; }
 }
 
 public record ManagementMcpServerDto : McpServerListItemDto
@@ -17,4 +19,6 @@ public record ManagementMcpServerDto : McpServerListItemDto
     [JsonPropertyName("owner")] public required string Owner { get; init; }
     [JsonPropertyName("editable")] public required bool Editable { get; init; }
     [JsonPropertyName("assignedUserCount")] public required int AssignedUserCount { get; init; }
+    /// <summary>Whether the current user is assigned this MCP (can toggle own shortcut).</summary>
+    [JsonPropertyName("assignedToMe")] public bool AssignedToMe { get; init; }
 }

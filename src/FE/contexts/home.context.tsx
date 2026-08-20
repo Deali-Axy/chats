@@ -1,4 +1,4 @@
-import { Dispatch, createContext } from 'react';
+import { Dispatch, SetStateAction, createContext } from 'react';
 
 import { ActionType } from '@/hooks/useCreateReducer';
 
@@ -50,6 +50,9 @@ export interface HomeInitialState {
 
   showChatBar: boolean;
   showChatInput: boolean;
+  chatBarWidth: number;
+  effectiveChatBarWidth: number;
+  chatBarMaxWidth: number;
 }
 
 export const initialState: HomeInitialState = {
@@ -72,6 +75,9 @@ export const initialState: HomeInitialState = {
 
   showChatBar: getSettings().showChatBar,
   showChatInput: true,
+  chatBarWidth: getSettings().chatBarWidth,
+  effectiveChatBarWidth: getSettings().chatBarWidth,
+  chatBarMaxWidth: getSettings().chatBarWidth,
 };
 
 export interface HomeContextProps {
@@ -89,6 +95,14 @@ export interface HomeContextProps {
 
   hasModel: () => boolean;
   handleNewChat: (groupId?: string | null) => void;
+  /** 创建临时聊天 */
+  handleNewTempChat: () => void;
+  /** 结束临时对话 */
+  handleEndTempChat: () => void;
+  /** 临时聊天对象 */
+  tempChat: IChat | null;
+  /** 更新临时聊天对象 */
+  setTempChat: Dispatch<SetStateAction<IChat | null>>;
   handleDeleteChat: (ids: string[]) => void;
   handleSelectChat: (chat: IChat) => void;
   handleUpdateChat: (
@@ -96,7 +110,7 @@ export interface HomeContextProps {
     id: string,
     params: HandleUpdateChatParams,
   ) => void;
-  getChats: (query: string) => void;
+  getChats: (query?: string) => Promise<void>;
   getChatsByGroup: (params: GetChatsParams) => void;
   handleStopChats: () => void;
 }

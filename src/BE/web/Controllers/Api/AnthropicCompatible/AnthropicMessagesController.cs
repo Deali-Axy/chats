@@ -3,19 +3,16 @@ using Chats.DB.Enums;
 using Chats.BE.Controllers.Api.AnthropicCompatible.Dtos;
 using Chats.BE.Controllers.Chats.Chats;
 using Chats.BE.Services;
-using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models;
 using Chats.BE.Services.Models.ChatServices;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using Chats.BE.Services.Models.Dtos;
 using Chats.BE.Services.OpenAIApiKeySession;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using System.Diagnostics;
 using System.Text.Json;
 using System.Text.Json.Nodes;
-using Chats.BE.Services.Options;
-using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Api.AnthropicCompatible;
 
@@ -23,22 +20,18 @@ namespace Chats.BE.Controllers.Api.AnthropicCompatible;
 public class AnthropicMessagesController(
     ChatsDB db,
     CurrentApiKey currentApiKey,
-    ChatFactory cf,
+    ChatRunService chatRunService,
     UserModelManager userModelManager,
     ILogger<AnthropicMessagesController> logger,
-    BalanceService balanceService,
-    FileUrlProvider fup) : ControllerBase
+    ClientInfoManager clientInfoManager) : ControllerBase
 {
     private static readonly DBApiType[] AllowedApiTypes = [DBApiType.OpenAIChatCompletion, DBApiType.OpenAIResponse, DBApiType.AnthropicMessages];
 
     [HttpPost("v1/messages")]
     public async Task<ActionResult> CreateMessage(
         [FromBody] JsonObject json,
-        [FromServices] AsyncClientInfoManager clientInfoManager,
-        [FromServices] IOptions<ChatOptions> chatOptions,
         CancellationToken cancellationToken)
     {
-        InChatContext icc = new(Stopwatch.GetTimestamp());
         AnthropicRequestWrapper request = new(json);
 
         if (!request.SeemsValid())
@@ -51,37 +44,26 @@ public class AnthropicMessagesController(
             return ErrorMessage(AnthropicErrorTypes.InvalidRequestError, "model is required.");
         }
 
-        Task<int> clientInfoIdTask = clientInfoManager.GetClientInfoId(cancellationToken);
+        _ = clientInfoManager.GetClientInfoId(cancellationToken);
         UserModel? userModel = await userModelManager.GetUserModel(currentApiKey.ApiKey, request.Model, cancellationToken);
         if (userModel == null)
         {
             return ErrorMessage(AnthropicErrorTypes.NotFoundError, $"The model `{request.Model}` does not exist or you do not have access to it.");
         }
 
-        if (!AllowedApiTypes.Contains(userModel.Model.ApiType))
+        if (!AllowedApiTypes.Contains((DBApiType)userModel.Model.CurrentSnapshot.ApiTypeId))
         {
             return ErrorMessage(AnthropicErrorTypes.InvalidRequestError, $"The model `{request.Model}` does not support messages API.");
         }
 
-        int? retry429Times = chatOptions.Value.Retry429Times;
-        return await ProcessMessage(request, userModel, icc, clientInfoIdTask, retry429Times, cancellationToken);
+        return await ProcessMessage(request, userModel, cancellationToken);
     }
 
     private async Task<ActionResult> ProcessMessage(
         AnthropicRequestWrapper request,
         UserModel userModel,
-        InChatContext icc,
-        Task<int> clientInfoIdTask,
-        int? retry429Times,
         CancellationToken cancellationToken)
     {
-        Model cm = userModel.Model;
-        ChatService s = cf.CreateChatService(cm);
-        UserBalance userBalance = await db.UserBalances
-            .Where(x => x.UserId == currentApiKey.User.Id)
-            .FirstOrDefaultAsync(cancellationToken) ?? throw new InvalidOperationException("User balance not found.");
-        UserModelBalanceCalculator calc = new(BalanceInitialInfo.FromDB([userModel], userBalance.Balance), []);
-        ScopedBalanceCalculator scopedCalc = calc.WithScoped("0");
         ActionResult? errorToReturn = null;
         bool hasSuccessYield = false;
         string messageId = $"msg_{Guid.NewGuid():N}";
@@ -90,12 +72,16 @@ public class AnthropicMessagesController(
         StreamingState streamingState = new();
         bool messageStarted = false;
 
-        try
-        {
-            ChatRequest csr = request.ToChatRequest(currentApiKey.User.Id.ToString(), cm);
-
-            await foreach (ChatSegment segment in icc.Run(scopedCalc, userModel, s, csr, fup, retry429Times, cancellationToken))
+        ChatRequest csr = request.ToChatRequest(currentApiKey.User.Id.ToString(), userModel.Model);
+        ChatRunResult runResult = await chatRunService.RunAsync(
+            new ChatRunRequest
             {
+                UserModel = userModel,
+                ChatRequest = csr,
+            },
+            async (segmentContext, ct) =>
+            {
+                ChatSegment segment = segmentContext.Segment;
                 if (request.Streamed)
                 {
                     if (!hasSuccessYield)
@@ -110,89 +96,64 @@ public class AnthropicMessagesController(
                     {
                         if (!messageStarted)
                         {
-                            await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, usageSegment.Usage.InputTokens), cancellationToken);
-                            await YieldEvent("ping", new PingEvent(), cancellationToken);
+                            await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, usageSegment.Usage), ct);
+                            await YieldEvent("ping", new PingEvent(), ct);
                             messageStarted = true;
                             hasSuccessYield = true;
                         }
-                        continue;
+                        return;
                     }
 
                     if (!messageStarted)
                     {
-                        await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, 0), cancellationToken);
-                        await YieldEvent("ping", new PingEvent(), cancellationToken);
+                        await YieldEvent("message_start", CreateMessageStartEvent(request.Model!, messageId, ChatTokenUsage.Zero), ct);
+                        await YieldEvent("ping", new PingEvent(), ct);
                         messageStarted = true;
                         hasSuccessYield = true;
                     }
 
-                    await ProcessStreamingItem(segment, streamingState, cancellationToken);
+                    await ProcessStreamingItem(segment, streamingState, ct);
                 }
 
-                if (cancellationToken.IsCancellationRequested)
+                if (ct.IsCancellationRequested)
                 {
                     throw new TaskCanceledException();
                 }
-            }
+            },
+            cancellationToken);
 
-            // Send final events for streaming
-            if (request.Streamed && hasSuccessYield && icc.FinishReason != DBFinishReason.Cancelled)
+        switch (runResult.Exception)
+        {
+            case RawChatServiceException rawEx:
+                logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
+                errorToReturn = await YieldRawError(hasSuccessYield && request.Streamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
+                break;
+            case ChatServiceException cse:
+                errorToReturn = await YieldError(hasSuccessYield && request.Streamed, MapFinishReasonToErrorType(cse.ErrorCode), cse.Message, cancellationToken);
+                break;
+            case Exception e when e is not TaskCanceledException:
+                logger.LogError(e, "Unknown error");
+                errorToReturn = await YieldError(hasSuccessYield && request.Streamed, AnthropicErrorTypes.ApiError, "Internal server error", cancellationToken);
+                break;
+        }
+
+        if (request.Streamed && hasSuccessYield && runResult.FinishReason != DBFinishReason.Cancelled)
+        {
+            if (streamingState.CurrentBlockIndex >= 0)
             {
-                // Close any open content block
-                if (streamingState.CurrentBlockIndex >= 0)
-                {
-                    await YieldEvent("content_block_stop", new ContentBlockStopEvent { Index = streamingState.CurrentBlockIndex }, cancellationToken);
-                }
-
-                // Send message_delta with stop_reason
-                await YieldEvent("message_delta", icc.FullResponse!.ToMessageDeltaEvent(), cancellationToken);
-
-                // Send message_stop
-                await YieldEvent("message_stop", new MessageStopEvent(), cancellationToken);
+                await YieldEvent("content_block_stop", new ContentBlockStopEvent { Index = streamingState.CurrentBlockIndex }, cancellationToken);
             }
-        }
-        catch (RawChatServiceException rawEx)
-        {
-            icc.FinishReason = rawEx.ErrorCode;
-            logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
-            errorToReturn = await YieldRawError(hasSuccessYield && request.Streamed, rawEx.StatusCode, rawEx.Body, cancellationToken);
-        }
-        catch (ChatServiceException cse)
-        {
-            icc.FinishReason = cse.ErrorCode;
-            errorToReturn = await YieldError(hasSuccessYield && request.Streamed, MapFinishReasonToErrorType(cse.ErrorCode), cse.Message, cancellationToken);
-        }
-        catch (TaskCanceledException)
-        {
-            icc.FinishReason = DBFinishReason.Cancelled;
-        }
-        catch (Exception e)
-        {
-            icc.FinishReason = DBFinishReason.UnknownError;
-            logger.LogError(e, "Unknown error");
-            errorToReturn = await YieldError(hasSuccessYield && request.Streamed, AnthropicErrorTypes.ApiError, "Internal server error", cancellationToken);
-        }
-        finally
-        {
-            cancellationToken = CancellationToken.None;
+
+            await YieldEvent("message_delta", runResult.FullResponse.ToMessageDeltaEvent(), cancellationToken);
+            await YieldEvent("message_stop", new MessageStopEvent(), cancellationToken);
         }
 
-        // Save usage
-        UserApiUsage usage = new()
+        db.UserApiUsages.Add(new UserApiUsage
         {
             ApiKeyId = currentApiKey.ApiKeyId,
-            Usage = icc.ToUserModelUsage(currentApiKey.User.Id, scopedCalc, userModel, await clientInfoIdTask, isApi: true),
-        };
-        db.UserApiUsages.Add(usage);
-        await db.SaveChangesAsync(cancellationToken);
-        if (calc.BalanceCost > 0)
-        {
-            _ = balanceService.AsyncUpdateBalance(currentApiKey.User.Id, CancellationToken.None);
-        }
-        if (calc.UsageCosts.Any())
-        {
-            _ = balanceService.AsyncUpdateUsage([userModel!.Id], CancellationToken.None);
-        }
+            UsageId = runResult.UserModelUsageId,
+        });
+        await db.SaveChangesAsync(CancellationToken.None);
 
         if (hasSuccessYield && request.Streamed)
         {
@@ -204,8 +165,7 @@ public class AnthropicMessagesController(
         }
         else
         {
-            // Non-streamed success response
-            AnthropicResponse response = icc.FullResponse!.ToAnthropicResponse(request.Model!, messageId);
+            AnthropicResponse response = runResult.FullResponse.ToAnthropicResponse(request.Model!, messageId);
             return Ok(response);
         }
     }
@@ -283,6 +243,63 @@ public class AnthropicMessagesController(
                 }
                 break;
 
+            case ToolCallSegment tool when tool.Id != null
+                && tool.Name == DeepSeekHostedWebSearch.InternalToolName
+                && DeepSeekHostedWebSearch.TryParseBlock(tool.Arguments, DeepSeekHostedWebSearch.ServerToolUseType, out JsonObject? serverToolUse)
+                && serverToolUse != null:
+                if (state.CurrentBlockIndex >= 0)
+                {
+                    await YieldEvent("content_block_stop", new ContentBlockStopEvent { Index = state.CurrentBlockIndex }, cancellationToken);
+                }
+
+                state.CurrentBlockIndex++;
+                state.CurrentBlockType = $"server_tool_{tool.Index}";
+                state.HostedWebSearchCallIds.Add(tool.Id);
+                await YieldEvent("content_block_start", new ContentBlockStartEvent
+                {
+                    Index = state.CurrentBlockIndex,
+                    ContentBlock = new ContentBlockStartData
+                    {
+                        Type = DeepSeekHostedWebSearch.ServerToolUseType,
+                        Id = serverToolUse["id"]?.GetValue<string>(),
+                        Name = serverToolUse["name"]?.GetValue<string>(),
+                        Input = new JsonObject(),
+                        Caller = serverToolUse["caller"]?.DeepClone(),
+                    }
+                }, cancellationToken);
+
+                if (serverToolUse["input"] is JsonNode input)
+                {
+                    await YieldEvent("content_block_delta", new ContentBlockDeltaEvent
+                    {
+                        Index = state.CurrentBlockIndex,
+                        Delta = ContentBlockDelta.InputJsonDelta(input.ToJsonString(JSON.JsonSerializerOptions))
+                    }, cancellationToken);
+                }
+                break;
+
+            case ToolCallResponseSegment response when state.HostedWebSearchCallIds.Contains(response.ToolCallId)
+                && DeepSeekHostedWebSearch.TryParseBlock(response.Response, DeepSeekHostedWebSearch.ToolResultType, out JsonObject? webSearchResult)
+                && webSearchResult != null:
+                if (state.CurrentBlockIndex >= 0)
+                {
+                    await YieldEvent("content_block_stop", new ContentBlockStopEvent { Index = state.CurrentBlockIndex }, cancellationToken);
+                }
+
+                state.CurrentBlockIndex++;
+                state.CurrentBlockType = $"server_tool_result_{response.ToolCallId}";
+                await YieldEvent("content_block_start", new ContentBlockStartEvent
+                {
+                    Index = state.CurrentBlockIndex,
+                    ContentBlock = new ContentBlockStartData
+                    {
+                        Type = DeepSeekHostedWebSearch.ToolResultType,
+                        ToolUseId = webSearchResult["tool_use_id"]?.GetValue<string>(),
+                        Content = webSearchResult["content"]?.DeepClone(),
+                    }
+                }, cancellationToken);
+                break;
+
             case ToolCallSegment tool:
                 // Handle tool use blocks
                 string toolBlockId = $"tool_{tool.Index}";
@@ -320,7 +337,7 @@ public class AnthropicMessagesController(
         }
     }
 
-    private static MessageStartEvent CreateMessageStartEvent(string model, string messageId, int inputTokens)
+    private static MessageStartEvent CreateMessageStartEvent(string model, string messageId, ChatTokenUsage usage)
     {
         return new MessageStartEvent
         {
@@ -330,7 +347,9 @@ public class AnthropicMessagesController(
                 Model = model,
                 Usage = new MessageStartUsage
                 {
-                    InputTokens = inputTokens
+                    InputTokens = usage.InputFreshTokens,
+                    CacheCreationInputTokens = usage.CacheCreationTokens > 0 ? usage.CacheCreationTokens : null,
+                    CacheReadInputTokens = usage.CacheTokens > 0 ? usage.CacheTokens : null
                 }
             }
         };
@@ -340,6 +359,7 @@ public class AnthropicMessagesController(
     {
         public int CurrentBlockIndex { get; set; } = -1;
         public string? CurrentBlockType { get; set; }
+        public HashSet<string> HostedWebSearchCallIds { get; } = new(StringComparer.Ordinal);
     }
 
     private static readonly ReadOnlyMemory<byte> eventU8 = "event: "u8.ToArray();

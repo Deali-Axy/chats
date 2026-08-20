@@ -85,18 +85,18 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             DBModelProvider? matchingProviderId = ModelProviderInfo.GetIdByName(query.Provider);
             if (matchingProviderId != null)
             {
-                usagesQuery = usagesQuery.Where(u => u.Model.ModelKey.ModelProviderId == (short)matchingProviderId);
+                usagesQuery = usagesQuery.Where(u => u.ModelSnapshot.ModelKeySnapshot.ModelProviderId == (short)matchingProviderId);
             }
         }
 
         if (!string.IsNullOrEmpty(query.ModelKey))
         {
-            usagesQuery = usagesQuery.Where(u => u.Model.ModelKey.Name == query.ModelKey);
+            usagesQuery = usagesQuery.Where(u => u.ModelSnapshot.ModelKeySnapshot.Name == query.ModelKey);
         }
 
         if (!string.IsNullOrEmpty(query.Model))
         {
-            usagesQuery = usagesQuery.Where(u => u.Model.Name == query.Model);
+            usagesQuery = usagesQuery.Where(u => u.ModelSnapshot.Name == query.Model);
         }
 
         if (query.Start != null)
@@ -115,13 +115,10 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
             usagesQuery = usagesQuery.Where(u => u.CreatedAt < localEnd);
         }
 
-        if (query.Source == UsageSource.WebChat)
+        if (query.Source != null)
         {
-            usagesQuery = usagesQuery.Where(u => u.UserApiUsage == null);
-        }
-        if (query.Source == UsageSource.Api)
-        {
-            usagesQuery = usagesQuery.Where(u => u.UserApiUsage != null);
+            byte sourceId = (byte)query.Source.Value;
+            usagesQuery = usagesQuery.Where(u => u.SourceId == sourceId);
         }
 
         IQueryable<UsageDto> rows = usagesQuery
@@ -131,9 +128,9 @@ public class UsageController(ChatsDB db, CurrentUser currentUser, IUrlEncryption
                 UserName = u.User.UserName,
                 ApiKeyId = idEncryption.EncryptApiKeyId((int?)u.UserApiUsage!.ApiKey.Id),
                 ApiKey = u.UserApiUsage!.ApiKey.Key.ToMaskedNull(),
-                ModelProviderName = ModelProviderInfo.GetName((DBModelProvider)u.Model.ModelKey.ModelProviderId),
-                ModelReferenceName = u.Model.DeploymentName,
-                ModelName = u.Model.Name,
+                ModelProviderName = ModelProviderInfo.GetName((DBModelProvider)u.ModelSnapshot.ModelKeySnapshot.ModelProviderId),
+                ModelReferenceName = u.ModelSnapshot.DeploymentName,
+                ModelName = u.ModelSnapshot.Name,
                 PreprocessDurationMs = u.PreprocessDurationMs,
                 FirstResponseDurationMs = u.FirstResponseDurationMs,
                 PostprocessDurationMs = u.PostprocessDurationMs,

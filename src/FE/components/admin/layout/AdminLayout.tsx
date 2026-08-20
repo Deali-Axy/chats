@@ -25,6 +25,7 @@ import {
   IconUserCog,
   IconUsers,
 } from '@/components/Icons/index';
+import { FileText } from 'lucide-react';
 import UserMenuPopover, { PageType } from '@/components/UserMenuPopover/UserMenuPopover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -101,10 +102,9 @@ const AdminHeaderBar = ({
 }) => {
   return (
     <div className="flex p-3 items-center border-b">
-      <SidebarTrigger
-        className="mr-2"
-        icon={<IconLayoutSidebar size={26} strokeWidth={1} />}
-      />
+      <SidebarTrigger className="mr-2">
+        <IconLayoutSidebar size={26} strokeWidth={1} />
+      </SidebarTrigger>
       <h1 className="font-medium">
         {selectedMenu?.headerTitle || selectedMenu?.title || t('Chats Admin Panel')}
       </h1>
@@ -223,6 +223,13 @@ const AdminLayout = ({
         <IconIdBadge strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Invitation Code Management'),
+    },
+    {
+      url: '/admin/changelog',
+      icon: (stroke?: string) => (
+        <FileText strokeWidth={1.2} stroke={stroke} className="h-5 w-5" />
+      ),
+      title: t('Changelog'),
     },
   ];
 

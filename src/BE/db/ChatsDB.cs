@@ -17,9 +17,9 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatConfig> ChatConfigs { get; set; }
 
-    public virtual DbSet<ChatConfigArchived> ChatConfigArchiveds { get; set; }
-
     public virtual DbSet<ChatConfigMcp> ChatConfigMcps { get; set; }
+
+    public virtual DbSet<ChatConfigSnapshot> ChatConfigSnapshots { get; set; }
 
     public virtual DbSet<ChatDockerSession> ChatDockerSessions { get; set; }
 
@@ -67,7 +67,11 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ModelKey> ModelKeys { get; set; }
 
+    public virtual DbSet<ModelKeySnapshot> ModelKeySnapshots { get; set; }
+
     public virtual DbSet<ModelProviderOrder> ModelProviderOrders { get; set; }
+
+    public virtual DbSet<ModelSnapshot> ModelSnapshots { get; set; }
 
     public virtual DbSet<PasswordAttempt> PasswordAttempts { get; set; }
 
@@ -101,8 +105,6 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<StepContentToolCallResponse> StepContentToolCallResponses { get; set; }
 
-    public virtual DbSet<TransactionType> TransactionTypes { get; set; }
-
     public virtual DbSet<UsageTransaction> UsageTransactions { get; set; }
 
     public virtual DbSet<User> Users { get; set; }
@@ -118,6 +120,8 @@ public partial class ChatsDB : DbContext
     public virtual DbSet<UserApiUsage> UserApiUsages { get; set; }
 
     public virtual DbSet<UserBalance> UserBalances { get; set; }
+
+    public virtual DbSet<UserConfig> UserConfigs { get; set; }
 
     public virtual DbSet<UserInitialConfig> UserInitialConfigs { get; set; }
 
@@ -136,10 +140,6 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.CreditUser).WithMany(p => p.BalanceTransactionCreditUsers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_BalanceTransaction_CreditUserId");
-
-            entity.HasOne(d => d.TransactionType).WithMany(p => p.BalanceTransactions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_BalanceLog2_BalanceLogType");
 
             entity.HasOne(d => d.User).WithMany(p => p.BalanceTransactionUsers)
                 .OnDelete(DeleteBehavior.ClientSetNull)
@@ -182,20 +182,18 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_ChatConfig_Model");
         });
 
-        modelBuilder.Entity<ChatConfigArchived>(entity =>
-        {
-            entity.Property(e => e.ChatConfigId).ValueGeneratedNever();
-
-            entity.HasOne(d => d.ChatConfig).WithOne(p => p.ChatConfigArchived)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ChatConfigArchived_ChatConfig");
-        });
-
         modelBuilder.Entity<ChatConfigMcp>(entity =>
         {
             entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_ChatConfig");
 
             entity.HasOne(d => d.McpServer).WithMany(p => p.ChatConfigMcps).HasConstraintName("FK_ChatConfigMcp_McpServer");
+        });
+
+        modelBuilder.Entity<ChatConfigSnapshot>(entity =>
+        {
+            entity.HasOne(d => d.ModelSnapshot).WithMany(p => p.ChatConfigSnapshots)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ChatConfigSnapshot_ModelSnapshot");
         });
 
         modelBuilder.Entity<ChatDockerSession>(entity =>
@@ -244,7 +242,7 @@ public partial class ChatsDB : DbContext
         {
             entity.HasKey(e => e.Id).HasName("PK_Message");
 
-            entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatTurns).HasConstraintName("FK_ChatTurn_ChatConfig");
+            entity.HasOne(d => d.ChatConfigSnapshot).WithMany(p => p.ChatTurns).HasConstraintName("FK_ChatTurn_ChatConfigSnapshot");
 
             entity.HasOne(d => d.Chat).WithMany(p => p.ChatTurns).HasConstraintName("FK_Message_Chat");
 
@@ -327,19 +325,30 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<Model>(entity =>
         {
-            entity.HasOne(d => d.ModelKey).WithMany(p => p.Models)
+            entity.HasOne(d => d.CurrentSnapshot).WithOne(p => p.Model)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_Model_ModelKey2");
+                .HasConstraintName("FK_Model_CurrentSnapshot");
         });
 
         modelBuilder.Entity<ModelKey>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_ModelKey2");
+
+            entity.HasOne(d => d.CurrentSnapshot).WithOne(p => p.ModelKey)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ModelKey_CurrentSnapshot");
         });
 
         modelBuilder.Entity<ModelProviderOrder>(entity =>
         {
             entity.Property(e => e.ModelProviderId).ValueGeneratedNever();
+        });
+
+        modelBuilder.Entity<ModelSnapshot>(entity =>
+        {
+            entity.HasOne(d => d.ModelKeySnapshot).WithMany(p => p.ModelSnapshots)
+                .OnDelete(DeleteBehavior.ClientSetNull)
+                .HasConstraintName("FK_ModelSnapshot_ModelKeySnapshot");
         });
 
         modelBuilder.Entity<PasswordAttempt>(entity =>
@@ -362,9 +371,10 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<RequestTrace>(entity =>
         {
-            entity.HasKey(e => e.Id).IsClustered(false);
+            // Clustered index options are SQL Server-only; SQLite ignores them.
+            entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => e.StartedAt, "IX_RequestTrace_StartedAt").IsClustered();
+            entity.HasIndex(e => e.StartedAt, "IX_RequestTrace_StartedAt");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
         });
@@ -468,24 +478,15 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.IdNavigation).WithOne(p => p.StepContentToolCallResponse).HasConstraintName("FK_MessageContentToolCallResponse_MessageContent");
         });
 
-        modelBuilder.Entity<TransactionType>(entity =>
-        {
-            entity.HasKey(e => e.Id).HasName("PK_BalanceLogType");
-        });
-
         modelBuilder.Entity<UsageTransaction>(entity =>
         {
             entity.HasOne(d => d.CreditUser).WithMany(p => p.UsageTransactions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UsageTransaction_User");
 
-            entity.HasOne(d => d.Model).WithMany(p => p.UsageTransactions)
+            entity.HasOne(d => d.ModelSnapshot).WithMany(p => p.UsageTransactions)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UsageTransaction_Model");
-
-            entity.HasOne(d => d.TransactionType).WithMany(p => p.UsageTransactions)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UsageTransaction_TransactionType");
+                .HasConstraintName("FK_UsageTransaction_ModelSnapshot");
         });
 
         modelBuilder.Entity<User>(entity =>
@@ -580,6 +581,11 @@ public partial class ChatsDB : DbContext
                 .HasConstraintName("FK_UserBalance_UserId");
         });
 
+        modelBuilder.Entity<UserConfig>(entity =>
+        {
+            entity.HasOne(d => d.User).WithMany(p => p.UserConfigs).HasConstraintName("FK_UserConfig_User");
+        });
+
         modelBuilder.Entity<UserInitialConfig>(entity =>
         {
             entity.HasOne(d => d.InvitationCode).WithMany(p => p.UserInitialConfigs)
@@ -623,9 +629,9 @@ public partial class ChatsDB : DbContext
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_UserModelUsage_FinishReason");
 
-            entity.HasOne(d => d.Model).WithMany(p => p.UserModelUsages)
+            entity.HasOne(d => d.ModelSnapshot).WithMany(p => p.UserModelUsages)
                 .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_UserModelUsage_Model");
+                .HasConstraintName("FK_UserModelUsage_ModelSnapshot");
 
             entity.HasOne(d => d.UsageTransaction).WithOne(p => p.UserModelUsage).HasConstraintName("FK_ModelUsage_UsageTransactionLog");
 

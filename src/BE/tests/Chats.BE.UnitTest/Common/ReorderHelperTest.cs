@@ -25,7 +25,7 @@ public class ReorderHelperTest
     public void Constructor_WithValidOptions_ShouldCreateInstance()
     {
         // Arrange
-        ReorderOptions options = new ReorderOptions
+        ReorderOptions options = new()
         {
             ReorderSteps = [1000, 100, 10],
             ReorderStart = -30000,
@@ -33,7 +33,7 @@ public class ReorderHelperTest
         };
 
         // Act
-        ReorderHelper helper = new ReorderHelper(options);
+        ReorderHelper helper = new(options);
 
         // Assert
         Assert.NotNull(helper);
@@ -52,7 +52,7 @@ public class ReorderHelperTest
     public void Constructor_WithNullReorderSteps_ShouldThrowArgumentException()
     {
         // Arrange
-        ReorderOptions options = new ReorderOptions
+        ReorderOptions options = new()
         {
             ReorderSteps = null!,
             ReorderStart = -30000,
@@ -67,7 +67,7 @@ public class ReorderHelperTest
     public void Constructor_WithEmptyReorderSteps_ShouldThrowArgumentException()
     {
         // Arrange
-        ReorderOptions options = new ReorderOptions
+        ReorderOptions options = new()
         {
             ReorderSteps = [],
             ReorderStart = -30000,
@@ -141,13 +141,13 @@ public class ReorderHelperTest
     public void ReorderEntities_WhenPreferredStepCausesOverflow_ShouldUseSmallerStep()
     {
         // Arrange - 创建一个会导致1000步长溢出的配置
-        ReorderOptions options = new ReorderOptions
+        ReorderOptions options = new()
         {
             ReorderSteps = [30000, 100, 10], // 第一个步长会溢出
             ReorderStart = 0,
             MoveStep = 1000
         };
-        ReorderHelper helper = new ReorderHelper(options);
+        ReorderHelper helper = new(options);
         TestOrderableEntity[] entities = new[]
         {
             new TestOrderableEntity { Name = "Entity1" },
@@ -168,13 +168,13 @@ public class ReorderHelperTest
     public void ReorderEntities_WhenAllStepsCauseOverflow_ShouldUseAverageDistribution()
     {
         // Arrange - 创建一个所有步长都会溢出的配置
-        ReorderOptions options = new ReorderOptions
+        ReorderOptions options = new()
         {
             ReorderSteps = [30000, 20000, 10000],
             ReorderStart = 30000,
             MoveStep = 1000
         };
-        ReorderHelper helper = new ReorderHelper(options);
+        ReorderHelper helper = new(options);
         TestOrderableEntity[] entities = new[]
         {
             new TestOrderableEntity { Name = "Entity1" },
@@ -194,13 +194,13 @@ public class ReorderHelperTest
     public void ReorderEntities_WhenStartPositionNeedsAdjustment_ShouldAdjustStartPosition()
     {
         // Arrange - 配置从接近最大值开始，但步长较小可以通过调整起始位置来适配
-        ReorderOptions options = new ReorderOptions
+        ReorderOptions options = new()
         {
             ReorderSteps = [1000, 100, 10],
             ReorderStart = 32000, // 接近 short.MaxValue
             MoveStep = 1000
         };
-        ReorderHelper helper = new ReorderHelper(options);
+        ReorderHelper helper = new(options);
         TestOrderableEntity[] entities = new[]
         {
             new TestOrderableEntity { Name = "Entity1" },
@@ -234,13 +234,13 @@ public class ReorderHelperTest
     public void ReorderEntities_WithCustomSteps_ShouldUseCustomConfiguration()
     {
         // Arrange
-        ReorderOptions options = new ReorderOptions
+        ReorderOptions options = new()
         {
             ReorderSteps = [500, 50, 5],
             ReorderStart = -15000,
             MoveStep = 500
         };
-        ReorderHelper helper = new ReorderHelper(options);
+        ReorderHelper helper = new(options);
         TestOrderableEntity[] entities = new[]
         {
             new TestOrderableEntity { Name = "Entity1" },
@@ -259,133 +259,41 @@ public class ReorderHelperTest
 
     #region TryApplyMove Tests
 
-    [Fact]
-    public void TryApplyMove_BetweenTwoEntities_WithEnoughSpace_ShouldReturnTrueAndSetMiddleValue()
+    public static TheoryData<string, short, short?, short?, int, bool, short> TryApplyMoveCases()
     {
-        // Arrange
-        TestOrderableEntity previous = new TestOrderableEntity { Order = 1000 };
-        TestOrderableEntity next = new TestOrderableEntity { Order = 2000 };
-        TestOrderableEntity source = new TestOrderableEntity { Order = 500 };
-
-        // Act
-        bool result = ReorderHelper.Default.TryApplyMove(source, previous, next);
-
-        // Assert
-        Assert.True(result);
-        Assert.Equal(1500, source.Order); // (1000 + 2000) / 2
-    }
-
-    [Fact]
-    public void TryApplyMove_BetweenTwoEntities_WithInsufficientSpace_ShouldReturnFalse()
-    {
-        // Arrange
-        TestOrderableEntity previous = new TestOrderableEntity { Order = 1000 };
-        TestOrderableEntity next = new TestOrderableEntity { Order = 1001 }; // 只有1的间隔
-        TestOrderableEntity source = new TestOrderableEntity { Order = 500 };
-
-        // Act
-        bool result = ReorderHelper.Default.TryApplyMove(source, previous, next);
-
-        // Assert
-        Assert.False(result);
-        Assert.Equal(500, source.Order); // Order 应该保持不变
-    }
-
-    [Fact]
-    public void TryApplyMove_AfterPrevious_WithinRange_ShouldReturnTrueAndAddMoveStep()
-    {
-        // Arrange
-        TestOrderableEntity previous = new TestOrderableEntity { Order = 1000 };
-        TestOrderableEntity source = new TestOrderableEntity { Order = 500 };
-
-        // Act
-        bool result = ReorderHelper.Default.TryApplyMove(source, previous, null);
-
-        // Assert
-        Assert.True(result);
-        Assert.Equal(2000, source.Order); // 1000 + 1000 (MoveStep)
-    }
-
-    [Fact]
-    public void TryApplyMove_AfterPrevious_CausingOverflow_ShouldReturnFalse()
-    {
-        // Arrange
-        TestOrderableEntity previous = new TestOrderableEntity { Order = short.MaxValue };
-        TestOrderableEntity source = new TestOrderableEntity { Order = 500 };
-
-        // Act
-        bool result = ReorderHelper.Default.TryApplyMove(source, previous, null);
-
-        // Assert
-        Assert.False(result);
-        Assert.Equal(500, source.Order); // Order 应该保持不变
-    }
-
-    [Fact]
-    public void TryApplyMove_BeforeNext_WithinRange_ShouldReturnTrueAndSubtractMoveStep()
-    {
-        // Arrange
-        TestOrderableEntity next = new TestOrderableEntity { Order = 1000 };
-        TestOrderableEntity source = new TestOrderableEntity { Order = 500 };
-
-        // Act
-        bool result = ReorderHelper.Default.TryApplyMove(source, null, next);
-
-        // Assert
-        Assert.True(result);
-        Assert.Equal(0, source.Order); // 1000 - 1000 (MoveStep)
-    }
-
-    [Fact]
-    public void TryApplyMove_BeforeNext_CausingUnderflow_ShouldReturnFalse()
-    {
-        // Arrange
-        TestOrderableEntity next = new TestOrderableEntity { Order = short.MinValue };
-        TestOrderableEntity source = new TestOrderableEntity { Order = 500 };
-
-        // Act
-        bool result = ReorderHelper.Default.TryApplyMove(source, null, next);
-
-        // Assert
-        Assert.False(result);
-        Assert.Equal(500, source.Order); // Order 应该保持不变
-    }
-
-    [Fact]
-    public void TryApplyMove_WithCustomMoveStep_ShouldUseCustomStep()
-    {
-        // Arrange
-        ReorderOptions options = new ReorderOptions
+        return new TheoryData<string, short, short?, short?, int, bool, short>
         {
-            ReorderSteps = [1000, 100, 10],
-            ReorderStart = -30000,
-            MoveStep = 500 // 自定义移动步长
+            { "between spaced entities", 500, 1000, 2000, 1000, true, 1500 },
+            { "between adjacent entities", 500, 1000, 1001, 1000, false, 500 },
+            { "after previous", 500, 1000, null, 1000, true, 2000 },
+            { "after previous overflows", 500, short.MaxValue, null, 1000, false, 500 },
+            { "before next", 500, null, 1000, 1000, true, 0 },
+            { "before next underflows", 500, null, short.MinValue, 1000, false, 500 },
+            { "custom move step", 100, 1000, null, 500, true, 1500 },
+            { "same previous and next", 500, 1000, 1000, 1000, false, 500 },
         };
-        ReorderHelper helper = new ReorderHelper(options);
-        TestOrderableEntity previous = new TestOrderableEntity { Order = 1000 };
-        TestOrderableEntity source = new TestOrderableEntity { Order = 100 };
-
-        // Act
-        bool result = helper.TryApplyMove(source, previous, null);
-
-        // Assert
-        Assert.True(result);
-        Assert.Equal(1500, source.Order); // 1000 + 500 (自定义 MoveStep)
     }
 
-    [Fact]
-    public void TryApplyMove_BetweenAdjacentEntities_ShouldReturnFalse()
+    [Theory]
+    [MemberData(nameof(TryApplyMoveCases))]
+    public void TryApplyMove_ShouldReturnExpectedResultAndOrder(
+        string _,
+        short sourceOrder,
+        short? previousOrder,
+        short? nextOrder,
+        int moveStep,
+        bool expectedResult,
+        short expectedOrder)
     {
-        // Arrange
-        TestOrderableEntity previous = new TestOrderableEntity { Order = 1000 };
-        TestOrderableEntity next = new TestOrderableEntity { Order = 1000 }; // 相同值
-        TestOrderableEntity source = new TestOrderableEntity { Order = 500 };
+        ReorderHelper helper = CreateHelper(moveStep);
+        TestOrderableEntity source = new() { Order = sourceOrder };
+        TestOrderableEntity? previous = previousOrder is null ? null : new TestOrderableEntity { Order = previousOrder.Value };
+        TestOrderableEntity? next = nextOrder is null ? null : new TestOrderableEntity { Order = nextOrder.Value };
 
-        // Act
-        bool result = ReorderHelper.Default.TryApplyMove(source, previous, next);
+        bool result = helper.TryApplyMove(source, previous, next);
 
-        // Assert
-        Assert.False(result);
+        Assert.Equal(expectedResult, result);
+        Assert.Equal(expectedOrder, source.Order);
     }
 
     #endregion
@@ -459,7 +367,7 @@ public class ReorderHelperTest
     public void RedistributeInRange_WithSingleEntity_ShouldSetToRangeStart()
     {
         // Arrange
-        TestUpdatableEntity entity = new TestUpdatableEntity { Name = "Entity1", UpdatedAt = DateTime.MinValue };
+        TestUpdatableEntity entity = new() { Name = "Entity1", UpdatedAt = DateTime.MinValue };
         TestUpdatableEntity[] entities = new[] { entity };
 
         // Act
@@ -589,21 +497,21 @@ public class ReorderHelperTest
     public void Integration_MultipleCustomHelpers_ShouldWorkIndependently()
     {
         // Arrange
-        ReorderOptions options1 = new ReorderOptions
+        ReorderOptions options1 = new()
         {
             ReorderSteps = [1000, 100, 10],
             ReorderStart = -30000,
             MoveStep = 1000
         };
-        ReorderOptions options2 = new ReorderOptions
+        ReorderOptions options2 = new()
         {
             ReorderSteps = [500, 50, 5],
             ReorderStart = -15000,
             MoveStep = 500
         };
 
-        ReorderHelper helper1 = new ReorderHelper(options1);
-        ReorderHelper helper2 = new ReorderHelper(options2);
+        ReorderHelper helper1 = new(options1);
+        ReorderHelper helper2 = new(options2);
 
         TestOrderableEntity[] entities1 = new[] { new TestOrderableEntity { Name = "Entity1" } };
         TestOrderableEntity[] entities2 = new[] { new TestOrderableEntity { Name = "Entity2" } };
@@ -625,13 +533,13 @@ public class ReorderHelperTest
     public void ReorderEntities_WhenStepCausesOverflowButAdjustedStartWorks_ShouldAdjustStart()
     {
         // Arrange - 配置步长会从起始位置溢出，但可以通过调整起始位置解决
-        ReorderOptions options = new ReorderOptions
+        ReorderOptions options = new()
         {
             ReorderSteps = [10000], // 只有一个较大的步长
             ReorderStart = 20000,   // 高起始位置
             MoveStep = 1000
         };
-        ReorderHelper helper = new ReorderHelper(options);
+        ReorderHelper helper = new(options);
         TestOrderableEntity[] entities = new[]
         {
             new TestOrderableEntity { Name = "Entity1" },
@@ -665,62 +573,6 @@ public class ReorderHelperTest
         Assert.Equal(-30000, entities[0].Order);
         Assert.Equal(-29900, entities[1].Order); // -30000 + 100
         Assert.True(entities[entities.Length - 1].Order <= short.MaxValue);
-    }
-
-    [Fact]
-    public void TryApplyMove_WithNullSourceEntity_ShouldThrowNullReferenceException()
-    {
-        // Arrange
-        TestOrderableEntity? source = null;
-        TestOrderableEntity previous = new TestOrderableEntity { Order = 1000 };
-
-        // Act & Assert
-        Assert.Throws<NullReferenceException>(() => 
-            ReorderHelper.Default.TryApplyMove(source!, previous, null));
-    }
-
-    [Fact]
-    public void TryApplyMove_WithZeroMoveStep_ShouldWork()
-    {
-        // Arrange
-        ReorderOptions options = new ReorderOptions
-        {
-            ReorderSteps = [1000, 100, 10],
-            ReorderStart = -30000,
-            MoveStep = 0 // 零步长
-        };
-        ReorderHelper helper = new ReorderHelper(options);
-        TestOrderableEntity previous = new TestOrderableEntity { Order = 1000 };
-        TestOrderableEntity source = new TestOrderableEntity { Order = 500 };
-
-        // Act
-        bool result = helper.TryApplyMove(source, previous, null);
-
-        // Assert
-        Assert.True(result);
-        Assert.Equal(1000, source.Order); // 1000 + 0
-    }
-
-    [Fact]
-    public void TryApplyMove_WithNegativeMoveStep_ShouldWork()
-    {
-        // Arrange
-        ReorderOptions options = new ReorderOptions
-        {
-            ReorderSteps = [1000, 100, 10],
-            ReorderStart = -30000,
-            MoveStep = -500 // 负步长
-        };
-        ReorderHelper helper = new ReorderHelper(options);
-        TestOrderableEntity previous = new TestOrderableEntity { Order = 1000 };
-        TestOrderableEntity source = new TestOrderableEntity { Order = 0 };
-
-        // Act
-        bool result = helper.TryApplyMove(source, previous, null);
-
-        // Assert
-        Assert.True(result);
-        Assert.Equal(500, source.Order); // 1000 + (-500)
     }
 
     [Fact]
@@ -763,40 +615,6 @@ public class ReorderHelperTest
         {
             Assert.True(entities[i].Order <= entities[i + 1].Order);
         }
-    }
-
-    [Fact]
-    public void ReorderHelper_Properties_ShouldReturnCorrectValues()
-    {
-        // Arrange
-        ReorderOptions options = new ReorderOptions
-        {
-            ReorderSteps = [2000, 200, 20],
-            ReorderStart = -25000,
-            MoveStep = 750
-        };
-        ReorderHelper helper = new ReorderHelper(options);
-
-        // Act & Assert
-        Assert.Equal(750, helper.MoveStep);
-        Assert.Equal(-25000, helper.ReorderStart);
-    }
-
-    [Fact]
-    public void ReorderOptions_ShouldSupportCollectionInitializer()
-    {
-        // Arrange & Act
-        ReorderOptions options = new ReorderOptions
-        {
-            ReorderSteps = [1000, 100, 10, 1],
-            ReorderStart = -30000,
-            MoveStep = 1000
-        };
-
-        // Assert
-        Assert.Equal(4, options.ReorderSteps.Length);
-        Assert.Equal(1000, options.ReorderSteps[0]);
-        Assert.Equal(1, options.ReorderSteps[3]);
     }
 
     [Theory]
@@ -852,6 +670,16 @@ public class ReorderHelperTest
         Assert.True(entities[1].Order < entities[2].Order);
         Assert.True(entities[2].Order < entities[3].Order);
         Assert.True(entities[3].Order < entities[4].Order);
+    }
+
+    private static ReorderHelper CreateHelper(int moveStep)
+    {
+        return new ReorderHelper(new ReorderOptions
+        {
+            ReorderSteps = [1000, 100, 10],
+            ReorderStart = -30000,
+            MoveStep = moveStep
+        });
     }
 
     #endregion

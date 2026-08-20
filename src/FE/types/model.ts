@@ -27,6 +27,7 @@ export enum DBModelProvider {
   TokenPony = 19,
   Anthropic = 20,
   Mimo = 21,
+  Novita = 22,
 }
 
 export type FEModelProvider = {
@@ -42,6 +43,7 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.AzureAIFoundry,
     name: 'Azure AI Foundry',
     icon: '/logos/azure-ai-foundry.svg',
+    allowWebSearch: true,
   },
   {
     id: DBModelProvider.HunYuan,
@@ -55,7 +57,12 @@ export const feModelProviders: FEModelProvider[] = [
     name: 'Moonshot',
     icon: '/logos/moonshot.svg',
   },
-  { id: DBModelProvider.OpenAI, name: 'OpenAI', icon: '/logos/openai.svg' },
+  {
+    id: DBModelProvider.OpenAI,
+    name: 'OpenAI',
+    icon: '/logos/openai.svg',
+    allowWebSearch: true,
+  },
   {
     id: DBModelProvider.QianFan,
     name: 'Wenxin Qianfan',
@@ -82,6 +89,7 @@ export const feModelProviders: FEModelProvider[] = [
     id: DBModelProvider.DeepSeek,
     name: 'DeepSeek',
     icon: '/logos/deepseek.svg',
+    allowWebSearch: true,
   },
   {
     id: DBModelProvider.X_AI,
@@ -128,7 +136,13 @@ export const feModelProviders: FEModelProvider[] = [
   {
     id: DBModelProvider.Mimo,
     name: 'Xiaomi Mimo',
-    icon: 'https://chats.sdcb.pub/model-provider/21/favicon.png',
+    icon: 'https://chats.io.sdcb.ai/model-provider/21/favicon.png',
+    allowWebSearch: true,
+  },
+  {
+    id: DBModelProvider.Novita,
+    name: 'Novita AI',
+    icon: '/logos/novita.svg',
   },
 ];
 

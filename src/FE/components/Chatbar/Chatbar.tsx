@@ -14,9 +14,14 @@ import {
   setChats,
   setChatsSelectType,
 } from '@/actions/chat.actions';
-import { setShowChatBar } from '@/actions/setting.actions';
+import {
+  setChatBarWidth,
+  setShowChatBar,
+} from '@/actions/setting.actions';
+import { MIN_CHATBAR_WIDTH } from '@/utils/settings';
 import HomeContext from '@/contexts/home.context';
 import Sidebar from '../Sidebar/Sidebar';
+import SearchResultsModal from '../Search/SearchResultsModal';
 import ChatActionConfirm from './ChatActionConfirm';
 import ChatActions from './ChatActions';
 import ChatGroups from './ChatGroups';
@@ -39,6 +44,9 @@ const Chatbar = () => {
       chatGroups,
       chatPaging,
       showChatBar,
+      effectiveChatBarWidth,
+      chatBarMaxWidth,
+      chatBarWidth,
       isChatsLoading,
       chatsSelectType,
     },
@@ -47,6 +55,8 @@ const Chatbar = () => {
     settingDispatch,
     handleDeleteChat,
     handleNewChat,
+    handleNewTempChat,
+    handleSelectChat,
     hasModel,
     getChats,
     getChatsByGroup,
@@ -58,9 +68,18 @@ const Chatbar = () => {
   } = chatBarContextValue;
   const [searchTerm, setSearchTerm] = useState('');
   const [actionConfirming, setActionConfirming] = useState(false);
+  const [isSearchResultsOpen, setIsSearchResultsOpen] = useState(false);
+  const [searchResults, setSearchResults] = useState<ChatResult[]>([]);
 
   const handleToggleChatbar = () => {
     settingDispatch(setShowChatBar(!showChatBar));
+  };
+
+  const handleDesktopWidthChange = (
+    width: number,
+    options?: { persist?: boolean },
+  ) => {
+    settingDispatch(setChatBarWidth(width, options?.persist ?? false));
   };
 
   const handleAddGroup = () => {
@@ -118,28 +137,40 @@ const Chatbar = () => {
     });
   };
 
-  useEffect(() => {
-    if (searchTerm) {
-      dispatch({
-        field: 'filteredChats',
-        value: chats.filter((chat) => {
-          const searchable = chat.title.toLocaleLowerCase();
-          return searchable.toLowerCase().includes(searchTerm.toLowerCase());
-        }),
-      });
-    } else {
-      dispatch({
-        field: 'filteredChats',
-        value: chats,
-      });
+  const handleSelectChatFromSearch = (chatId: string) => {
+    const chat = chats.find((c) => c.id === chatId);
+    if (chat) {
+      handleSelectChat(chat);
     }
-  }, [chats, dispatch, searchTerm]);
+  };
+
+  const handleSearch = async (value: string) => {
+    setSearchTerm(value);
+    if (value.trim()) {
+      await getChats(value);
+      setSearchResults(chats);
+      setIsSearchResultsOpen(true);
+    } else {
+      setIsSearchResultsOpen(false);
+      setSearchResults([]);
+      await getChats();
+    }
+  };
+
+  // 搜索逻辑已移至后端处理，支持搜索标题、标签和消息内容
+  useEffect(() => {
+    dispatch({
+      field: 'filteredChats',
+      value: chats,
+    });
+  }, [chats, dispatch]);
 
   return (
     <ChatbarContext.Provider
       value={{
         ...chatBarContextValue,
         handleDeleteChat,
+        searchTerm,
       }}
     >
       <Sidebar<ChatResult>
@@ -147,7 +178,13 @@ const Chatbar = () => {
         messageIsStreaming={selectedChat?.status === ChatStatus.Chatting}
         side={'left'}
         isOpen={showChatBar}
+        resizable
+        desktopWidth={effectiveChatBarWidth || chatBarWidth}
+        desktopMinWidth={MIN_CHATBAR_WIDTH}
+        desktopMaxWidth={chatBarMaxWidth}
+        onDesktopWidthChange={handleDesktopWidthChange}
         addItemButtonTitle={t('New chat')}
+        addTempItemButtonTitle={t('Temporary Chat')}
         hasModel={hasModel}
         folderComponent={<ChatGroups onShowMore={handleShowMore} />}
         actionComponent={
@@ -173,13 +210,19 @@ const Chatbar = () => {
         }
         items={filteredChats}
         searchTerm={searchTerm}
-        handleSearchTerm={(value: string) => {
-          setSearchTerm(value);
-          getChats(value);
-        }}
+        handleSearchTerm={handleSearch}
         toggleOpen={handleToggleChatbar}
         handleCreateItem={handleNewChat}
+        handleCreateTempItem={handleNewTempChat}
         footerComponent={<ChatBarSettings />}
+      />
+
+      <SearchResultsModal
+        isOpen={isSearchResultsOpen}
+        searchTerm={searchTerm}
+        searchResults={searchResults}
+        onClose={() => setIsSearchResultsOpen(false)}
+        onSelectChat={handleSelectChatFromSearch}
       />
     </ChatbarContext.Provider>
   );

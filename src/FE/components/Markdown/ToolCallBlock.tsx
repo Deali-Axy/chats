@@ -1,4 +1,4 @@
-import { FC, memo, useState, useEffect } from 'react';
+import { FC, memo, useEffect, useRef, useState } from 'react';
 import { useTheme } from 'next-themes';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { oneDark, oneLight } from 'react-syntax-highlighter/dist/cjs/styles/prism';
@@ -7,17 +7,16 @@ import useTranslation from '@/hooks/useTranslation';
 import { ChatSpanStatus, ToolCallContent, ToolResponseContent, ToolProgressDelta } from '@/types/chat';
 import { IconCheck, IconChevronRight, IconClipboard } from '@/components/Icons/index';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { isChatting } from '@/utils/chats';
+import { copyTextToClipboard } from '@/utils/clipboard';
 
 interface ToolCallBlockProps {
     toolCall: ToolCallContent;
     toolResponse?: ToolResponseContent;
     chatStatus?: ChatSpanStatus;
-    /**
-     * 当后续有任何内容（包括另一个 tool call）开始输出后，自动收起。
-     * 注意：不会覆盖用户手动展开/收起。
-     */
-    nextMessageContentStarted?: boolean;
 }
+
+const COMPLETED_AUTO_CLOSE_DELAY_MS = 1000;
 
 interface WebSearchResult {
     type?: string;
@@ -26,23 +25,64 @@ interface WebSearchResult {
     page_age?: string;
 }
 
-export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus, nextMessageContentStarted }) => {
+interface WebSearchCallAction {
+    type?: string;
+    query?: string;
+    queries?: string[];
+    url?: string;
+    pattern?: string;
+}
+
+export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolResponse, chatStatus }) => {
     const { t } = useTranslation();
     const { resolvedTheme } = useTheme();
     const [isParamsCopied, setIsParamsCopied] = useState<boolean>(false);
     const [isResponseCopied, setIsResponseCopied] = useState<boolean>(false);
-    // 计算 finished 状态：有 toolResponse 或者 聊天状态不是 Chatting (即已结束或失败)
-    const finished = !!toolResponse || (chatStatus !== ChatSpanStatus.Chatting);
+    const isLive = chatStatus !== undefined && isChatting(chatStatus);
+    const hasCompleted = toolCall.completed === true
+        || (toolResponse !== undefined && toolResponse.progress === undefined);
+    const isActive = isLive && !hasCompleted;
 
-    const [isOpen, setIsOpen] = useState<boolean>(!(nextMessageContentStarted ?? false));
+    const [isOpen, setIsOpen] = useState<boolean>(isActive);
     const [isManuallyToggled, setIsManuallyToggled] = useState<boolean>(false);
+    const autoCloseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const hasBeenLiveRef = useRef(isLive);
 
-    // 自动开合逻辑（不覆盖用户手动动作）
-    // 目标：在下一个 message content（非 tool）开始前保持展开。
     useEffect(() => {
+        if (isLive) {
+            hasBeenLiveRef.current = true;
+        }
+    }, [isLive]);
+
+    // 每个工具块按自身生命周期独立开合，并始终尊重用户的手动选择。
+    useEffect(() => {
+        if (autoCloseTimerRef.current !== null) {
+            clearTimeout(autoCloseTimerRef.current);
+            autoCloseTimerRef.current = null;
+        }
+
         if (isManuallyToggled) return;
-        setIsOpen(!(nextMessageContentStarted ?? false));
-    }, [nextMessageContentStarted, isManuallyToggled]);
+
+        if (isActive) {
+            setIsOpen(true);
+        } else if (hasCompleted && hasBeenLiveRef.current) {
+            // 保留最终结果一小段时间，然后自动收起。
+            setIsOpen(true);
+            autoCloseTimerRef.current = setTimeout(() => {
+                autoCloseTimerRef.current = null;
+                setIsOpen(false);
+            }, COMPLETED_AUTO_CLOSE_DELAY_MS);
+        } else {
+            setIsOpen(false);
+        }
+
+        return () => {
+            if (autoCloseTimerRef.current !== null) {
+                clearTimeout(autoCloseTimerRef.current);
+                autoCloseTimerRef.current = null;
+            }
+        };
+    }, [hasCompleted, isActive, isManuallyToggled]);
 
     const baseTheme = resolvedTheme === 'dark' ? oneDark : oneLight;
 
@@ -63,14 +103,13 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return null;
     };
 
-    // 检查是否为web_search工具的结果数组
-    const getWebSearchResults = (): WebSearchResult[] | null => {
-        if (toolCall.n !== 'web_search' || !toolResponse) {
+    const getResponseWebSearchResults = (): WebSearchResult[] | null => {
+        if (toolCall.n !== 'web_search_call' || !toolResponse) {
             return null;
         }
         try {
             const parsed = JSON.parse(toolResponse.r);
-            if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].type === 'web_search_result') {
+            if (Array.isArray(parsed) && parsed.every(item => item?.type === 'web_search_result')) {
                 return parsed as WebSearchResult[];
             }
         } catch {
@@ -85,11 +124,9 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     };
 
     const copyToClipboard = (text: string, isParams: boolean) => (e: React.MouseEvent) => {
-        if (!navigator.clipboard || !navigator.clipboard.writeText) {
-            return;
-        }
+        copyTextToClipboard(text).then((copied) => {
+            if (!copied) return;
 
-        navigator.clipboard.writeText(text).then(() => {
             if (isParams) {
                 setIsParamsCopied(true);
                 setTimeout(() => setIsParamsCopied(false), 2000);
@@ -102,7 +139,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
     };
 
     const code = getCodeIfAvailable();
-    const webSearchResults = getWebSearchResults();
+    const responseWebSearchResults = getResponseWebSearchResults();
     const toolProgressDeltas = getToolProgressDeltas();
 
     const deltaToText = (delta: ToolProgressDelta): string => {
@@ -128,6 +165,18 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         return obj as Record<string, unknown>;
     };
 
+    const getWebSearchCallAction = (): WebSearchCallAction | null => {
+        if (toolCall.n !== 'web_search_call') {
+            return null;
+        }
+        const obj = getToolCallJsonObject();
+        const action = obj?.action;
+        if (!action || typeof action !== 'object' || Array.isArray(action)) {
+            return null;
+        }
+        return action as WebSearchCallAction;
+    };
+
     const hasSessionId = (obj: Record<string, unknown> | null): boolean => {
         return !!obj && Object.prototype.hasOwnProperty.call(obj, 'sessionId');
     };
@@ -139,10 +188,14 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         displayParams: string 
     } => {
         const obj = getToolCallJsonObject();
+        const baseDisplayName = toolCall.d ?? toolCall.n;
         
         // 根据工具名称选择图标
         let headerIcon = '🔧'; // 默认图标
         switch (toolCall.n) {
+            case 'web_search_call':
+                headerIcon = '🔎';
+                break;
             case 'create_docker_session':
                 headerIcon = '🐳';
                 break;
@@ -155,15 +208,35 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             case 'write_file':
                 headerIcon = '✏️';
                 break;
-            case 'read_file':
-                headerIcon = '📖';
-                break;
-            case 'patch_file':
-                headerIcon = '🩹';
-                break;
             case 'download_chat_files':
                 headerIcon = '📥';
                 break;
+        }
+
+        if (toolCall.n === 'web_search_call') {
+            const action = getWebSearchCallAction();
+            const status = typeof obj?.status === 'string' ? obj.status : null;
+            const actionType = action?.type ?? 'web_search_call';
+            const metadataLine = status ? (
+                <span className='text-foreground font-sans font-semibold text-gray-600 dark:text-gray-100 text-sm'>
+                    {t('Status')}: <span className='font-normal'>{status}</span>
+                </span>
+            ) : null;
+
+            let header = `web_search_call: ${actionType}`;
+            const searchQuery = action?.query
+                ?? action?.queries?.find(query => !query.startsWith('ws_call_id='))
+                ?? action?.queries?.[0];
+            if (actionType === 'search' && searchQuery) {
+                header = `${t('Web Search')}: ${searchQuery}`;
+            } else if (actionType === 'open_page' && action?.url) {
+                header = `${t('Open Page')}: ${action.url}`;
+            } else if (actionType === 'find_in_page') {
+                header = `${t('Find in Page')}: ${action?.pattern ?? action?.url ?? ''}`.trim();
+            }
+
+            const displayParams = JSON.stringify(action ?? obj ?? {}, null, 2);
+            return { header, headerIcon, metadataLine, displayParams };
         }
         
         // run_command: 提取 header, metadata 和 command
@@ -213,8 +286,8 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             return { header, headerIcon, metadataLine, displayParams };
         }
 
-        // write_file/patch_file: 提取 header, metadata 和内容
-        if (toolCall.n === 'write_file' || toolCall.n === 'patch_file') {
+        // write_file: 提取 header, metadata 和内容
+        if (toolCall.n === 'write_file') {
             let header = toolCall.n;
             let metadataLine: React.ReactNode | null = null;
             let displayParams = toolCall.p;
@@ -235,31 +308,11 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                     );
                 }
 
-                // 提取具体内容
-                if (toolCall.n === 'write_file') {
-                    const text = obj?.text;
-                    displayParams = typeof text === 'string' ? text : toolCall.p;
-                } else {
-                    const patch = obj?.patch;
-                    displayParams = typeof patch === 'string' ? patch : toolCall.p;
-                }
+                const text = obj?.text;
+                displayParams = typeof text === 'string' ? text : toolCall.p;
             }
 
             return { header, headerIcon, metadataLine, displayParams };
-        }
-
-        // read_file: 提取 header
-        if (toolCall.n === 'read_file') {
-            let header = toolCall.n;
-            
-            if (obj) {
-                const path = obj.path;
-                if (typeof path === 'string' && path.trim().length > 0) {
-                    header = `${toolCall.n}: ${path}`;
-                }
-            }
-
-            return { header, headerIcon, metadataLine: null, displayParams: toolCall.p };
         }
 
         // destroy_session: 提取 header
@@ -283,7 +336,7 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
             const path = obj.path;
             if (typeof path === 'string' && path.trim().length > 0) {
                 return { 
-                    header: `${toolCall.n}: ${path}`, 
+                    header: `${baseDisplayName}: ${path}`,
                     headerIcon, 
                     metadataLine: null, 
                     displayParams: toolCall.p 
@@ -292,14 +345,66 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
         }
 
         // 默认情况
-        return { header: toolCall.n, headerIcon, metadataLine: null, displayParams: toolCall.p };
+        return { header: baseDisplayName, headerIcon, metadataLine: null, displayParams: toolCall.p };
     };
 
     const { header, headerIcon, metadataLine, displayParams } = getDisplayInfo();
 
     const toggleOpen = () => {
-        setIsOpen(!isOpen);
+        if (autoCloseTimerRef.current !== null) {
+            clearTimeout(autoCloseTimerRef.current);
+            autoCloseTimerRef.current = null;
+        }
         setIsManuallyToggled(true);
+        setIsOpen((currentlyOpen) => !currentlyOpen);
+    };
+
+    const renderWebSearchResultsTable = (results: WebSearchResult[]) => {
+        const includeAge = results.some(result => !!result.page_age);
+        return (
+        <table className="w-full border-collapse text-left m-0">
+            <thead>
+                <tr className="border-b border-border">
+                    <th className="py-1 pr-3 font-medium">{t('Title')}</th>
+                    {includeAge && (
+                        <th className="py-1 px-3 font-medium whitespace-nowrap">{t('Age')}</th>
+                    )}
+                </tr>
+            </thead>
+            <tbody>
+                {results.length === 0 ? (
+                    <tr>
+                        <td className="py-1 pr-3 text-muted-foreground" colSpan={includeAge ? 2 : 1}>
+                            {t('No sources')}
+                        </td>
+                    </tr>
+                ) : (
+                    results.map((result, index) => (
+                        <tr key={index} className="border-b border-border last:border-b-0 hover:bg-muted/60">
+                            <td className="py-1 pr-3" title={result.url}>
+                                {result.url ? (
+                                    <a
+                                        href={result.url}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-blue-600 dark:text-blue-400 hover:underline"
+                                        onClick={(e) => e.stopPropagation()}
+                                    >
+                                        {result.title || result.url}
+                                    </a>
+                                ) : (result.title || '-')}
+                            </td>
+                            {includeAge && (
+                                <td className="py-1 px-3 whitespace-nowrap">
+                                    {result.page_age || '-'}
+                                </td>
+                            )}
+                        </tr>
+                    ))
+                )}
+            </tbody>
+        </table>
+        );
     };
 
     return (
@@ -478,37 +583,8 @@ export const ToolCallBlock: FC<ToolCallBlockProps> = memo(({ toolCall, toolRespo
                                 </Tooltip>
                             </TooltipProvider>
                         </div>
-                        {webSearchResults ? (
-                            <table className="w-full border-collapse text-left m-0">
-                                <thead>
-                                    <tr className="border-b border-border">
-                                        <th className="py-1 pr-3 font-medium">{t('Title')}</th>
-                                        <th className="py-1 px-3 font-medium whitespace-nowrap">{t('Age')}</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {webSearchResults.map((result, index) => (
-                                        <tr key={index} className="border-b border-border last:border-b-0 hover:bg-muted/60">
-                                            <td className="py-1 pr-3" title={result.url}>
-                                                {result.url ? (
-                                                    <a
-                                                        href={result.url}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="text-blue-600 dark:text-blue-400 hover:underline"
-                                                        onClick={(e) => e.stopPropagation()}
-                                                    >
-                                                        {result.title || result.url}
-                                                    </a>
-                                                ) : (result.title || '-')}
-                                            </td>
-                                            <td className="py-1 px-3 whitespace-nowrap">
-                                                {result.page_age || '-'}
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </table>
+                        {responseWebSearchResults ? (
+                            renderWebSearchResultsTable(responseWebSearchResults)
                         ) : (
                             toolProgressDeltas ? (
                                 <pre className="not-prose whitespace-pre-wrap break-words font-mono">

@@ -9,6 +9,7 @@ export interface ChatbarContextProps {
   state: ChatbarInitialState;
   dispatch: Dispatch<ActionType<ChatbarInitialState>>;
   handleDeleteChat: (chatIds: string[]) => void;
+  searchTerm?: string;
 }
 export interface ChatbarInitialState {
   searchTerm: string;

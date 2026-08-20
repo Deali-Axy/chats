@@ -3,8 +3,16 @@ import { FC, memo } from 'react';
 import { hasMultipleSpans } from '@/utils/chats';
 
 import { AdminModelDto } from '@/types/adminApis';
-import { ChatRole, IChat, Message, ResponseContent } from '@/types/chat';
-import { IChatMessage, MessageDisplayType, ReactionMessageType } from '@/types/chatMessage';
+import {
+  ChatRole,
+  FileDef,
+  IChat,
+  Message,
+  MessageContentType,
+  ResponseContent,
+  getFileUrl,
+} from '@/types/chat';
+import { IChatMessage, MessageDisplayType, ReactionMessageType, getMessageContents } from '@/types/chatMessage';
 
 import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
@@ -21,6 +29,7 @@ export interface Props {
   className?: string;
   chatShareId?: string;
   isAdminView?: boolean;
+  enableGroupImagePreview?: boolean;
   responseMessageMinHeight?: string;
   responseMessageMinHeightGroupIndex?: number;
   onChangeChatLeafMessageId?: (messageId: string) => void;
@@ -38,6 +47,39 @@ export interface Props {
   onRegenerateAllAssistant?: (messageId: string, modelId: number) => void;
 }
 
+const collectMessageImageUrls = (message: IChatMessage): string[] => {
+  return getMessageContents(message)
+    .filter(
+      (content): content is ResponseContent & { c: FileDef } =>
+        (content.$type === MessageContentType.fileId ||
+          content.$type === MessageContentType.tempFileId) &&
+        (content.c as FileDef).contentType.startsWith('image/'),
+    )
+    .map((content) => getFileUrl(content.c));
+};
+
+const collectResponseGroupImageUrls = (messages: IChatMessage[]): string[] => {
+  const imageUrls: string[] = [];
+  const seen = new Set<string>();
+
+  messages.forEach((message) => {
+    if (message.role !== ChatRole.Assistant) {
+      return;
+    }
+
+    collectMessageImageUrls(message).forEach((imageUrl) => {
+      if (seen.has(imageUrl)) {
+        return;
+      }
+
+      seen.add(imageUrl);
+      imageUrls.push(imageUrl);
+    });
+  });
+
+  return imageUrls;
+};
+
 export const ChatMessage: FC<Props> = memo(
   ({
     selectedMessages,
@@ -47,6 +89,7 @@ export const ChatMessage: FC<Props> = memo(
     className,
     chatShareId,
     isAdminView,
+    enableGroupImagePreview = false,
     responseMessageMinHeight,
     responseMessageMinHeightGroupIndex,
     onChangeChatLeafMessageId,
@@ -64,10 +107,14 @@ export const ChatMessage: FC<Props> = memo(
       <div
         className={cn(
           'w-full m-auto p-2 md:p-4 overflow-x-hidden',
+          !isMultiSpan && 'md:max-w-6xl',
           className,
         )}
       >
         {selectedMessages.map((messages, groupIndex) => {
+          const responseGroupImageUrls = enableGroupImagePreview
+            ? collectResponseGroupImageUrls(messages)
+            : [];
           const isUserMessageGroup = messages.find((x) => x.role === ChatRole.User);
           const shouldRenderResponseSpacer =
             !!responseMessageMinHeight &&
@@ -84,13 +131,26 @@ export const ChatMessage: FC<Props> = memo(
             >
               {isUserMessageGroup ? (
                 messages.map((message, index) => (
-                  <div key={`message-${message.id}`} data-message-id={message.id} data-message-role={message.role}>
+                  <div
+                    key={`message-${message.id}`}
+                    className={cn(
+                      message.role === ChatRole.User && 'w-full',
+                      message.role === ChatRole.User &&
+                        (isMultiSpan
+                          ? 'sm:w-[50vw] xl:w-[50vw]'
+                          : 'md:ml-auto md:max-w-3xl xl:max-w-4xl'),
+                    )}
+                    data-message-id={message.id}
+                    data-message-role={message.role}
+                  >
                     {message.role === ChatRole.User && (
                       <div
                         key={'user-message-' + index}
                         className={cn(
-                          'prose w-full dark:prose-invert rounded-r-md group',
-                          'sm:w-[50vw] xl:w-[50vw]',
+                          'w-full rounded-r-md group',
+                          isMultiSpan
+                            ? 'sm:w-[50vw] xl:w-[50vw]'
+                            : 'md:ml-auto md:max-w-3xl xl:max-w-4xl',
                           index > 0 && 'mt-4',
                         )}
                         data-user-message-id={message.id}
@@ -112,7 +172,12 @@ export const ChatMessage: FC<Props> = memo(
               ) : (
                 <>
                   <div
-                    className="md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))] gap-4"
+                    className={cn(
+                      'gap-4',
+                      isMultiSpan
+                        ? 'md:grid md:grid-cols-[repeat(auto-fit,minmax(375px,1fr))]'
+                        : 'w-full md:mx-auto md:max-w-4xl xl:max-w-5xl',
+                    )}
                     data-response-content="true"
                     data-response-group-index={groupIndex}
                   >
@@ -133,15 +198,10 @@ export const ChatMessage: FC<Props> = memo(
                               }
                               key={'response-group-message-' + index}
                               className={cn(
-                                'border-[1px] border-background rounded-md flex w-full bg-card mb-1 chat-message-bg',
-                                isMultiSpan &&
-                                  message.isActive &&
-                                  'border-primary/50 border-gray-300 dark:border-gray-600',
-                                isMultiSpan && 'p-1 md:p-2',
-                                !isMultiSpan && 'border-none',
+                                'flex w-full bg-background mb-1 rounded-md',
                               )}
                             >
-                              <div className="rounded-r-md flex-1 overflow-auto leading-4 font-normal py-2 px-3">
+                              <div className="rounded-r-md min-w-0 flex-1 leading-4 font-normal px-1">
                                 <ResponseMessage
                                   key={'response-message-' + message.id + '-' + message.spanId}
                                   chatStatus={selectedChat.status}
@@ -149,6 +209,7 @@ export const ChatMessage: FC<Props> = memo(
                                   readonly={readonly}
                                   chatId={selectedChat.id}
                                   chatShareId={chatShareId}
+                                  groupImageUrls={responseGroupImageUrls}
                                   onEditResponseMessage={onEditResponseMessage}
                                 />
                               </div>
