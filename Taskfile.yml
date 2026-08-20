@@ -5,6 +5,9 @@ vars:
   FE_DIR: ./src/FE
   BE_DIR: ./src/BE/web
   BE_PROJECT: Chats.BE.csproj
+  BE_CSProj: ./src/BE/web/Chats.BE.csproj
+  EF_CONTEXT: ChatsDB
+  EF_OUT: DB/Migrations
 
 tasks:
   default:
@@ -18,13 +21,13 @@ tasks:
       - goreman -f Procfile start
 
   dev:fe:
-    desc: 启动前端开发服务器 (Next.js)
+    desc: 启动前端开发服务器 (Next.js / pnpm)
     dir: '{{.FE_DIR}}'
     cmds:
-      - npm run dev
+      - pnpm run dev
 
   dev:be:
-    desc: 启动后端开发服务器 (ASP.NET Core)
+    desc: 启动后端开发服务器 (ASP.NET Core，启动时自动 Migrate)
     dir: '{{.BE_DIR}}'
     cmds:
       - dotnet run --project {{.BE_PROJECT}}
@@ -44,7 +47,7 @@ tasks:
     desc: 构建前端项目
     dir: '{{.FE_DIR}}'
     cmds:
-      - npm run build
+      - pnpm run build
 
   build:be:
     desc: 构建后端项目
@@ -61,6 +64,39 @@ tasks:
     desc: 运行后端单元测试
     cmds:
       - dotnet test src/BE/tests/Chats.BE.UnitTest/Chats.BE.UnitTest.csproj
+
+  # --- EF Core migrations (SQLite only) ---
+
+  tools:restore:
+    desc: 还原本地 .NET 工具（含 dotnet-ef）
+    cmds:
+      - dotnet tool restore
+
+  ef:add:
+    desc: 新增 EF migration（用法：task ef:add -- AddSomething）
+    deps: [tools:restore]
+    cmds:
+      - |
+        {{if not .CLI_ARGS}}echo "Usage: task ef:add -- <MigrationName>" && exit 1{{end}}
+        dotnet tool run dotnet-ef migrations add {{.CLI_ARGS}} --project {{.BE_CSProj}} --startup-project {{.BE_CSProj}} --context {{.EF_CONTEXT}} --output-dir {{.EF_OUT}}
+
+  ef:update:
+    desc: 将数据库更新到最新 migration（空库会建表；启动时也会自动 Migrate）
+    deps: [tools:restore]
+    cmds:
+      - dotnet tool run dotnet-ef database update --project {{.BE_CSProj}} --startup-project {{.BE_CSProj}} --context {{.EF_CONTEXT}}
+
+  ef:list:
+    desc: 列出 EF migrations
+    deps: [tools:restore]
+    cmds:
+      - dotnet tool run dotnet-ef migrations list --project {{.BE_CSProj}} --startup-project {{.BE_CSProj}} --context {{.EF_CONTEXT}}
+
+  ef:remove:
+    desc: 删除最近一次未应用的 migration（慎用）
+    deps: [tools:restore]
+    cmds:
+      - dotnet tool run dotnet-ef migrations remove --project {{.BE_CSProj}} --startup-project {{.BE_CSProj}} --context {{.EF_CONTEXT}}
 
   clean:
     desc: 清理构建产物

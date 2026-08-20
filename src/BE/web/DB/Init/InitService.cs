@@ -1,10 +1,9 @@
-﻿using Chats.DB;
+using Chats.DB;
 using Chats.DB.Enums;
 using Chats.BE.Services;
 using Chats.BE.Services.Configs;
 using Chats.BE.Services.Models.ChatServices.Test;
 using Microsoft.EntityFrameworkCore;
-using System.Data.Common;
 using System.Text.Json;
 
 namespace Chats.BE.DB.Init;
@@ -18,140 +17,16 @@ public class InitService(IServiceScopeFactory scopeFactory)
         using IServiceScope scope = scopeFactory.CreateScope();
         using ChatsDB db = scope.ServiceProvider.GetRequiredService<ChatsDB>();
 
-        if (await db.Database.EnsureCreatedAsync(cancellationToken))
+        Console.WriteLine("Applying EF Core migrations (SQLite)...");
+        await db.Database.MigrateAsync(cancellationToken);
+        Console.WriteLine("Database schema is up to date.");
+
+        // Fresh install seed only — never overwrite an existing database.
+        if (!await db.Users.AnyAsync(cancellationToken))
         {
-            Console.WriteLine("Database created, inserting initial data...");
+            Console.WriteLine("No users found, inserting initial data...");
             await InsertInitialData(scope, db, cancellationToken);
             Console.WriteLine("Initial data inserted.");
-        }
-
-        await EnsureBackwardCompatibleSchemaAsync(db, cancellationToken);
-    }
-
-    private static async Task EnsureBackwardCompatibleSchemaAsync(ChatsDB db, CancellationToken cancellationToken)
-    {
-        if (!db.Database.IsSqlite())
-        {
-            return;
-        }
-
-        DbConnection connection = db.Database.GetDbConnection();
-        bool shouldClose = connection.State != System.Data.ConnectionState.Open;
-        if (shouldClose)
-        {
-            await connection.OpenAsync(cancellationToken);
-        }
-
-        try
-        {
-            static async Task<bool> TableExistsAsync(DbConnection connection, string tableName, CancellationToken ct)
-            {
-                await using DbCommand command = connection.CreateCommand();
-                command.CommandText = "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = $name LIMIT 1;";
-                DbParameter parameter = command.CreateParameter();
-                parameter.ParameterName = "$name";
-                parameter.Value = tableName;
-                command.Parameters.Add(parameter);
-                object? result = await command.ExecuteScalarAsync(ct);
-                return result != null;
-            }
-
-            bool hasUserConfig = await TableExistsAsync(connection, "UserConfig", cancellationToken);
-            if (!hasUserConfig)
-            {
-                bool hasLegacyUserConfigs = await TableExistsAsync(connection, "UserConfigs", cancellationToken);
-                if (hasLegacyUserConfigs)
-                {
-                    await db.Database.ExecuteSqlRawAsync(
-                        "ALTER TABLE \"UserConfigs\" RENAME TO \"UserConfig\";",
-                        cancellationToken);
-                    Console.WriteLine("Applied SQLite compatibility schema update: renamed UserConfigs to UserConfig.");
-                }
-                else
-                {
-                    await db.Database.ExecuteSqlRawAsync(
-                        "CREATE TABLE IF NOT EXISTS \"UserConfig\" (\"UserId\" INTEGER NOT NULL, \"Key\" TEXT NOT NULL, \"Value\" TEXT NOT NULL, \"Description\" TEXT NULL, CONSTRAINT \"PK_UserConfig\" PRIMARY KEY (\"UserId\", \"Key\"), CONSTRAINT \"FK_UserConfig_User\" FOREIGN KEY (\"UserId\") REFERENCES \"User\" (\"Id\"));",
-                        cancellationToken);
-                    Console.WriteLine("Applied SQLite compatibility schema update: created missing UserConfig table.");
-                }
-            }
-
-            bool hasSourceId = false;
-            await using (DbCommand command = connection.CreateCommand())
-            {
-                command.CommandText = "PRAGMA table_info(\"UserModelUsage\");";
-                await using DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    if (string.Equals(reader.GetString(1), "SourceId", StringComparison.OrdinalIgnoreCase))
-                    {
-                        hasSourceId = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasSourceId)
-            {
-                await db.Database.ExecuteSqlRawAsync(
-                    "ALTER TABLE \"UserModelUsage\" ADD COLUMN \"SourceId\" INTEGER NOT NULL DEFAULT 0;",
-                    cancellationToken);
-                Console.WriteLine("Applied SQLite compatibility schema update: added UserModelUsage.SourceId.");
-            }
-
-            // Backfill historical rows that were defaulted to 0 before SourceId existed.
-            int apiFromApiUsage = await db.Database.ExecuteSqlRawAsync(
-                "UPDATE \"UserModelUsage\" SET \"SourceId\" = 2 WHERE \"SourceId\" = 0 AND EXISTS (SELECT 1 FROM \"UserApiUsage\" uau WHERE uau.\"UsageId\" = \"UserModelUsage\".\"Id\");",
-                cancellationToken);
-
-            int summaryFromTransactions = await db.Database.ExecuteSqlRawAsync(
-                "UPDATE \"UserModelUsage\" SET \"SourceId\" = 3 WHERE \"SourceId\" = 0 AND (EXISTS (SELECT 1 FROM \"BalanceTransaction\" bt WHERE bt.\"Id\" = \"UserModelUsage\".\"BalanceTransactionId\" AND bt.\"TransactionTypeId\" = 5) OR EXISTS (SELECT 1 FROM \"UsageTransaction\" ut WHERE ut.\"Id\" = \"UserModelUsage\".\"UsageTransactionId\" AND ut.\"TransactionTypeId\" = 5));",
-                cancellationToken);
-
-            int apiFromTransactions = await db.Database.ExecuteSqlRawAsync(
-                "UPDATE \"UserModelUsage\" SET \"SourceId\" = 2 WHERE \"SourceId\" = 0 AND (EXISTS (SELECT 1 FROM \"BalanceTransaction\" bt WHERE bt.\"Id\" = \"UserModelUsage\".\"BalanceTransactionId\" AND bt.\"TransactionTypeId\" = 4) OR EXISTS (SELECT 1 FROM \"UsageTransaction\" ut WHERE ut.\"Id\" = \"UserModelUsage\".\"UsageTransactionId\" AND ut.\"TransactionTypeId\" = 4));",
-                cancellationToken);
-
-            int webChatDefaulted = await db.Database.ExecuteSqlRawAsync(
-                "UPDATE \"UserModelUsage\" SET \"SourceId\" = 1 WHERE \"SourceId\" = 0;",
-                cancellationToken);
-
-            int totalBackfilled = apiFromApiUsage + summaryFromTransactions + apiFromTransactions + webChatDefaulted;
-            if (totalBackfilled > 0)
-            {
-                Console.WriteLine($"Backfilled UserModelUsage.SourceId for {totalBackfilled} historical records.");
-            }
-
-            // 检查 Chat 表是否有 IsTemp 列（临时聊天功能）
-            bool hasIsTemp = false;
-            await using (DbCommand command = connection.CreateCommand())
-            {
-                command.CommandText = "PRAGMA table_info(\"Chat\");";
-                await using DbDataReader reader = await command.ExecuteReaderAsync(cancellationToken);
-                while (await reader.ReadAsync(cancellationToken))
-                {
-                    if (string.Equals(reader.GetString(1), "IsTemp", StringComparison.OrdinalIgnoreCase))
-                    {
-                        hasIsTemp = true;
-                        break;
-                    }
-                }
-            }
-
-            if (!hasIsTemp)
-            {
-                await db.Database.ExecuteSqlRawAsync(
-                    "ALTER TABLE \"Chat\" ADD COLUMN \"IsTemp\" INTEGER NOT NULL DEFAULT 0;",
-                    cancellationToken);
-                Console.WriteLine("Applied SQLite compatibility schema update: added Chat.IsTemp.");
-            }
-        }
-        finally
-        {
-            if (shouldClose)
-            {
-                await connection.CloseAsync();
-            }
         }
     }
 

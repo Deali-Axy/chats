@@ -371,9 +371,10 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<RequestTrace>(entity =>
         {
-            entity.HasKey(e => e.Id).IsClustered(false);
+            // Clustered index options are SQL Server-only; SQLite ignores them.
+            entity.HasKey(e => e.Id);
 
-            entity.HasIndex(e => e.StartedAt, "IX_RequestTrace_StartedAt").IsClustered();
+            entity.HasIndex(e => e.StartedAt, "IX_RequestTrace_StartedAt");
 
             entity.Property(e => e.Id).ValueGeneratedNever();
         });

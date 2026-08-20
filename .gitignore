@@ -60,6 +60,10 @@ logs.txt
 /**/chats.db
 /**/chats.db-shm
 /**/chats.db-wal
+/**/chats.design.db
+/**/chats.design.db-shm
+/**/chats.design.db-wal
+/**/chats.db.bak*
 /Publish
 /src/BE/web/AppData/*
 **/bin
