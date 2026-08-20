@@ -32,6 +32,8 @@
     <Project Path="src/BE/tests/Chats.BE.ApiTest/Chats.BE.ApiTest.csproj" />
     <Project Path="src/BE/tests/Chats.BE.UnitTest/Chats.BE.UnitTest.csproj" />
   </Folder>
-  <Folder Name="/tools/" />
+  <Folder Name="/tools/">
+    <Project Path="tools/DataMigration/DataMigration.csproj" />
+  </Folder>
   <Project Path="src/scripts/scripts.csproj" />
 </Solution>
