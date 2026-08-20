@@ -5,6 +5,7 @@ namespace DataMigration.Utilities;
 
 [JsonSourceGenerationOptions(WriteIndented = true)]
 [JsonSerializable(typeof(OutputResult))]
+[JsonSerializable(typeof(EtlReport))]
 internal partial class SourceGenerationContext : JsonSerializerContext
 {
 }

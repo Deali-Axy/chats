@@ -19,6 +19,11 @@
     </ItemGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\..\src\BE\db\Chats.DB.csproj" />
+        <ProjectReference Include="..\..\src\BE\web\Chats.BE.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="dotenv.net" Version="4.0.2"/>
         <PackageReference Include="Dumpify" Version="0.7.0"/>
         <PackageReference Include="EFCore.NamingConventions" Version="10.0.1"/>
