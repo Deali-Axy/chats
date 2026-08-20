@@ -71,7 +71,4 @@ logs.txt
 **/obj
 .claude
 .fake
-eng/Chats.Capture/.state
-eng/Chats.Capture/State/StatePreparationService.cs
-eng/Chats.Capture/Output/*
 **/artifacts

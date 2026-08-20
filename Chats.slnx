@@ -23,10 +23,6 @@
     <File Path=".github/workflows/code-interpreter/skills.md" />
     <File Path=".github/workflows/code-interpreter/smoke-test.sh" />
   </Folder>
-  <Folder Name="/eng/">
-    <Project Path="eng/AzureFileMigrator/AzureFileMigrator.csproj" />
-    <Project Path="eng/Chats.Capture/Chats.Capture.csproj" />
-  </Folder>
   <Folder Name="/src/">
     <Project Path="src/BE/db/Chats.DB.csproj" />
     <Project Path="src/BE/docker/Chats.DockerInterface.csproj" />
@@ -36,5 +32,6 @@
     <Project Path="src/BE/tests/Chats.BE.ApiTest/Chats.BE.ApiTest.csproj" />
     <Project Path="src/BE/tests/Chats.BE.UnitTest/Chats.BE.UnitTest.csproj" />
   </Folder>
+  <Folder Name="/tools/" />
   <Project Path="src/scripts/scripts.csproj" />
 </Solution>
