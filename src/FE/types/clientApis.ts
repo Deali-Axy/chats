@@ -15,6 +15,7 @@ export interface SingInResult {
   sessionId: string;
   username: string;
   role: string;
+  apiKeyEnabled: boolean;
 }
 
 export interface LoginConfigsResult {
@@ -309,10 +310,12 @@ export interface GetChatPresetResult {
   name: string;
   updatedAt: string;
   spans: ChatSpanDto[];
+  isSystem: boolean;
 }
 
 export interface PutChatPresetParams {
   name: string;
+  isSystem?: boolean;
   spans: PutChatPresetSpanParams[];
 }
 
@@ -335,7 +338,7 @@ export interface PutChatPresetSpanParams {
 export interface ChatPresetReorderRequest {
   sourceId: string;
   previousId: string | null; // 新位置的前一个元素
-  nextId: string | null;     // 新位置的后一个元素
+  nextId: string | null; // 新位置的后一个元素
 }
 
 export interface GetUsageParams {
@@ -404,18 +407,26 @@ export interface GetUserFilesResult {
 // MCP related types
 export interface McpToolBasicInfo {
   name: string;
-  description?: string;
-  parameters?: string;
+  title: string | null;
+  description: string | null;
+  parameters: string | null;
+  destructive: boolean;
+  idempotent: boolean;
+  openWorld: boolean;
+  readOnly: boolean;
 }
 
 export interface McpServerListItemDto {
   id: number;
-  label: string;
+  name: string;
+  displayName: string | null;
+  showShortcut: boolean;
 }
 
 export interface McpServerListManagementItemDto {
   id: number;
-  label: string;
+  name: string;
+  displayName: string | null;
   url: string;
   createdAt: string;
   updatedAt: string;
@@ -423,17 +434,22 @@ export interface McpServerListManagementItemDto {
   owner: string;
   editable: boolean;
   assignedUserCount: number;
+  assignedToMe: boolean;
+  showShortcut: boolean;
 }
 
 export interface McpServerDetailsDto extends McpServerListManagementItemDto {
   headers?: string;
+  serverInstructions?: string;
   tools: McpToolBasicInfo[];
 }
 
 export interface UpdateMcpServerRequest {
-  label: string;
+  name: string;
+  displayName?: string | null;
   url: string;
   headers?: string;
+  serverInstructions?: string;
   tools: McpToolBasicInfo[];
 }
 
@@ -442,10 +458,16 @@ export interface FetchToolsRequest {
   headers?: string;
 }
 
+export interface FetchToolsResponse {
+  tools: McpToolBasicInfo[];
+  serverInstructions?: string;
+}
+
 // MCP用户分配相关类型
 export interface AssignedUserInfo {
   id: number;
   customHeaders?: string;
+  showShortcut?: boolean;
 }
 
 export interface AssignUsersToMcpRequest {
@@ -463,6 +485,11 @@ export interface AssignedUserDetailsDto {
   id: number;
   userName: string;
   customHeaders?: string;
+  showShortcut: boolean;
+}
+
+export interface UpdateMyMcpAssignmentRequest {
+  showShortcut: boolean;
 }
 
 export interface AssignedUserNameDto {

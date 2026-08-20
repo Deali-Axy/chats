@@ -7,8 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <!-- SQLite provider; EF Core abstractions come transitively for entity mapping -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.5" />
+    <!-- SQLite only in Ayaka Chats; EF Core comes transitively -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.11" />
   </ItemGroup>
 
 </Project>

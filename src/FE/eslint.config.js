@@ -21,7 +21,10 @@ module.exports = [
     },
   },
   {
-    files: ['hooks/useThrottle.ts', 'components/Markdown/MermaidBlock.tsx'],
+    files: [
+      'hooks/useThrottle.ts',
+      'components/Markdown/MermaidBlock.tsx',
+    ],
     rules: {
       'react-hooks/purity': 'error',
     },

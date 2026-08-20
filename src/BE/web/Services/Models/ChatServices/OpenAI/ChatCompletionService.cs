@@ -79,7 +79,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", modelKey.Secret);
     }
 
-    protected virtual string ReasoningContentPropertyName => "reasoning_content";
+    private static readonly string[] ReasoningContentPropertyNames = ["reasoning_content", "reasoning"];
 
     /// <summary>
     /// Controls how to persist thinking/reasoning content returned from upstream.
@@ -100,8 +100,6 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     /// <summary>
     /// Controls how to persist thinking/reasoning content returned from upstream, with an optional signature.
-    /// Some providers (e.g., MiniMax `reasoning_details`) return structured reasoning payloads that should be
-    /// preserved in history for interleaved thinking.
     /// Default behavior ignores the signature and uses <see cref="TryCreateThinkingSegmentForStorage(string, out ChatSegment?)"/>.
     /// </summary>
     protected virtual bool TryCreateThinkingSegmentForStorage(string thinkingContent, string? thinkingSignature, out ChatSegment? segment)
@@ -121,21 +119,6 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         out string? thinkingContent)
     {
         thinkingContent = null;
-        return false;
-    }
-
-    /// <summary>
-    /// Controls how to send thinking/reasoning content back to upstream in the next request.
-    /// Use this when the upstream expects a structured reasoning payload (e.g., MiniMax `reasoning_details`).
-    /// Default behavior returns false.
-    /// </summary>
-    protected virtual bool TryBuildThinkingNodeForRequest(
-        NeutralMessage message,
-        IReadOnlyList<NeutralThinkContent> thinkingContents,
-        IReadOnlyList<NeutralToolCallContent> toolCalls,
-        out JsonNode? thinkingNode)
-    {
-        thinkingNode = null;
         return false;
     }
 
@@ -166,14 +149,24 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
     private (string? text, string? signature) TryGetThinkingPayload(JsonElement obj)
     {
-        if (!obj.TryGetProperty(ReasoningContentPropertyName, out JsonElement rc))
+        foreach (string propertyName in ReasoningContentPropertyNames)
         {
-            return (null, null);
+            if (!obj.TryGetProperty(propertyName, out JsonElement rc))
+            {
+                continue;
+            }
+
+            string? text = ExtractThinkingText(rc);
+            if (string.IsNullOrEmpty(text))
+            {
+                continue;
+            }
+
+            string? signature = rc.ValueKind is JsonValueKind.Array or JsonValueKind.Object ? rc.GetRawText() : null;
+            return (text, signature);
         }
 
-        string? text = ExtractThinkingText(rc);
-        string? signature = rc.ValueKind is JsonValueKind.Array or JsonValueKind.Object ? rc.GetRawText() : null;
-        return (text, signature);
+        return (null, null);
     }
 
     /// <summary>
@@ -234,13 +227,14 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            throw await RawChatServiceException.CreateAsync(response, cancellationToken);
         }
 
         using Stream stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
         DBFinishReason? finishReason = null;
+        string? responseId = null;
+        bool emittedHostedWebSearch = false;
 
         await foreach (SseItem<string> sseItem in SseParser.Create(stream, (_, bytes) => Encoding.UTF8.GetString(bytes)).EnumerateAsync(cancellationToken))
         {
@@ -254,9 +248,15 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             {
                 json = JsonDocument.Parse(sseItem.Data).RootElement;
             }
+
             catch (JsonException)
             {
                 continue;
+            }
+
+            if (json.TryGetProperty("id", out JsonElement responseIdEl) && responseIdEl.ValueKind == JsonValueKind.String)
+            {
+                responseId = responseIdEl.GetString();
             }
 
             // Parse choices
@@ -277,6 +277,20 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             }
 
             JsonElement delta = TryGetObjectProperty(choice, "delta", out JsonElement d) ? d : default;
+
+            if (delta.ValueKind == JsonValueKind.Object
+                && delta.TryGetProperty("annotations", out JsonElement annotationsEl))
+            {
+                JsonArray hostedResults = ParseHostedWebSearchAnnotations(annotationsEl);
+                if (!emittedHostedWebSearch && hostedResults.Count > 0)
+                {
+                    foreach (ChatSegment segment in CreateHostedWebSearchSegments(responseId, hostedResults))
+                    {
+                        yield return segment;
+                    }
+                    emittedHostedWebSearch = true;
+                }
+            }
 
             // Parse content
             string? content = delta.ValueKind == JsonValueKind.Object && delta.TryGetProperty("content", out JsonElement c) && c.ValueKind == JsonValueKind.String ? c.GetString() : null;
@@ -331,14 +345,16 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             }
 
             List<ChatSegment> items = [];
-            if (!string.IsNullOrEmpty(content))
-            {
-                items.Add(ChatSegment.FromText(content));
-            }
-
+            // Reasoning belongs before the visible answer even when upstream sends both in one delta.
+            // Yield thinking first so the UI does not render content and then append earlier reasoning after it.
             if (!string.IsNullOrEmpty(reasoningContent) && TryCreateThinkingSegmentForStorage(reasoningContent, reasoningSignature, out ChatSegment? thinkSegment) && thinkSegment != null)
             {
                 items.Add(thinkSegment);
+            }
+
+            if (!string.IsNullOrEmpty(content))
+            {
+                items.Add(ChatSegment.FromText(content));
             }
             items.AddRange(toolCallSegments);
 
@@ -447,8 +463,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
 
         if (!response.IsSuccessStatusCode)
         {
-            string errorBody = await response.Content.ReadAsStringAsync(cancellationToken);
-            throw new RawChatServiceException((int)response.StatusCode, errorBody);
+            throw await RawChatServiceException.CreateAsync(response, cancellationToken);
         }
 
         string jsonResponse = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -463,21 +478,39 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         {
             if (TryGetObjectProperty(choice, "message", out JsonElement message))
             {
+                if (message.TryGetProperty("annotations", out JsonElement annotationsEl))
+                {
+                    JsonArray hostedResults = ParseHostedWebSearchAnnotations(annotationsEl);
+                    if (hostedResults.Count > 0)
+                    {
+                        string? responseId = root.TryGetProperty("id", out JsonElement responseIdEl)
+                            && responseIdEl.ValueKind == JsonValueKind.String
+                            ? responseIdEl.GetString()
+                            : null;
+                        items.AddRange(CreateHostedWebSearchSegments(responseId, hostedResults));
+                    }
+                }
+
+                string? text = null;
+
                 // Content
                 if (message.TryGetProperty("content", out JsonElement content) && content.ValueKind == JsonValueKind.String)
                 {
-                    string? text = content.GetString();
-                    if (!string.IsNullOrEmpty(text))
-                    {
-                        items.Add(ChatSegment.FromText(text));
-                    }
+                    text = content.GetString();
                 }
 
                 // Reasoning content
                 (string? reasoning, string? reasoningSignature) = TryGetThinkingPayload(message);
+                // Reasoning belongs before the visible answer even when upstream sends both in one message.
+                // Yield thinking first so the UI does not render content and then append earlier reasoning after it.
                 if (!string.IsNullOrEmpty(reasoning) && TryCreateThinkingSegmentForStorage(reasoning, reasoningSignature, out ChatSegment? thinkSegment) && thinkSegment != null)
                 {
                     items.Add(thinkSegment);
+                }
+
+                if (!string.IsNullOrEmpty(text))
+                {
+                    items.Add(ChatSegment.FromText(text));
                 }
 
                 // Tool calls
@@ -505,6 +538,7 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
                         });
                     }
                 }
+
             }
 
             // Finish reason
@@ -611,6 +645,34 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
         }
 
         return body;
+    }
+
+    protected virtual JsonArray ParseHostedWebSearchAnnotations(JsonElement annotations)
+    {
+        return [];
+    }
+
+    private static IEnumerable<ChatSegment> CreateHostedWebSearchSegments(string? responseId, JsonArray results)
+    {
+        string callId = $"web_search_{responseId ?? "response"}";
+        yield return new ToolCallSegment
+        {
+            Index = 100000,
+            Id = callId,
+            Name = "web_search_call",
+            IsCompleted = true,
+            Arguments = new JsonObject
+            {
+                ["type"] = "web_search_call",
+                ["status"] = "completed",
+                ["action"] = new JsonObject { ["type"] = "search" },
+            }.ToJsonString(JSON.JsonSerializerOptions),
+        };
+        yield return ChatSegment.FromToolCallResponse(
+            callId,
+            results.ToJsonString(JSON.JsonSerializerOptions),
+            0,
+            true);
     }
 
     private static JsonArray BuildFunctionToolsArray(IEnumerable<ChatTool> tools)
@@ -751,13 +813,9 @@ public partial class ChatCompletionService(IHttpClientFactory httpClientFactory)
             msg["tool_calls"] = toolCallsArray;
         }
 
-        if (TryBuildThinkingNodeForRequest(message, thinkingContents, toolCalls, out JsonNode? thinkingNode) && thinkingNode != null)
+        if (TryBuildThinkingContentForRequest(message, thinkingContents, toolCalls, out string? thinkingContent) && !string.IsNullOrEmpty(thinkingContent))
         {
-            msg[ReasoningContentPropertyName] = thinkingNode;
-        }
-        else if (TryBuildThinkingContentForRequest(message, thinkingContents, toolCalls, out string? thinkingContent) && !string.IsNullOrEmpty(thinkingContent))
-        {
-            msg[ReasoningContentPropertyName] = thinkingContent;
+            msg["reasoning_content"] = thinkingContent;
         }
 
         return msg;

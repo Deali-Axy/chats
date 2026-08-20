@@ -18,8 +18,8 @@ using ModelContextProtocol;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 using Chats.BE.Services.Models.ChatServices.OpenAI;
+using Chats.BE.Services.Models.ChatServices.Anthropic;
 using System.Diagnostics;
-using System.Security.Cryptography;
 using System.Text.Json;
 using System.Threading.Channels;
 using EmptyResult = Microsoft.AspNetCore.Mvc.EmptyResult;
@@ -28,16 +28,41 @@ using DBFile = Chats.DB.File;
 using Chats.DB.Enums;
 using Chats.BE.DB.Extensions;
 using Chats.BE.Services.CodeInterpreter;
+using Chats.BE.Services.Mcp;
 using Chats.BE.Services.Options;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
+using Chats.BE.Services.UserContext;
 using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Chats.Chats;
 
 [Route("api/chats"), Authorize]
-public class ChatController(ChatStopService stopService, ClientInfoManager clientInfoManager, IHttpClientFactory httpClientFactory, ILoggerFactory loggerFactory) : ControllerBase
+public class ChatController(
+    ChatStopService stopService,
+    ClientInfoManager clientInfoManager,
+    IHttpClientFactory httpClientFactory,
+    ILoggerFactory loggerFactory,
+    McpToolExecutionPlanner mcpToolExecutionPlanner,
+    McpToolExecutionService mcpToolExecutionService) : ControllerBase
 {
+    private sealed record ResolvedToolCall(
+        int Index,
+        string ToolCallId,
+        string ExposedName,
+        string Parameters,
+        ToolExecutionKind Kind,
+        bool ReadOnly,
+        McpToolExecutionRequest? McpRequest);
+
+    private sealed record ExecutedToolCall(
+        int Index,
+        string ToolCallId,
+        bool IsSuccess,
+        string Result,
+        int DurationMs,
+        IReadOnlyList<StepContent> Artifacts);
+
     [HttpPost("regenerate-assistant-message")]
     public async Task<IActionResult> RegenerateOneMessage(
         [FromBody] EncryptedRegenerateAssistantMessageRequest req,
@@ -268,6 +293,44 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
         LinkedList<ChatTurn> messageTreeNoContent = GetMessageTree(existingMessages, req.LastMessageId);
         Step[] messageTree = await FillContents(messageTreeNoContent, db, cancellationToken);
+
+        if (newDbUserTurn != null)
+        {
+            DateTime utcNow = DateTime.UtcNow;
+            TimeSpan userOffset = TimeSpan.FromMinutes(-req.TimezoneOffset);
+            DateTimeOffset userLocalTime = new DateTimeOffset(utcNow, TimeSpan.Zero).ToOffset(userOffset);
+
+            List<UserContextContribution> contributions = [.. toGenerateSpans.Select(span =>
+                new UserContextContribution(
+                    "model",
+                    userModels[span.ChatConfig.ModelId].Model.CurrentSnapshot.Name,
+                    [span.SpanId]))];
+            byte[] codeInterpreterSpanIds = [.. toGenerateSpans
+                .Where(x => x.ChatConfig.CodeExecutionEnabled)
+                .Select(x => x.SpanId)
+                .Distinct()
+                .Order()];
+
+            if (codeInterpreterSpanIds.Length > 0)
+            {
+                IEnumerable<ChatTurn> contextTurns = messageTreeNoContent.Append(newDbUserTurn);
+                string? codeInterpreterContext = CodeInterpreterExecutor.BuildCodeInterpreterContextPrefix(contextTurns, utcNow);
+                if (!string.IsNullOrWhiteSpace(codeInterpreterContext))
+                {
+                    contributions.Add(new UserContextContribution(
+                        "code_interpreter",
+                        codeInterpreterContext,
+                        codeInterpreterSpanIds));
+                }
+            }
+
+            StepContentText primaryText = newDbUserTurn.Steps
+                .SelectMany(x => x.StepContents)
+                .Where(x => x.ContentType == DBStepContentType.Text)
+                .Select(x => x.StepContentText!)
+                .First();
+            primaryText.ContextTemplate = UserContextTemplate.Build(userLocalTime, contributions);
+        }
 
         Response.Headers.ContentType = "text/event-stream";
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
@@ -501,66 +564,52 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         // Combine message tree and user message steps, then convert to neutral format
         List<Step> allSteps = [.. messageTree, .. dbUserMessage?.Steps ?? []];
 
-        // Include dbUserMessage in the turns for CollectActiveSessions to find dangling sessions bound to it
-        IEnumerable<ChatTurn> allTurns = dbUserMessage != null
-            ? messageTurns.Append(dbUserMessage)
-            : messageTurns;
-
         bool codeExecutionEnabled = chatSpan.ChatConfig.CodeExecutionEnabled;
 
-        string? ciPrefix = codeExecutionEnabled
-            ? codeInterpreter.BuildCodeInterpreterContextPrefix(allTurns)
-            : null;
-
         IReadOnlyList<Step> filteredHistorySteps = RemoveNonMatchingHistoricalTurnThinkingBlocks(messageTurns, userModel.ModelId);
-        IList<NeutralMessage> neutralMessages = CodeInterpreterContextMessageBuilder.BuildMessages(
-            historySteps: filteredHistorySteps,
-            currentRoundSteps: dbUserMessage?.Steps ?? [],
-            codeExecutionEnabled: codeExecutionEnabled,
-            contextPrefix: ciPrefix);
+        IList<NeutralMessage> neutralMessages = filteredHistorySteps
+            .Concat(dbUserMessage?.Steps ?? [])
+            .ToNeutral(chatSpan.SpanId);
+        NeutralSystemMessage? systemMessage = chatSpan.ChatConfig.CodeExecutionEnabled
+            ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
+            : string.IsNullOrWhiteSpace(chatSpan.ChatConfig.SystemPrompt)
+                ? null
+                : NeutralSystemMessage.FromText(chatSpan.ChatConfig.SystemPrompt);
+        McpServer[] enabledMcpServers = [.. chatSpan.ChatConfig.ChatConfigMcps
+            .Select(x => x.McpServer)
+            .DistinctBy(x => x.Id)];
+        systemMessage = McpServerInstructionsBuilder.MergeSystemMessage(
+            systemMessage,
+            enabledMcpServers);
+
         ChatRequest csr = new()
         {
             EndUserId = $"{chat.Id}-{chatSpan.SpanId}",
             Messages = neutralMessages,
             ChatConfig = chatSpan.ChatConfig,
-            System = chatSpan.ChatConfig.CodeExecutionEnabled
-                ? codeInterpreter.BuildSystemMessage(chatSpan.ChatConfig.SystemPrompt)
-                : null,
+            System = systemMessage,
             Tools = [],
             Source = UsageSource.WebChat,
         };
 
-        // Build a name mapping for tools to avoid collisions while keeping names clean
-        Dictionary<string, (int serverId, string originalToolName)> toolNameMap = new(StringComparer.Ordinal);
-        HashSet<string> usedToolNames = new(StringComparer.Ordinal);
+        // Build a stable name mapping for tools to avoid collisions while keeping names clean.
+        Dictionary<string, McpTool> toolNameMap = new(StringComparer.Ordinal);
+        string[] reservedToolNames = codeExecutionEnabled ? CodeInterpreterExecutor.ToolNames : [];
 
         if (codeExecutionEnabled)
         {
-            // Reserve CI tool names to avoid collisions with MCP tools.
-            foreach (string n in CodeInterpreterExecutor.ToolNames)
-            {
-                usedToolNames.Add(n);
-            }
             codeInterpreter.AddTools(csr.Tools, chatSpan.ChatConfig.Model.CurrentSnapshot.AllowVision);
         }
-        foreach (McpTool tool in chatSpan.ChatConfig.ChatConfigMcps.SelectMany(x => x.McpServer.McpTools))
+        IReadOnlyList<McpToolNameMapping> mcpToolMappings = McpToolNameMapper.Build(
+            enabledMcpServers.SelectMany(x => x.McpTools),
+            reservedToolNames);
+        foreach (McpToolNameMapping mapping in mcpToolMappings)
         {
-            string finalName = tool.ToolName;
-            if (!usedToolNames.Add(finalName))
-            {
-                // Duplicate detected, generate a non-digit-leading 8-char random prefix
-                string prefix;
-                do
-                {
-                    prefix = GenerateAlphaFirstToken(8);
-                    finalName = prefix + "_" + tool.ToolName;
-                } while (!usedToolNames.Add(finalName));
-            }
-
-            toolNameMap[finalName] = (tool.McpServerId, tool.ToolName);
+            McpTool tool = mapping.Tool;
+            toolNameMap[mapping.ExposedName] = tool;
             csr.Tools.Add(new FunctionTool
             {
-                FunctionName = finalName,
+                FunctionName = mapping.ExposedName,
                 FunctionDescription = tool.Description,
                 FunctionParameters = tool.Parameters,
             });
@@ -606,64 +655,70 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
             bool hasUnfinishedToolCalls = TryGetUnfinishedToolCall(step, out List<StepContentToolCall> unfinishedToolCalls);
 
+            List<ResolvedToolCall> resolvedCalls = [];
+            for (int index = 0; index < unfinishedToolCalls.Count; index++)
+            {
+                StepContentToolCall call = unfinishedToolCalls[index];
+                string callName = call.Name ?? throw new InvalidOperationException("Tool call name is null");
+                string callId = call.ToolCallId ?? throw new InvalidOperationException("Tool call id is null");
+                string parameters = call.Parameters ?? "{}";
+
+                if (codeExecutionEnabled && codeInterpreter.IsCodeInterpreterTool(callName))
+                {
+                    resolvedCalls.Add(new(index, callId, callName, parameters, ToolExecutionKind.CodeInterpreter, false, null));
+                    continue;
+                }
+
+                if (!toolNameMap.TryGetValue(callName, out McpTool? tool))
+                {
+                    resolvedCalls.Add(new(index, callId, callName, parameters, ToolExecutionKind.Unknown, false, null));
+                    continue;
+                }
+
+                call.DisplayName = tool.Title ?? tool.ToolName;
+                McpServer server = tool.McpServer;
+                UserMcp userMcp = userMcps.FirstOrDefault(x => x.McpServerId == server.Id)
+                    ?? throw new InvalidOperationException($"UserMcp not found for server id: {server.Id}");
+                string? chatConfigHeaders = chatSpan.ChatConfig.ChatConfigMcps
+                    .FirstOrDefault(x => x.McpServerId == server.Id)?.CustomHeaders;
+                Dictionary<string, string> headers = MergeHeaders(
+                    logger,
+                    server.Headers,
+                    userMcp.CustomHeaders,
+                    chatConfigHeaders);
+                McpToolExecutionRequest executionRequest = new(
+                    server.Id,
+                    server.Name,
+                    server.Url,
+                    headers,
+                    tool.ToolName,
+                    parameters,
+                    tool.Idempotent);
+                resolvedCalls.Add(new(index, callId, callName, parameters, ToolExecutionKind.Mcp, tool.ReadOnly, executionRequest));
+            }
+
             WriteStep(step);
 
             if (hasUnfinishedToolCalls)
             {
-                foreach (StepContentToolCall call in unfinishedToolCalls)
+                await using McpToolExecutionScope mcpExecutionScope = mcpToolExecutionService.CreateScope();
+                IReadOnlyList<ToolExecutionBatch<ResolvedToolCall>> batches = mcpToolExecutionPlanner.Plan(
+                    resolvedCalls.Select(x => new ToolExecutionPlanItem<ResolvedToolCall>(x, x.Kind, x.ReadOnly)));
+                foreach (ToolExecutionBatch<ResolvedToolCall> batch in batches)
                 {
-                    string callName = call.Name ?? throw new InvalidOperationException("Tool call name is null");
-
-                    if (codeExecutionEnabled && codeInterpreter.IsCodeInterpreterTool(callName))
+                    ExecutedToolCall[] completed;
+                    if (batch.IsParallel)
                     {
-                        Stopwatch ciSw = Stopwatch.StartNew();
-                        bool completedSuccess = false;
-                        string completedResult = "Tool did not produce completion";
+                        completed = await Task.WhenAll(batch.Items.Select(x => ExecuteMcpCall(x.Value, mcpExecutionScope)));
+                    }
+                    else
+                    {
+                        completed = [await ExecuteCall(batch.Items[0].Value, mcpExecutionScope)];
+                    }
 
-                        await foreach (ToolProgressDelta delta in codeInterpreter.ExecuteToolCallAsync(
-                            ciCtx!,
-                            call.ToolCallId!,
-                            callName,
-                            call.Parameters ?? "{}",
-                            cancellationToken))
-                        {
-                            if (delta is ToolCompletedToolProgressDelta done)
-                            {
-                                completedSuccess = done.Result.IsSuccess;
-                                completedResult = done.Result.IsSuccess ? done.Result.Value : done.Result.Error!;
-                                writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, completedSuccess, call.ToolCallId!, completedResult));
-                            }
-                            else
-                            {
-                                writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, delta));
-                            }
-                        }
-
-                        string ciResult = completedResult;
-                        ciSw.Stop();
-
-                        // Drain any artifacts produced by this tool call and upload via controller thread.
-                        List<StepContent> artifactStepContents = [];
-                        foreach (CodeInterpreterExecutor.PendingFileArtifact a in codeInterpreter.DrainPendingArtifacts(ciCtx!))
-                        {
-                            string token = $"{chatSpan.SpanId}_{Guid.NewGuid():N}";
-                            TaskCompletionSource<DBFile> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
-                            fileCache[token] = tcs;
-
-                            writer.TryWrite(new TempFileGeneratedLine(chatSpan.SpanId, token, a.FileName, a.ContentType, a.Bytes));
-
-                            try
-                            {
-                                DBFile f = await tcs.Task;
-                                artifactStepContents.Add(StepContent.FromFile(f));
-                            }
-                            catch (Exception ex)
-                            {
-                                logger.LogWarning(ex, "Failed to store generated file artifact: {fileName}", a.FileName);
-                            }
-                        }
-
-                        WriteStep(new Step()
+                    foreach (ExecutedToolCall result in completed.OrderBy(x => x.Index))
+                    {
+                        WriteStep(new Step
                         {
                             Turn = turn,
                             ChatRoleId = (byte)DBChatRole.ToolCall,
@@ -671,139 +726,20 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                             Edited = false,
                             StepContents =
                             [
-                                new StepContent()
+                                new StepContent
                                 {
-                                    StepContentToolCallResponse = new()
+                                    StepContentToolCallResponse = new StepContentToolCallResponse
                                     {
-                                        ToolCallId = call.ToolCallId,
-                                        Response = ciResult,
-                                        DurationMs = (int)ciSw.ElapsedMilliseconds,
-                                        IsSuccess = completedSuccess,
+                                        ToolCallId = result.ToolCallId,
+                                        Response = result.Result,
+                                        DurationMs = result.DurationMs,
+                                        IsSuccess = result.IsSuccess,
                                     },
                                     ContentTypeId = (byte)DBStepContentType.ToolCallResponse,
                                 },
-                                .. artifactStepContents
+                                .. result.Artifacts,
                             ],
                         });
-
-                        continue;
-                    }
-
-                    if (!toolNameMap.TryGetValue(callName, out (int serverId, string originalToolName) mapped))
-                    {
-                        throw new InvalidOperationException($"Tool name not found in map: {callName}");
-                    }
-                    int serverId = mapped.serverId;
-                    string toolName = mapped.originalToolName;
-
-                    McpServer mcpServer = chatSpan.ChatConfig.ChatConfigMcps
-                        .Where(x => x.McpServerId == serverId)
-                        .Select(x => x.McpServer)
-                        .FirstOrDefault() ?? throw new InvalidOperationException($"MCP Server not found for id: {serverId}");
-                    UserMcp userMcp = userMcps.FirstOrDefault(x => x.McpServerId == mcpServer.Id)
-                        ?? throw new InvalidOperationException($"UserMcp not found for server id: {mcpServer.Id}");
-                    Dictionary<string, string> headers = MergeHeaders(
-                        mcpServer.Headers,
-                        userMcp.CustomHeaders,
-                        chatSpan.ChatConfig.ChatConfigMcps.FirstOrDefault(x => x.McpServerId == mcpServer.Id)?.CustomHeaders);
-
-                    logger.LogInformation("Using MCP Server {mcpServer.Label} ({mcpServer.Url}) for tool call {call.Name} with headers: {headers}",
-                        mcpServer.Label, mcpServer.Url, call.Name, headers);
-                    Stopwatch sw = Stopwatch.StartNew();
-                    McpClient mcpClient = await McpClient.CreateAsync(new HttpClientTransport(new HttpClientTransportOptions
-                    {
-                        Endpoint = new Uri(mcpServer.Url),
-                        AdditionalHeaders = headers,
-                    }, httpClientFactory.CreateClient(HttpClientNames.ChatControllerMcp), loggerFactory, ownsHttpClient: true), cancellationToken: cancellationToken);
-
-                    logger.LogInformation("{mcpServer.Label} connected, elapsed={elapsed}ms, Calling tool: {toolName}, parameters: {call.Parameters}",
-                        mcpServer.Label, sw.ElapsedMilliseconds, toolName, call.Parameters);
-
-                    (bool isSuccess, string toolResult) = await CallMcp(cancellationToken);
-                    logger.LogInformation("Tool {call.Name} completed, success: {success}, result: {result}", call.Name, isSuccess, toolResult);
-                    writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, true, call.ToolCallId!, toolResult));
-                    WriteStep(new Step()
-                    {
-                        Turn = turn,
-                        ChatRoleId = (byte)DBChatRole.ToolCall,
-                        CreatedAt = DateTime.UtcNow,
-                        Edited = false,
-                        StepContents =
-                        [
-                            new StepContent()
-                            {
-                                StepContentToolCallResponse = new()
-                                {
-                                    ToolCallId = call.ToolCallId,
-                                    Response = toolResult,
-                                    DurationMs = (int)sw.ElapsedMilliseconds,
-                                    IsSuccess = isSuccess,
-                                },
-                                ContentTypeId = (byte)DBStepContentType.ToolCallResponse,
-                            }
-                        ],
-                    });
-
-                    async Task<(bool success, string result)> CallMcp(CancellationToken cancellationToken)
-                    {
-                        try
-                        {
-                            CallToolResult result = await mcpClient.CallToolAsync(toolName, JsonSerializer.Deserialize<Dictionary<string, object?>>(call.Parameters!), new ProgressReporter(pnv =>
-                            {
-                                logger.LogInformation("Tool {call.Name} progress: {pnv.Message}", call.Name, pnv.Message);
-                                try
-                                {
-                                    ToolProgressDelta delta = JsonSerializer.Deserialize<ToolProgressDelta>(pnv.Message!)!;
-                                    if (delta is ToolCompletedToolProgressDelta done)
-                                    {
-                                        throw new Exception("ToolCompletedToolProgressDelta in mcp tool call is not supported!");
-                                    }
-
-                                    writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId!, delta));
-                                }
-                                catch (JsonException)
-                                {
-                                    // ignore invalid progress delta
-                                    return;
-                                }
-                            }), cancellationToken: cancellationToken);
-                            return (result.IsError switch
-                            {
-                                null => true,
-                                _ => !result.IsError.Value
-                            }, string.Join("\n", result.Content.OfType<TextContentBlock>().Select(x => x.Text)));
-                        }
-                        catch (McpException e)
-                        {
-                            return (false, e.Message);
-                        }
-                    }
-
-                    Dictionary<string, string> MergeHeaders(params string?[] headers)
-                    {
-                        Dictionary<string, string> result = [];
-
-                        foreach (string? header in headers)
-                        {
-                            if (string.IsNullOrWhiteSpace(header)) continue;
-                            try
-                            {
-                                Dictionary<string, string>? dict = JsonSerializer.Deserialize<Dictionary<string, string>>(header);
-                                if (dict != null)
-                                {
-                                    foreach (KeyValuePair<string, string> kv in dict)
-                                    {
-                                        result[kv.Key] = kv.Value;
-                                    }
-                                }
-                            }
-                            catch (JsonException)
-                            {
-                                logger.LogWarning("Invalid MCP header JSON: {header}", header);
-                            }
-                        }
-
-                        return result;
                     }
                 }
             }
@@ -811,6 +747,122 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             {
                 break;
             }
+        }
+
+        async Task<ExecutedToolCall> ExecuteCall(ResolvedToolCall call, McpToolExecutionScope mcpExecutionScope)
+        {
+            return call.Kind switch
+            {
+                ToolExecutionKind.Mcp => await ExecuteMcpCall(call, mcpExecutionScope),
+                ToolExecutionKind.CodeInterpreter => await ExecuteCodeInterpreterCall(call),
+                _ => CompleteUnknownCall(call),
+            };
+        }
+
+        async Task<ExecutedToolCall> ExecuteMcpCall(
+            ResolvedToolCall call,
+            McpToolExecutionScope mcpExecutionScope)
+        {
+            McpToolExecutionRequest request = call.McpRequest
+                ?? throw new InvalidOperationException("Resolved MCP call has no execution request");
+            logger.LogInformation(
+                "Calling MCP Server {ServerName} ({ServerUrl}) tool {ToolName}",
+                request.ServerName,
+                request.ServerUrl,
+                request.ToolName);
+            McpToolExecutionResult result = await mcpToolExecutionService.ExecuteAsync(
+                mcpExecutionScope,
+                request,
+                delta => writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId, delta)),
+                cancellationToken);
+            logger.LogInformation(
+                "MCP tool {ExposedName} completed, success={Success}, attempts={Attempts}, duration={DurationMs}ms",
+                call.ExposedName,
+                result.IsSuccess,
+                result.Attempts,
+                result.DurationMs);
+            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, result.IsSuccess, call.ToolCallId, result.Result));
+            return new(call.Index, call.ToolCallId, result.IsSuccess, result.Result, result.DurationMs, []);
+        }
+
+        async Task<ExecutedToolCall> ExecuteCodeInterpreterCall(ResolvedToolCall call)
+        {
+            Stopwatch stopwatch = Stopwatch.StartNew();
+            bool success = false;
+            string result = "Tool did not produce completion";
+            await foreach (ToolProgressDelta delta in codeInterpreter.ExecuteToolCallAsync(
+                ciCtx!,
+                call.ToolCallId,
+                call.ExposedName,
+                call.Parameters,
+                cancellationToken))
+            {
+                if (delta is ToolCompletedToolProgressDelta done)
+                {
+                    success = done.Result.IsSuccess;
+                    result = done.Result.IsSuccess ? done.Result.Value : done.Result.Error!;
+                }
+                else
+                {
+                    writer.TryWrite(new ToolProgressLine(chatSpan.SpanId, call.ToolCallId, delta));
+                }
+            }
+
+            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, success, call.ToolCallId, result));
+            List<StepContent> artifacts = [];
+            foreach (CodeInterpreterExecutor.PendingFileArtifact artifact in codeInterpreter.DrainPendingArtifacts(ciCtx!))
+            {
+                string token = $"{chatSpan.SpanId}_{Guid.NewGuid():N}";
+                TaskCompletionSource<DBFile> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
+                fileCache[token] = tcs;
+                writer.TryWrite(new TempFileGeneratedLine(
+                    chatSpan.SpanId,
+                    token,
+                    artifact.FileName,
+                    artifact.ContentType,
+                    artifact.Bytes));
+                try
+                {
+                    artifacts.Add(StepContent.FromFile(await tcs.Task));
+                }
+                catch (Exception ex)
+                {
+                    logger.LogWarning(ex, "Failed to store generated file artifact: {FileName}", artifact.FileName);
+                }
+            }
+
+            return new(call.Index, call.ToolCallId, success, result, (int)stopwatch.ElapsedMilliseconds, artifacts);
+        }
+
+        ExecutedToolCall CompleteUnknownCall(ResolvedToolCall call)
+        {
+            string result = $"Unknown tool: {call.ExposedName}";
+            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, false, call.ToolCallId, result));
+            return new(call.Index, call.ToolCallId, false, result, 0, []);
+        }
+
+        static Dictionary<string, string> MergeHeaders(ILogger logger, params string?[] sources)
+        {
+            Dictionary<string, string> result = [];
+            foreach (string? source in sources)
+            {
+                if (string.IsNullOrWhiteSpace(source)) continue;
+                try
+                {
+                    Dictionary<string, string>? values = JsonSerializer.Deserialize<Dictionary<string, string>>(source);
+                    if (values is null) continue;
+                    foreach (KeyValuePair<string, string> value in values)
+                    {
+                        result[value.Key] = value.Value;
+                    }
+                }
+                catch (JsonException)
+                {
+                    logger.LogWarning("Invalid MCP header JSON: {Header}", source);
+                }
+            }
+
+            return result;
         }
 
         static bool TryGetUnfinishedToolCall(Step step, out List<StepContentToolCall> toolCall)
@@ -840,7 +892,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
 
         void WriteStep(Step step)
         {
-            csr.Messages.Add(step.ToNeutral());
+            csr.Messages.Add(step.ToNeutral(chatSpan.SpanId));
             writer.TryWrite(new EndStepInternal(chatSpan.SpanId, step));
         }
 
@@ -849,6 +901,7 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
             string? errorText = null;
             bool responseStated = false;
             bool reasoningStarted = false;
+            HashSet<string> hostedWebSearchCallIds = new(StringComparer.Ordinal);
             ChatRunResult runResult = await chatRunService.RunAsync(
                 new ChatRunRequest
                 {
@@ -881,10 +934,34 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
                             {
                                 responseStated = true;
                             }
-                            writer.TryWrite(new CallingToolLine(chatSpan.SpanId, toolCall.Id!, toolCall.Name!, toolCall.Arguments!));
+                            string toolArguments = toolCall.Arguments!;
+                            if (toolCall.Name == DeepSeekHostedWebSearch.InternalToolName
+                                && toolCall.Id != null
+                                && DeepSeekHostedWebSearch.TryCreatePresentationCall(toolArguments, out string presentationCall))
+                            {
+                                hostedWebSearchCallIds.Add(toolCall.Id);
+                                toolArguments = presentationCall;
+                            }
+                            string? displayName = toolCall.Name is not null
+                                && toolNameMap.TryGetValue(toolCall.Name, out McpTool? streamedMcpTool)
+                                ? streamedMcpTool.Title ?? streamedMcpTool.ToolName
+                                : null;
+                            writer.TryWrite(new CallingToolLine(
+                                chatSpan.SpanId,
+                                toolCall.Id!,
+                                toolCall.Name!,
+                                toolArguments,
+                                displayName,
+                                toolCall.IsCompleted));
                             break;
                         case ToolCallResponseSegment toolCallResponse:
-                            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolCallResponse.Response!));
+                            string toolResponse = toolCallResponse.Response!;
+                            if (hostedWebSearchCallIds.Contains(toolCallResponse.ToolCallId)
+                                && DeepSeekHostedWebSearch.TryCreatePresentationResponse(toolResponse, out string presentationResponse))
+                            {
+                                toolResponse = presentationResponse;
+                            }
+                            writer.TryWrite(new ToolCompletedLine(chatSpan.SpanId, toolCallResponse.IsSuccess, toolCallResponse.ToolCallId!, toolResponse));
                             break;
                         case Base64PreviewImage preview:
                             writer.TryWrite(new FileGeneratingLine(chatSpan.SpanId, preview.ToTempFileDto()));
@@ -1080,18 +1157,4 @@ public class ChatController(ChatStopService stopService, ClientInfoManager clien
         }
     }
 
-    private static string GenerateAlphaFirstToken(int length)
-    {
-        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(length);
-        const string letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-        const string alphanum = letters + "0123456789";
-
-        Span<char> buffer = stackalloc char[length];
-        buffer[0] = letters[RandomNumberGenerator.GetInt32(letters.Length)];
-        for (int i = 1; i < length; i++)
-        {
-            buffer[i] = alphanum[RandomNumberGenerator.GetInt32(alphanum.Length)];
-        }
-        return new string(buffer);
-    }
 }

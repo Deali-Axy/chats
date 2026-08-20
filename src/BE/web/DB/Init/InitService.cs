@@ -10,7 +10,8 @@ namespace Chats.BE.DB.Init;
 
 public class InitService(IServiceScopeFactory scopeFactory)
 {
-    public const string DefaultPrompt = "You are an AI assistant named Ayaka Chats. Please follow user instructions carefully and respond accordingly. Current date: {{CURRENT_DATE}}";
+    // Ayaka branding; no {{...}} variables (removed upstream in 1.15).
+    public const string DefaultPrompt = "You are an AI assistant named Ayaka Chats. Please follow user instructions carefully and respond accordingly.";
 
     public async Task Init(CancellationToken cancellationToken = default)
     {
@@ -86,6 +87,7 @@ public class InitService(IServiceScopeFactory scopeFactory)
             CreatedAt = now,
             PasswordHash = scope.ServiceProvider.GetRequiredService<PasswordHasher>().HashPassword("RESET!!!"),
             Enabled = true,
+            ApiKeyEnabled = true,
             Role = "admin",
             UpdatedAt = now,
             UserModels =

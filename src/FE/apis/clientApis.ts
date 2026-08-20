@@ -1,5 +1,7 @@
 import { createFetchClient } from '@/hooks/createFetchClient';
 
+import { getTz } from '@/utils/date';
+
 import { AdminModelDto, PostPromptParams } from '@/types/adminApis';
 import {
   FileDef,
@@ -9,8 +11,14 @@ import {
 } from '@/types/chat';
 import { IChatMessage, IStepGenerateInfo } from '@/types/chatMessage';
 import {
-  ChatResult,
+  AssignUsersToMcpRequest,
+  AssignedUserDetailsDto,
+  AssignedUserNameDto,
   ChatPresetReorderRequest,
+  ChatResult,
+  ChatSpanDto,
+  FetchToolsRequest,
+  FetchToolsResponse,
   GetBalance7DaysUsageResult,
   GetChatPresetResult,
   GetChatShareResult,
@@ -22,9 +30,13 @@ import {
   GetUserApiKeyResult,
   GetUserBalanceResult,
   GetUserChatGroupWithMessagesResult as GetUserChatGroupWithChatsResult,
-  GetUserFilesResult,
   GetUserFilesParams,
+  GetUserFilesResult,
   LoginConfigsResult,
+  McpServerDetailsDto,
+  McpServerListItemDto,
+  McpServerListManagementItemDto,
+  McpToolBasicInfo,
   ModelUsageDto,
   PostChatGroupParams,
   PostChatParams,
@@ -41,27 +53,19 @@ import {
   PutResponseMessageEditInPlaceParams,
   SingInParams,
   SingInResult,
-  McpServerListItemDto,
-  McpServerDetailsDto,
-  UpdateMcpServerRequest,
-  FetchToolsRequest,
-  McpToolBasicInfo,
-  McpServerListManagementItemDto,
-  AssignUsersToMcpRequest,
-  TitleSummarySettingsDto,
-  TitleSummaryDefaultTemplateDto,
   TitleSummaryConfig,
   ChatTitleSummaryResult,
+  TitleSummaryDefaultTemplateDto,
+  TitleSummarySettingsDto,
   UnassignedUserDto,
-  AssignedUserDetailsDto,
-  AssignedUserNameDto,
+  UpdateMcpServerRequest,
+  UpdateMyMcpAssignmentRequest,
 } from '@/types/clientApis';
 import { SiteInfoConfig } from '@/types/config';
 import { IChatGroup } from '@/types/group';
 import { PageResult } from '@/types/page';
 import { Prompt, PromptSlim } from '@/types/prompt';
 import { SmsType } from '@/types/user';
-import { getTz } from '@/utils/date';
 
 export const changeUserPassword = (params: PostUserPassword) => {
   const fetchService = createFetchClient();
@@ -88,7 +92,11 @@ export const getStepGenerateInfo = (
   stepId: string,
 ): Promise<IStepGenerateInfo | null> => {
   const fetchService = createFetchClient();
-  return fetchService.get<IStepGenerateInfo>(`/api/messages/${chatId}/step/${stepId}/generate-info`).catch(() => null);
+  return fetchService
+    .get<IStepGenerateInfo>(
+      `/api/messages/${chatId}/step/${stepId}/generate-info`,
+    )
+    .catch(() => null);
 };
 
 export const getSharedTurnGenerateInfo = (
@@ -106,9 +114,11 @@ export const getSharedStepGenerateInfo = (
   stepId: string,
 ): Promise<IStepGenerateInfo | null> => {
   const fetchService = createFetchClient();
-  return fetchService.get<IStepGenerateInfo>(
-    `/api/public/chat-share/${chatShareId}/step/${stepId}/generate-info`,
-  ).catch(() => null);
+  return fetchService
+    .get<IStepGenerateInfo>(
+      `/api/public/chat-share/${chatShareId}/step/${stepId}/generate-info`,
+    )
+    .catch(() => null);
 };
 
 export const getChatsByPaging = (
@@ -118,7 +128,9 @@ export const getChatsByPaging = (
   const fetchService = createFetchClient();
   const groupIdQuery = groupId ? `groupId=${groupId}` : '';
   return fetchService.get(
-    `/api/user/chats?${groupIdQuery}&page=${page}&pageSize=${pageSize}&query=${query || ''}`,
+    `/api/user/chats?${groupIdQuery}&page=${page}&pageSize=${pageSize}&query=${
+      query || ''
+    }`,
   );
 };
 
@@ -177,12 +189,16 @@ export const getUserModels = () => {
 
 export const getTitleSummarySettings = () => {
   const fetchServer = createFetchClient();
-  return fetchServer.get<TitleSummarySettingsDto>('/api/user-configs/title-summary');
+  return fetchServer.get<TitleSummarySettingsDto>(
+    '/api/user-configs/title-summary',
+  );
 };
 
 export const getTitleSummaryDefaultTemplate = () => {
   const fetchServer = createFetchClient();
-  return fetchServer.get<TitleSummaryDefaultTemplateDto>('/api/user-configs/title-summary/default-template');
+  return fetchServer.get<TitleSummaryDefaultTemplateDto>(
+    '/api/user-configs/title-summary/default-template',
+  );
 };
 
 export const putTitleSummarySettings = (body: TitleSummaryConfig) => {
@@ -344,9 +360,12 @@ export const postUserChatSpan = (
   params?: PostUserChatSpanParams,
 ) => {
   const fetchServer = createFetchClient();
-  return fetchServer.post<PostUserChatSpanResult[]>(`/api/chat/${chatId}/span`, {
-    body: params,
-  });
+  return fetchServer.post<PostUserChatSpanResult[]>(
+    `/api/chat/${chatId}/span`,
+    {
+      body: params,
+    },
+  );
 };
 
 export const putUserChatSpan = (
@@ -529,6 +548,26 @@ export const putChatSpan = (
   });
 };
 
+export const putChatMcp = (
+  encryptedChatId: string,
+  mcpServerId: number,
+): Promise<ChatSpanDto[]> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.put(
+    `/api/chat/${encryptedChatId}/mcp/${mcpServerId}`,
+  );
+};
+
+export const deleteChatMcp = (
+  encryptedChatId: string,
+  mcpServerId: number,
+): Promise<ChatSpanDto[]> => {
+  const fetchServer = createFetchClient();
+  return fetchServer.delete(
+    `/api/chat/${encryptedChatId}/mcp/${mcpServerId}`,
+  );
+};
+
 export const getChatPreset = () => {
   const fetchServer = createFetchClient();
   return fetchServer.get<GetChatPresetResult[]>(`/api/chat-preset`);
@@ -649,22 +688,33 @@ export const getMcpServers = (): Promise<McpServerListItemDto[]> => {
   return fetchService.get('/api/mcp');
 };
 
-export const getMcpServersForManagement = (): Promise<McpServerListManagementItemDto[]> => {
+export const getMcpServersForManagement = (
+  mineOnly: boolean = true,
+): Promise<McpServerListManagementItemDto[]> => {
   const fetchService = createFetchClient();
-  return fetchService.get('/api/mcp/management');
+  return fetchService.get('/api/mcp/management', {
+    params: { mineOnly },
+  });
 };
 
-export const getMcpServerDetails = (mcpId: number): Promise<McpServerDetailsDto> => {
+export const getMcpServerDetails = (
+  mcpId: number,
+): Promise<McpServerDetailsDto> => {
   const fetchService = createFetchClient();
   return fetchService.get(`/api/mcp/${mcpId}`);
 };
 
-export const createMcpServer = (params: UpdateMcpServerRequest): Promise<McpServerDetailsDto> => {
+export const createMcpServer = (
+  params: UpdateMcpServerRequest,
+): Promise<McpServerDetailsDto> => {
   const fetchService = createFetchClient();
   return fetchService.post('/api/mcp', { body: params });
 };
 
-export const updateMcpServer = (mcpId: number, params: UpdateMcpServerRequest): Promise<McpServerDetailsDto> => {
+export const updateMcpServer = (
+  mcpId: number,
+  params: UpdateMcpServerRequest,
+): Promise<McpServerDetailsDto> => {
   const fetchService = createFetchClient();
   return fetchService.put(`/api/mcp/${mcpId}`, { body: params });
 };
@@ -674,18 +724,37 @@ export const deleteMcpServer = (mcpId: number) => {
   return fetchService.delete(`/api/mcp/${mcpId}`);
 };
 
-export const fetchMcpTools = (params: FetchToolsRequest): Promise<McpToolBasicInfo[]> => {
+export const fetchMcpTools = (
+  params: FetchToolsRequest,
+): Promise<FetchToolsResponse> => {
   const fetchService = createFetchClient();
   return fetchService.post('/api/mcp/fetch-tools', { body: params });
 };
 
 // MCP用户分配相关API
-export const assignUsersToMcp = (mcpId: number, params: AssignUsersToMcpRequest): Promise<void> => {
+export const assignUsersToMcp = (
+  mcpId: number,
+  params: AssignUsersToMcpRequest,
+): Promise<void> => {
   const fetchService = createFetchClient();
-  return fetchService.post(`/api/mcp/${mcpId}/assign-to-users`, { body: params });
+  return fetchService.post(`/api/mcp/${mcpId}/assign-to-users`, {
+    body: params,
+  });
 };
 
-export const getUnassignedUsers = (mcpId: number, search?: string, limit: number = 10): Promise<UnassignedUserDto[]> => {
+export const updateMyMcpAssignment = (
+  mcpId: number,
+  params: UpdateMyMcpAssignmentRequest,
+): Promise<void> => {
+  const fetchService = createFetchClient();
+  return fetchService.put(`/api/mcp/${mcpId}/my-assignment`, { body: params });
+};
+
+export const getUnassignedUsers = (
+  mcpId: number,
+  search?: string,
+  limit: number = 10,
+): Promise<UnassignedUserDto[]> => {
   const fetchService = createFetchClient();
   const params = new URLSearchParams();
   if (search) {
@@ -693,16 +762,23 @@ export const getUnassignedUsers = (mcpId: number, search?: string, limit: number
   }
   params.append('limit', limit.toString());
   const queryString = params.toString();
-  return fetchService.get(`/api/mcp/${mcpId}/get-unassigned-users${queryString ? `?${queryString}` : ''}`);
+  return fetchService.get(
+    `/api/mcp/${mcpId}/get-unassigned-users${
+      queryString ? `?${queryString}` : ''
+    }`,
+  );
 };
 
-export const getAssignedUserDetails = (mcpId: number): Promise<AssignedUserDetailsDto[]> => {
+export const getAssignedUserDetails = (
+  mcpId: number,
+): Promise<AssignedUserDetailsDto[]> => {
   const fetchService = createFetchClient();
   return fetchService.get(`/api/mcp/${mcpId}/assigned-user-details`);
 };
 
-export const getAssignedUserNames = (mcpId: number): Promise<AssignedUserNameDto[]> => {
+export const getAssignedUserNames = (
+  mcpId: number,
+): Promise<AssignedUserNameDto[]> => {
   const fetchService = createFetchClient();
   return fetchService.get(`/api/mcp/${mcpId}/assigned-user-names`);
 };
-

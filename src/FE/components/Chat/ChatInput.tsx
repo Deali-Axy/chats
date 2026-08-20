@@ -11,7 +11,6 @@ import toast from 'react-hot-toast';
 import useTranslation from '@/hooks/useTranslation';
 
 import { isMobile } from '@/utils/common';
-import { formatPrompt } from '@/utils/promptVariable';
 
 import {
   ChatRole,
@@ -48,12 +47,13 @@ import DragUpload from '../DragUpload/DragUpload';
 import FilesPopover from '../Popover/FilesPopover';
 import FilePreview from '@/components/FilePreview/FilePreview';
 import PromptList from './PromptList';
-import VariableModal from './VariableModal';
 
 import { defaultFileConfig } from '@/apis/adminApis';
 import { getUserPromptDetail } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 import CodeExecutionControl from './CodeExecutionControl';
+import McpShortcutControl from './McpShortcutControl';
+import WebSearchControl from './WebSearchControl';
 import { ANIMATION_DURATION_MS } from '@/constants/animation';
 
 // 文本框配置
@@ -65,6 +65,7 @@ const TEXTAREA_MIN_HEIGHT =
   TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS + TEXTAREA_PADDING_Y; // 40px
 const TEXTAREA_MAX_HEIGHT =
   TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS + TEXTAREA_PADDING_Y; // 256px
+const PROMPT_TRIGGER_PATTERN = /\/([^\s/]*)$/;
 
 interface Props {
   onSend: (message: Message) => void;
@@ -99,8 +100,6 @@ const ChatInput = ({
   const [showPromptList, setShowPromptList] = useState(false);
   const [activePromptIndex, setActivePromptIndex] = useState(0);
   const [promptInputValue, setPromptInputValue] = useState('');
-  const [variables, setVariables] = useState<string[]>([]);
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
   const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(TEXTAREA_MIN_HEIGHT);
@@ -120,16 +119,16 @@ const ChatInput = ({
 
   // 定义所有需要在hooks规则下的callbacks和effects
   const updatePromptListVisibility = useCallback((text: string) => {
-    const match = text.match(/\/\w*$/);
-    const textLength = text.length;
-    const t = textLength > 0 ? text[textLength - 1] : '';
+    const match = text.match(PROMPT_TRIGGER_PATTERN);
 
-    if (match && t === '/') {
+    if (match) {
       setShowPromptList(true);
-      setPromptInputValue(match[0].slice(1));
+      setPromptInputValue(match[1]);
+      setActivePromptIndex(0);
     } else {
       setShowPromptList(false);
       setPromptInputValue('');
+      setActivePromptIndex(0);
     }
   }, []);
 
@@ -323,11 +322,11 @@ const ChatInput = ({
       return;
     }
 
-    if (showPromptList) {
+    if (showPromptList && filteredPrompts.length > 0) {
       if (e.key === 'ArrowDown') {
         e.preventDefault();
         setActivePromptIndex((prevIndex) =>
-          prevIndex < prompts.length - 1 ? prevIndex + 1 : prevIndex,
+          prevIndex < filteredPrompts.length - 1 ? prevIndex + 1 : prevIndex,
         );
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
@@ -337,7 +336,7 @@ const ChatInput = ({
       } else if (e.key === 'Tab') {
         e.preventDefault();
         setActivePromptIndex((prevIndex) =>
-          prevIndex < prompts.length - 1 ? prevIndex + 1 : 0,
+          prevIndex < filteredPrompts.length - 1 ? prevIndex + 1 : 0,
         );
       } else if (e.key === 'Enter') {
         e.preventDefault();
@@ -353,7 +352,7 @@ const ChatInput = ({
       if (isMobile() && e.key === 'Enter' && !e.shiftKey) {
         return; // 让移动端用户必须点击发送按钮
       }
-      
+
       // Alt+S 发送
       if (e.altKey && e.key.toLowerCase() === 's') {
         e.preventDefault();
@@ -390,57 +389,17 @@ const ChatInput = ({
     }
   };
 
-  const parseVariables = (content: string) => {
-    const regex = /{{(.*?)}}/g;
-    const foundVariables = [];
-    let match;
-
-    while ((match = regex.exec(content)) !== null) {
-      foundVariables.push(match[1]);
-    }
-
-    return foundVariables;
-  };
-
-  const handlePromptSelect = (prompt: Prompt) => {
-    const formatted = formatPrompt(prompt.content);
-    const parsedVariables = parseVariables(formatted);
-    onChangePrompt(prompt);
-    setVariables(parsedVariables);
-
-    if (parsedVariables.length > 0) {
-      setIsModalVisible(true);
-    } else {
-      const text = contentText?.replace(/\/\w*$/, formatted);
-      setContentText(text);
-
-      updatePromptListVisibility(formatted);
-    }
-  };
-
-  const handleInitModal = () => {
-    const selectedPrompt = filteredPrompts[activePromptIndex];
+  const handleInitModal = (index?: number) => {
+    const promptIndex = index ?? activePromptIndex;
+    const selectedPrompt = filteredPrompts[promptIndex];
     selectedPrompt &&
       getUserPromptDetail(selectedPrompt.id).then((data) => {
-        setContentText((prevContent) => {
-          return prevContent?.replace(/\/\w*$/, data.content);
-        });
-        handlePromptSelect(data);
+        setContentText((prevContent) =>
+          prevContent.replace(PROMPT_TRIGGER_PATTERN, () => data.content),
+        );
+        onChangePrompt(data);
         setShowPromptList(false);
       });
-  };
-
-  const handleSubmit = (updatedVariables: string[]) => {
-    const newContent = contentText?.replace(/{{(.*?)}}/g, (_, variable) => {
-      const index = variables.indexOf(variable);
-      return updatedVariables[index];
-    });
-
-    setContentText(newContent);
-
-    if (textareaRef && textareaRef.current) {
-      textareaRef.current.focus();
-    }
   };
 
   const canUploadFile = () => {
@@ -526,7 +485,12 @@ const ChatInput = ({
   return (
     <div
       ref={rootContainerRef}
-      className="absolute bottom-0 left-0 w-full z-20 overflow-hidden pointer-events-none min-h-[48px]"
+      className={cn(
+        'absolute bottom-0 left-0 w-full z-20 pointer-events-none min-h-[48px]',
+        showPromptList && filteredPrompts.length > 0
+          ? 'overflow-visible'
+          : 'overflow-hidden',
+      )}
     >
       {/* 展开状态的 ChatInput */}
       {(renderExpanded || animationState !== 'idle') && (
@@ -682,9 +646,9 @@ const ChatInput = ({
                 )}
               </div>
 
-              {/* 底部工具行 - Agent控制 + 发送按钮 */}
+              {/* 底部工具行 - 智能搜索/Agent控制 + 发送按钮 */}
               <div className="flex items-center px-2 py-2 border-t border-border/40">
-                {/* 左侧: Agent 代码执行控制 */}
+                {/* 左侧: 智能搜索 + Agent 代码执行控制 */}
                 <div className="flex items-center gap-2 flex-1">
                   {showUploadMenu && (
                     <Popover>
@@ -803,6 +767,18 @@ const ChatInput = ({
                       containerRef={inputContainerRef as React.RefObject<HTMLElement>}
                     />
                   )}
+                  <McpShortcutControl
+                    chatId={selectedChat.id}
+                    spans={selectedChat.spans}
+                    modelMap={modelMap}
+                    disabled={selectedChat.status === ChatStatus.Chatting}
+                  />
+                  <WebSearchControl
+                    chatId={selectedChat.id}
+                    spans={selectedChat.spans}
+                    modelMap={modelMap}
+                    disabled={selectedChat.status === ChatStatus.Chatting}
+                  />
                   <CodeExecutionControl
                     chatId={selectedChat.id}
                     spans={selectedChat.spans}
@@ -836,7 +812,7 @@ const ChatInput = ({
               </div>
 
               {showPromptList && filteredPrompts.length > 0 && (
-                <div className="absolute bottom-12 w-full">
+                <div className="absolute bottom-12 z-30 w-full">
                   <PromptList
                     activePromptIndex={activePromptIndex}
                     prompts={filteredPrompts}
@@ -847,14 +823,6 @@ const ChatInput = ({
                 </div>
               )}
 
-              {isModalVisible && (
-                <VariableModal
-                  prompt={filteredPrompts[activePromptIndex]}
-                  variables={variables}
-                  onSubmit={handleSubmit}
-                  onClose={() => setIsModalVisible(false)}
-                />
-              )}
             </div>
           </div>
         </div>

@@ -45,17 +45,18 @@ Ayaka Chats 是一个强大灵活的大语言模型统一前端，支持 22+ 主
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.12.0）
+## 🆕 最新版本（1.15.0）
 
-- 📅 发布日期：2026-06-14
-- 🧩 请求自定义：Model Key 和 Model 支持自定义 Header 与 RFC 6902 JSON Patch 请求体补丁，Model 层可以覆盖 Key 层配置
-- 🌐 自定义 URL：Model 新增 `Custom URL`，支持 `{baseUrl}` 占位符，便于适配网关、代理和厂商私有 endpoint
-- 🧾 配置快照化：新增 `ModelKeySnapshot`、`ModelSnapshot`、`ChatConfigSnapshot`，历史会话、用量和账单引用不可变配置事实
-- 🤖 Claude Code 兼容：Anthropic Messages 支持消息中的 `role=system`，兼容最新 Claude Code 请求结构
-- 🖼️ 图像与体验：图像生成支持输出格式/压缩，修复图片预览、模型排序、签名文件 URL 缓存和多项协议兼容问题
-- 🛠️ 升级重点：迁移脚本会重构模型配置引用关系，删除旧的可变配置列和 `ChatConfigArchived` 表；自定义 SQL/报表需要改读 snapshot 表
+- 📅 发布日期：2026-08-19
+- 📝 Prompt 收敛：保留 Prompt 管理和 `/xxx` 快捷选择，选中内容原样插入，并移除所有 `{{...}}` 变量替换
+- 🧩 MCP 元数据：分离协议名称与显示名称，支持工具元数据编辑和四个 annotation hint 同步
+- ⚡ MCP 执行优化：只读工具最多四个并行，幂等失败有限重试，并保持调用顺序稳定
+- 🧰 工具调用展示：并行工具独立展开，参数和 progress 期间保持展开，完成后延时收起
+- 🧠 Responses 推理回传：保留 reasoning signature 边界及 reasoning/tool/message 原始顺序，避免密文拼接错误
+- 👥 MCP 用户分配：紧凑四列表格、长用户名省略、多行 JSON 请求头和可用用户列表即时更新
+- ⬆️ 升级重点：SQL Server 和 SQLite 部署需运行对应的 `1.15.0` 数据库迁移脚本
 
-👉 [查看 1.12.0 发布说明](./doc/zh-CN/release-notes/1.12.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.15.0 发布说明](./doc/zh-CN/release-notes/1.15.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
@@ -103,6 +104,17 @@ mkdir -p ./AppData && chmod 755 ./AppData && docker run --restart unless-stopped
 - **上游仓库**：[github.com/sdcb/chats](https://github.com/sdcb/chats)
 - **上游文档**：[DeepWiki](https://deepwiki.com/sdcb/chats)
 - **上游 Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
+
+---
+
+## 特别感谢
+
+<div align="left">
+  <h1>RoutinAI</h1>
+  <img width="154" height="151" src="https://routin.ai/favicon.png"/>
+</div>
+
+[RoutinAI](https://routin.ai/) 是一个企业级统一 LLM API 网关，提供单一、类型安全的接口，可访问来自 GPT、Claude 和 Gemini 系列的 100 多个主流大语言模型，包括 gpt-5.6-sol、claude-opus-5 和 gemini-3.1-pro-preview 等模型。它通过提供零延迟边缘路由、无需修改代码即可无缝切换模型、统一计费以及带有消费上限和访问策略的集中治理，消除了管理多个 AI 供应商的复杂性。
 
 ---
 

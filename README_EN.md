@@ -45,17 +45,18 @@ All capabilities inherited from upstream:
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 Latest Release (1.12.0)
+## 🆕 Latest Release (1.15.0)
 
-- 📅 Release Date: 2026-06-14
-- 🧩 Request customization: Model Key and Model support custom headers and RFC 6902 JSON Patch body patches, with Model-level settings overriding Key-level settings
-- 🌐 Custom URL: Model adds `Custom URL` with `{baseUrl}` placeholder support for gateways, proxies, and provider-specific endpoints
-- 🧾 Configuration snapshots: adds `ModelKeySnapshot`, `ModelSnapshot`, and `ChatConfigSnapshot` so historical chats, usage, and billing reference immutable configuration facts
-- 🤖 Claude Code compatibility: Anthropic Messages supports in-message `role=system`, matching the latest Claude Code request structure
-- 🖼️ Image and UX fixes: image generation supports output format/compression, with fixes for image preview, model ordering, signed file URL caching, and protocol compatibility
-- 🛠️ Upgrade focus: the migration restructures model configuration references and removes old mutable config columns and `ChatConfigArchived`; custom SQL/reports should read snapshot tables instead
+- 📅 Release Date: 2026-08-19
+- 📝 Prompt convergence: keeps Prompt management and `/xxx` shortcuts, inserts selected content verbatim, and removes all `{{...}}` substitutions
+- 🧩 MCP metadata: separates protocol/display names, supports editable tool metadata, and synchronizes four annotation hints
+- ⚡ MCP execution: runs up to four read-only tools in parallel, retries idempotent failures within bounds, and preserves call order
+- 🧰 Tool-call UX: expands parallel tools independently, stays open during streamed arguments/progress, and collapses after completion
+- 🧠 Responses reasoning: preserves reasoning signature boundaries and original reasoning/tool/message order to prevent corrupted encrypted content
+- 👥 MCP user assignment: compact four-column table, long-name truncation, multiline JSON headers, and immediate available-list updates
+- ⬆️ Upgrade focus: SQL Server and SQLite deployments must run the corresponding `1.15.0` database migration
 
-👉 [View 1.12.0 Release Notes](./doc/en-US/release-notes/1.12.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.15.0 Release Notes](./doc/en-US/release-notes/1.15.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
@@ -103,6 +104,17 @@ This project is forked from [sdcb/chats](https://github.com/sdcb/chats) and cont
 - **Upstream Repository**: [github.com/sdcb/chats](https://github.com/sdcb/chats)
 - **Upstream Documentation**: [DeepWiki](https://deepwiki.com/sdcb/chats)
 - **Upstream Issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
+
+---
+
+## Special Thanks
+
+<div align="left">
+  <h1>RoutinAI</h1>
+  <img width="154" height="151" src="https://routin.ai/favicon.png"/>
+</div>
+
+[RoutinAI](https://routin.ai/) is an enterprise-grade unified LLM API gateway that provides a single, type-safe interface to access over 100 leading large language models from the GPT, Claude, and Gemini families, including models such as gpt-5.6-sol, claude-opus-5 and gemini-3.1-pro-preview. It eliminates the complexity of managing multiple AI vendors by providing zero-latency edge routing, seamless model switching without code modifications, unified billing, and centralized governance with spending caps and access policies.
 
 ---
 

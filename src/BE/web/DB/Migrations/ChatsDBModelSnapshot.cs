@@ -16,7 +16,7 @@ namespace Chats.BE.DB.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
+            modelBuilder.HasAnnotation("ProductVersion", "10.0.11");
 
             modelBuilder.Entity("ChatTagChat", b =>
                 {
@@ -356,6 +356,9 @@ namespace Chats.BE.DB.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -371,6 +374,8 @@ namespace Chats.BE.DB.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
+
+                    b.HasIndex(new[] { "IsSystem", "Order", "Id" }, "IX_ChatPreset_IsSystem_Order");
 
                     b.HasIndex(new[] { "Name" }, "IX_ChatPreset_Name");
 
@@ -821,16 +826,24 @@ namespace Chats.BE.DB.Migrations
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Headers")
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Label")
+                    b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(50)
+                        .IsUnicode(false)
                         .HasColumnType("TEXT");
 
                     b.Property<int>("OwnerUserId")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("ServerInstructions")
+                        .HasColumnType("TEXT");
 
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("TEXT");
@@ -842,9 +855,7 @@ namespace Chats.BE.DB.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex(new[] { "OwnerUserId" }, "IX_McpServer_OwnerUserId");
-
-                    b.HasIndex(new[] { "Label" }, "UX_McpServer_Label")
+                    b.HasIndex(new[] { "OwnerUserId", "Name" }, "UX_McpServer_Owner_Name")
                         .IsUnique();
 
                     b.ToTable("McpServer");
@@ -859,10 +870,26 @@ namespace Chats.BE.DB.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Destructive")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("Idempotent")
+                        .HasColumnType("INTEGER");
+
                     b.Property<int>("McpServerId")
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("OpenWorld")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("Parameters")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("ReadOnly")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
                         .HasColumnType("TEXT");
 
                     b.Property<string>("ToolName")
@@ -1528,6 +1555,9 @@ namespace Chats.BE.DB.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ContextTemplate")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id")
                         .HasName("PK_MessageContentText");
 
@@ -1555,6 +1585,10 @@ namespace Chats.BE.DB.Migrations
                 {
                     b.Property<long>("Id")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -1641,6 +1675,9 @@ namespace Chats.BE.DB.Migrations
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ApiKeyEnabled")
                         .HasColumnType("INTEGER");
 
                     b.Property<string>("Avatar")
@@ -1902,6 +1939,9 @@ namespace Chats.BE.DB.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<bool>("ApiKeyEnabled")
+                        .HasColumnType("INTEGER");
+
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("TEXT");
 
@@ -1910,6 +1950,10 @@ namespace Chats.BE.DB.Migrations
 
                     b.Property<string>("LoginType")
                         .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Mcps")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Models")
@@ -1945,6 +1989,9 @@ namespace Chats.BE.DB.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<int>("McpServerId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("ShowShortcut")
                         .HasColumnType("INTEGER");
 
                     b.Property<int>("UserId")

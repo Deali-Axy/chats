@@ -47,6 +47,26 @@ const UserModal = (props: IProps) => {
   const { user, isOpen, onClose, onSuccessful } = props;
   const [submit, setSubmit] = useState(false);
   const formFields: IFormFieldOption[] = [
+    ...(user
+      ? [
+          {
+            name: 'account',
+            label: t('Account'),
+            defaultValue: '',
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormInput options={options} field={field} disabled />
+            ),
+          },
+          {
+            name: 'provider',
+            label: t('Login Type'),
+            defaultValue: '',
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormInput options={options} field={field} disabled />
+            ),
+          },
+        ]
+      : []),
     {
       name: 'username',
       label: t('User Name'),
@@ -63,19 +83,18 @@ const UserModal = (props: IProps) => {
         <FormSwitch options={options} field={field} />
       ),
     },
-    {
-      name: 'password',
-      label: t('Password'),
-      defaultValue: '',
-      render: (options: IFormFieldOption, field: FormFieldType) => (
-        <FormInput
-          type="password"
-          hidden={!!user}
-          options={options}
-          field={field}
-        />
-      ),
-    },
+    ...(!user
+      ? [
+          {
+            name: 'password',
+            label: t('Password'),
+            defaultValue: '',
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormInput type="password" options={options} field={field} />
+            ),
+          },
+        ]
+      : []),
     {
       name: 'role',
       label: t('Role'),
@@ -100,9 +119,35 @@ const UserModal = (props: IProps) => {
         <FormInput options={options} field={field} />
       ),
     },
+    ...(user
+      ? [
+          {
+            name: 'sub',
+            label: 'SSO Sub',
+            defaultValue: '',
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormInput
+                options={options}
+                field={field}
+                disabled={user.provider?.toLowerCase() !== 'keycloak'}
+              />
+            ),
+          },
+          {
+            name: 'apiKeyEnabled',
+            label: t('Allow API Key'),
+            defaultValue: true,
+            render: (options: IFormFieldOption, field: FormFieldType) => (
+              <FormSwitch options={options} field={field} />
+            ),
+          },
+        ]
+      : []),
   ];
 
   const formSchema = z.object({
+    account: z.string().optional(),
+    provider: z.string().optional(),
     username: z
       .string()
       .min(
@@ -115,20 +160,18 @@ const UserModal = (props: IProps) => {
     enabled: z.boolean().optional(),
     phone: z.string().nullable().default(null),
     email: z.string().nullable().default(null),
-    password: !user
-      ? z
-          .string()
-          .min(
-            6,
-            t('Must contain at least {{length}} character(s)', {
-              length: 6,
-            })!,
-          )
-          .max(
-            18,
-            t('Contain at most {{length}} character(s)', { length: 18 })!,
-          )
-      : z.string(),
+    password: z
+      .string()
+      .min(
+        6,
+        t('Must contain at least {{length}} character(s)', {
+          length: 6,
+        })!,
+      )
+      .max(18, t('Contain at most {{length}} character(s)', { length: 18 })!)
+      .optional(),
+    sub: z.string().optional(),
+    apiKeyEnabled: z.boolean().optional(),
     role: z.string().optional(),
   });
 
@@ -150,6 +193,10 @@ const UserModal = (props: IProps) => {
       form.setValue('phone', user.phone);
       form.setValue('email', user.email);
       form.setValue('role', user.role);
+      form.setValue('account', user.account);
+      form.setValue('provider', user.provider || t('Account password login'));
+      form.setValue('sub', user.sub || '');
+      form.setValue('apiKeyEnabled', user.apiKeyEnabled);
     }
   }, [isOpen]);
 
@@ -157,13 +204,18 @@ const UserModal = (props: IProps) => {
     if (!form.formState.isValid) return;
     setSubmit(true);
     let p = null;
-    let params = {
+    const params: any = {
       ...values,
       username: values.username!,
       password: values.password!,
       role: values.role!,
     };
     if (user) {
+      delete params.account;
+      delete params.provider;
+      if (user.provider?.toLowerCase() !== 'keycloak') {
+        delete params.sub;
+      }
       p = putUser({
         id: user.id,
         ...params,
@@ -181,21 +233,26 @@ const UserModal = (props: IProps) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent>
-        <DialogHeader>
+      <DialogContent className="flex h-[calc(100dvh-2rem)] max-h-[calc(100dvh-2rem)] flex-col overflow-hidden sm:h-auto sm:max-w-lg">
+        <DialogHeader className="shrink-0">
           <DialogTitle>{user ? t('Edit User') : t('Add User')}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)}>
-            {formFields.map((item) => (
-              <FormField
-                key={item.name}
-                control={form.control}
-                name={item.name as never}
-                render={({ field }) => item.render(item, field)}
-              />
-            ))}
-            <DialogFooter className="pt-4">
+          <form
+            className="flex min-h-0 flex-1 flex-col"
+            onSubmit={form.handleSubmit(onSubmit)}
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto pr-1">
+              {formFields.map((item) => (
+                <FormField
+                  key={item.name}
+                  control={form.control}
+                  name={item.name as never}
+                  render={({ field }) => item.render(item, field)}
+                />
+              ))}
+            </div>
+            <DialogFooter className="shrink-0 border-t bg-background pt-4">
               <Button disabled={submit} type="submit">
                 {t('Save')}
               </Button>
