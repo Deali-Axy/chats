@@ -1,123 +1,91 @@
 {
-  "version": "1.13.1",
-  "date": "2026-06-23",
-  "tagline": "全新功能与体验优化",
+  "version": "1.15.0",
+  "date": "2026-08-19",
+  "tagline": "从 1.12 跨越到 1.15：MCP、联网搜索与模型配置全面升级",
   "features": [
     {
-      "title": "海报",
-      "description": "添加 v1.13.0 版本更新海报生成功能"
+      "title": "MCP 快捷开关",
+      "description": "把常用 MCP 固定到输入框，一键为当前对话启用或关闭，不用反复进配置"
     },
     {
-      "title": "临时聊天",
-      "description": "添加临时聊天功能"
+      "title": "智能联网搜索",
+      "description": "OpenAI / Azure、DeepSeek、小米 MiMo 支持原生 web_search，搜索过程与引用来源完整展示"
     },
     {
-      "title": "搜索功能",
-      "description": "添加搜索结果弹窗，支持内容高亮"
+      "title": "系统预设模型组",
+      "description": "管理员可把预设标为系统预设，全员可见、可应用和克隆，普通用户不能改删"
     },
     {
-      "title": "代码块",
-      "description": "enhance CodeBlock and CodeBlockCore components with copy to clipboard functionality and expand/collapse feature"
+      "title": "模型请求自定义",
+      "description": "Model Key / Model 双层自定义 Header、JSON Patch 请求体和模型级 URL，适配更多网关和私有参数"
     },
     {
-      "title": "添加前端 CORS 策略以支持新端口",
-      "description": "添加前端 CORS 策略以支持新端口"
+      "title": "配置快照",
+      "description": "密钥、模型和聊天配置改为不可变快照，改价格或 URL 不再改写历史用量与账单"
     },
     {
-      "title": "center single-span c...",
-      "description": "center single-span chat layout on desktop"
+      "title": "用户上下文快照",
+      "description": "发给模型的时间、环境和文件信息在消息创建时冻结，续聊更稳，也更利于 Prompt Cache"
     },
     {
-      "title": "update README and mo...",
-      "description": "update README and model provider documentation for version 1.11.0, add Novita AI support and enhance pricing transparency"
+      "title": "MCP 并行与重试",
+      "description": "只读工具最多 4 路并行，幂等失败自动重试；协议名与显示名分离，工具调用更稳定"
+    },
+    {
+      "title": "管理员用户管控",
+      "description": "支持重置密码、开关 API Key、初始配置预授 MCP；用户菜单只对有权限的人显示 API 入口"
     }
   ],
   "uiImprovements": [
     {
-      "title": "侧边栏",
-      "description": "使用 shadcn sidebar 组件重新设计聊天侧边栏"
+      "title": "工具调用卡片",
+      "description": "并行工具各自独立展开，执行中保持打开，完成后短暂展示再收起"
     },
     {
-      "title": "临时聊天",
-      "description": "优化临时聊天界面，用背景色区分替代横幅"
+      "title": "模型选择",
+      "description": "下拉框可按模型名和提供商搜索，移动端二级选择更顺手"
     },
     {
-      "title": "模型定价",
-      "description": "migrate model prices page to shared UI components"
+      "title": "图片预览",
+      "description": "支持缩放、拖拽和双指 pinch，并可跨消息浏览图片画廊"
     },
     {
-      "title": "extract getCopyableM...",
-      "description": "extract getCopyableMessageText function for support copy text/error, fix #127"
+      "title": "MCP 用户分配",
+      "description": "分配窗口改为紧凑四列表格，请求头与快捷方式一目了然"
     },
     {
-      "title": "replace 'custom-scro...",
-      "description": "replace 'custom-scrollbar' with 'scroller' for consistent styling across components"
+      "title": "代码块",
+      "description": "支持一键复制、展开/折叠，长代码阅读更轻松"
+    },
+    {
+      "title": "聊天布局",
+      "description": "桌面端单列居中，公式不再误伤金额和 URL，流式光标也不再打乱排版"
     }
   ],
   "bugFixes": [
-    "修复前端构建的 TypeScript 类型错误",
-    "将构建脚本中的 npm 替换为 pnpm 以修复 node_modules 兼容性问题",
-    "修复 SidebarProvider 包裹 div 导致聊天记录无法显示的问题",
-    "修复消息加载竞态条件和临时聊天并发创建问题",
-    "修复搜索栏与菜单按钮互相遮挡无法点击的问题",
-    "修复图标导入错误",
-    "访问主页时不再自动选择第一个聊天",
-    "remove pure black background in ChatMessage, set darker background for codeblock",
-    "adjust styles for improved layout and responsiveness in ChatMessage and StepInfoBubble components",
-    "ensure UserMessage maintains full width in edit mode on mobile"
+    "修复 Responses 推理签名被拼坏，导致后续请求 invalid_encrypted_content",
+    "修复流式工具调用交错保存失败、DeepSeek 多轮工具调用失败",
+    "修复 Anthropic 并行工具结果没有合并到同一条用户消息",
+    "关闭单美元数学语法，避免金额、URL、Shell 变量被当成公式",
+    "局域网 HTTP 访问时，代码块和消息复制按钮可正常使用",
+    "修复 MCP 预设重复插入、快捷开关冲突，以及网页搜索卡片不收起"
   ],
   "otherUpdates": [
     {
-      "title": "构建",
-      "description": "update dependencies for Next.js, React, and TypeScript"
+      "title": "Prompt 纯文本化",
+      "description": "{{CURRENT_DATE}} 等变量不再替换，选中 Prompt 后原样插入输入框"
     },
     {
-      "title": "侧边栏",
-      "description": "@ refactor(FE): 使用 shadcn sidebar-01 block 美化首页框架"
+      "title": "瞬态错误重试",
+      "description": "首段输出前对 429 / 5xx 自动退避重试，配置改为 Chat:MaxTransientRetries"
     },
     {
-      "title": "临时聊天",
-      "description": "@ fix: 临时对话在侧边栏显示，切换时不再自动删除"
+      "title": "Claude Code 兼容",
+      "description": "支持 Anthropic role=system，保留 thinking blocks，推理档位扩展到 minimal / xhigh / max"
     },
     {
-      "title": "包管理",
-      "description": "remove pnpm lockfile and clean up build doc references"
-    },
-    {
-      "title": "模型定价",
-      "description": "Refine model prices page responsive UX, add API type filters, and clarify pricing/context display"
-    },
-    {
-      "title": "清理合并冲突标记",
-      "description": "清理合并冲突标记"
-    },
-    {
-      "title": "添加 .next 目录到忽略列表",
-      "description": "添加 .next 目录到忽略列表"
-    },
-    {
-      "title": "使用 goreman 并发启动前后端",
-      "description": "使用 goreman 并发启动前后端"
-    },
-    {
-      "title": "添加 Taskfile 一键启动和部署",
-      "description": "添加 Taskfile 一键启动和部署"
-    },
-    {
-      "title": "golden model snapsho...",
-      "description": "golden model snapshot migration plan"
-    },
-    {
-      "title": "add model-snapshot m...",
-      "description": "add model-snapshot migration plan"
-    },
-    {
-      "title": "playwright test: ens...",
-      "description": "playwright test: ensure chatconfig screenshot"
-    },
-    {
-      "title": "add capture project ...",
-      "description": "add capture project for autotest/screenshot capture"
+      "title": "依赖升级",
+      "description": "前端升级 Node.js 24，MCP SDK 2.0，以及 .NET / EF Core / Playwright 等同步更新"
     }
   ]
 }

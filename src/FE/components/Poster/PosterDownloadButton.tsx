@@ -11,7 +11,7 @@ interface PosterDownloadButtonProps {
 
 const PosterDownloadButton: React.FC<PosterDownloadButtonProps> = ({
   targetId,
-  filename = 'ayaka-chats-v1.13.0-release.png',
+  filename = 'ayaka-chats-v1.15.0-release.png',
 }) => {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isCopying, setIsCopying] = useState(false);

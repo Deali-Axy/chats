@@ -25,7 +25,7 @@ While inheriting all upstream capabilities, Ayaka Chats introduces the following
 
 ### 📢 Independent Features
 
-- **Release Poster**: Auto-generated v1.13.0 release poster with one-click image copy for sharing
+- **Release Poster**: Auto-generated v1.15.0 release poster with one-click image copy for sharing
 
 ---
 

@@ -13,13 +13,28 @@ import {
   Package,
   Palette,
   CheckCircle,
-  XCircle,
-  ArrowRight,
+  Globe,
+  Shield,
+  SlidersHorizontal,
+  Database,
+  Brain,
+  RefreshCw,
+  Users,
+  Wrench,
+  Image as ImageIcon,
+  FileText,
 } from 'lucide-react';
 import type { ChangelogData } from '@/types/changelog';
 
-// 默认图标映射
 const featureIcons: Record<string, React.ReactNode> = {
+  'MCP 快捷开关': <Zap className="h-5 w-5" />,
+  '智能联网搜索': <Globe className="h-5 w-5" />,
+  '系统预设': <Shield className="h-5 w-5" />,
+  '模型请求自定义': <SlidersHorizontal className="h-5 w-5" />,
+  '配置快照': <Database className="h-5 w-5" />,
+  '用户上下文': <Brain className="h-5 w-5" />,
+  'MCP 并行': <RefreshCw className="h-5 w-5" />,
+  '管理员': <Users className="h-5 w-5" />,
   '临时聊天': <MessageSquare className="h-5 w-5" />,
   '搜索功能': <Search className="h-5 w-5" />,
   '聊天标题': <BarChart3 className="h-5 w-5" />,
@@ -30,13 +45,22 @@ const featureIcons: Record<string, React.ReactNode> = {
 };
 
 const uiIcons: Record<string, React.ReactNode> = {
-  '侧边栏': <Layout className="h-5 w-5" />,
+  '工具调用': <Wrench className="h-5 w-5" />,
+  '模型选择': <Search className="h-5 w-5" />,
+  '图片预览': <ImageIcon className="h-5 w-5" />,
+  'MCP 用户分配': <Users className="h-5 w-5" />,
   '代码块': <Code className="h-5 w-5" />,
+  '聊天布局': <Layout className="h-5 w-5" />,
+  '侧边栏': <Layout className="h-5 w-5" />,
   '欢迎界面': <Palette className="h-5 w-5" />,
   '模型定价': <BarChart3 className="h-5 w-5" />,
 };
 
 const otherIcons: Record<string, React.ReactNode> = {
+  'Prompt': <FileText className="h-5 w-5" />,
+  '瞬态错误': <RefreshCw className="h-5 w-5" />,
+  'Claude Code': <Code className="h-5 w-5" />,
+  '依赖升级': <Package className="h-5 w-5" />,
   '包管理': <Package className="h-5 w-5" />,
   '构建': <Zap className="h-5 w-5" />,
   '侧边栏': <Layout className="h-5 w-5" />,
