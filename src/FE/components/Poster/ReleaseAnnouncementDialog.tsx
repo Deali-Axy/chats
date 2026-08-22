@@ -1,11 +1,10 @@
-import dynamic from 'next/dynamic';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { Bug, CalendarDays, Sparkles } from 'lucide-react';
 
 import changelogData from '@/data/changelog.json';
 import type { ChangelogData } from '@/types/changelog';
 
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -14,83 +13,75 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 
-const ReleasePoster = dynamic(() => import('./ReleasePoster'), {
-  ssr: false,
-  loading: () => (
-    <div className="flex min-h-96 items-center justify-center text-sm text-muted-foreground">
-      正在加载版本公告…
-    </div>
-  ),
-});
-
-const PosterDownloadButton = dynamic(() => import('./PosterDownloadButton'), {
-  ssr: false,
-});
-
 const data = changelogData as ChangelogData;
-const storageKey = `ayaka-chats:release-announcement:hidden:${data.version}`;
 
-/** Shows the current release poster after login unless the user opted out for this version. */
+/** A compact release summary shown whenever an authenticated user enters the app. */
 const ReleaseAnnouncementDialog = () => {
   const [open, setOpen] = useState(false);
-  const [dontShowAgain, setDontShowAgain] = useState(false);
+  const highlights = useMemo(
+    () => [...data.features, ...data.uiImprovements].slice(0, 4),
+    [],
+  );
 
   useEffect(() => {
-    try {
-      setOpen(window.localStorage.getItem(storageKey) !== 'true');
-    } catch {
-      // Private browsing or restrictive browser settings should not block the announcement.
-      setOpen(true);
-    }
+    setOpen(true);
   }, []);
 
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      try {
-        if (dontShowAgain) {
-          window.localStorage.setItem(storageKey, 'true');
-        } else {
-          window.localStorage.removeItem(storageKey);
-        }
-      } catch {
-        // The dialog remains usable even when localStorage is unavailable.
-      }
-    }
-    setOpen(nextOpen);
-  };
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="flex h-[calc(100dvh-2rem)] w-[calc(100vw-1rem)] max-w-5xl flex-col gap-0 overflow-hidden p-0 sm:rounded-xl">
-        <DialogHeader className="border-b px-6 py-5 pr-12 text-left">
-          <DialogTitle>Ayaka Chats v{data.version} 更新公告</DialogTitle>
-          <DialogDescription>
-            查看本次更新内容，海报可直接复制或下载分享。
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="min-h-0 flex-1 overflow-auto bg-slate-950 p-3 sm:p-6">
-          <div className="min-w-[1080px] overflow-hidden rounded-xl shadow-2xl">
-            <ReleasePoster data={data} posterId="release-announcement-poster" />
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-2xl overflow-hidden border-violet-500/20 p-0 [&>button]:hidden">
+        <div className="bg-gradient-to-br from-violet-500/20 via-background to-sky-500/10 px-6 pb-6 pt-7 sm:px-8 sm:pt-8">
+          <DialogHeader className="text-left">
+            <div className="mb-3 inline-flex w-fit items-center gap-2 rounded-full border border-violet-500/30 bg-violet-500/10 px-3 py-1 text-xs font-medium text-violet-600 dark:text-violet-300">
+              <Sparkles className="h-3.5 w-3.5" />
+              新版本已就绪
+            </div>
+            <DialogTitle className="text-2xl sm:text-3xl">
+              Ayaka Chats v{data.version}
+            </DialogTitle>
+            <DialogDescription className="mt-3 max-w-xl text-sm leading-6 sm:text-base">
+              {data.tagline}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-5 inline-flex items-center gap-2 text-xs text-muted-foreground">
+            <CalendarDays className="h-3.5 w-3.5" />
+            发布于 {data.date}
           </div>
         </div>
 
-        <div className="flex flex-col gap-4 border-t bg-background px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
-          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
-            <Checkbox
-              checked={dontShowAgain}
-              onCheckedChange={(checked) => setDontShowAgain(checked === true)}
-              filled
-            />
-            下次不再提示 v{data.version}
-          </label>
-          <div className="flex flex-wrap items-center gap-3">
-            <PosterDownloadButton
-              targetId="release-announcement-poster"
-              filename={`ayaka-chats-v${data.version}-release.png`}
-            />
-            <Button onClick={() => handleOpenChange(false)}>我知道了</Button>
+        <div className="space-y-5 px-6 py-6 sm:px-8">
+          <div className="grid gap-3 sm:grid-cols-2">
+            {highlights.map((item) => (
+              <div
+                key={`${item.title}-${item.description}`}
+                className="rounded-xl border bg-card/70 p-4"
+              >
+                <div className="mb-2 flex items-center gap-2 text-sm font-semibold">
+                  <Sparkles className="h-4 w-4 text-violet-500" />
+                  {item.title}
+                </div>
+                <p className="text-sm leading-5 text-muted-foreground">
+                  {item.description}
+                </p>
+              </div>
+            ))}
           </div>
+
+          {data.bugFixes.length > 0 && (
+            <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+              <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-emerald-700 dark:text-emerald-300">
+                <Bug className="h-4 w-4" />
+                本次修复
+              </div>
+              <ul className="space-y-1.5 text-sm leading-5 text-muted-foreground">
+                {data.bugFixes.slice(0, 2).map((fix) => <li key={fix}>• {fix}</li>)}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        <div className="flex justify-end border-t bg-muted/30 px-6 py-4 sm:px-8">
+          <Button onClick={() => setOpen(false)}>我知道了</Button>
         </div>
       </DialogContent>
     </Dialog>

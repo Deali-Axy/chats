@@ -14,6 +14,7 @@ import { GetChatVersionResult } from '@/types/clientApis';
 import {
   IconChartPie,
   IconFiles,
+  IconFileText,
   IconIdBadge,
   IconLayoutSidebar,
   IconMessages,
@@ -25,7 +26,6 @@ import {
   IconUserCog,
   IconUsers,
 } from '@/components/Icons/index';
-import { FileText } from 'lucide-react';
 import UserMenuPopover, { PageType } from '@/components/UserMenuPopover/UserMenuPopover';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
@@ -227,7 +227,7 @@ const AdminLayout = ({
     {
       url: '/admin/changelog',
       icon: (stroke?: string) => (
-        <FileText strokeWidth={1.2} stroke={stroke} className="h-5 w-5" />
+        <IconFileText strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Changelog'),
     },
