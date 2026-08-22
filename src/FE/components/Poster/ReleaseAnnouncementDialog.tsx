@@ -5,6 +5,7 @@ import changelogData from '@/data/changelog.json';
 import type { ChangelogData } from '@/types/changelog';
 
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -14,18 +15,31 @@ import {
 } from '@/components/ui/dialog';
 
 const data = changelogData as ChangelogData;
+const DISMISS_STORAGE_KEY = `release-announcement-dismissed-v${data.version}`;
 
 /** A compact release summary shown whenever an authenticated user enters the app. */
 const ReleaseAnnouncementDialog = () => {
   const [open, setOpen] = useState(false);
+  const [dontShowAgain, setDontShowAgain] = useState(false);
   const highlights = useMemo(
     () => [...data.features, ...data.uiImprovements].slice(0, 4),
     [],
   );
 
   useEffect(() => {
-    setOpen(true);
+    setOpen(localStorage.getItem(DISMISS_STORAGE_KEY) !== 'true');
   }, []);
+
+  const handleDontShowAgainChange = (checked: boolean) => {
+    setDontShowAgain(checked);
+
+    if (checked) {
+      localStorage.setItem(DISMISS_STORAGE_KEY, 'true');
+      return;
+    }
+
+    localStorage.removeItem(DISMISS_STORAGE_KEY);
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -80,7 +94,20 @@ const ReleaseAnnouncementDialog = () => {
           )}
         </div>
 
-        <div className="flex justify-end border-t bg-muted/30 px-6 py-4 sm:px-8">
+        <div className="flex items-center justify-between border-t bg-muted/30 px-6 py-4 sm:px-8">
+          <label
+            htmlFor="release-announcement-dont-show-again"
+            className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground"
+          >
+            <Checkbox
+              id="release-announcement-dont-show-again"
+              checked={dontShowAgain}
+              onCheckedChange={(checked) =>
+                handleDontShowAgainChange(checked === true)
+              }
+            />
+            不再提示此版本
+          </label>
           <Button onClick={() => setOpen(false)}>我知道了</Button>
         </div>
       </DialogContent>
