@@ -57,6 +57,7 @@ import settingReducer, {
 } from '@/reducers/setting.reducer';
 import Chat from '../Chat/ChatView';
 import Chatbar from '../Chatbar/Chatbar';
+import ReleaseAnnouncementDialog from '../Poster/ReleaseAnnouncementDialog';
 
 import {
   deleteChats,
@@ -172,7 +173,7 @@ const HomeContent = () => {
         const isStillSelected = selectedChatIdRef.current === chatId;
         if (!isLatestRequest || !isStillSelected) return;
 
-        if (data.length > 0) {
+        if (data.messages.length > 0) {
           selectChatMessage(data, leafMessageId);
         } else {
           messageDispatch(setMessages([]));
@@ -229,9 +230,12 @@ const HomeContent = () => {
     initialState,
   });
 
-  const selectChatMessage = ({ messages, leafMessageId }: ChatMessageViewResult) => {
+  const selectChatMessage = (
+    { messages, leafMessageId }: ChatMessageViewResult,
+    fallbackLeafMessageId?: string,
+  ) => {
     messageDispatch(setMessages(messages));
-    let leafMsgId = leafMessageId ?? undefined;
+    let leafMsgId = leafMessageId ?? fallbackLeafMessageId;
     if (!leafMsgId) {
       if (messages.length === 0) {
         messageDispatch(setSelectedMessages([]));
@@ -633,6 +637,7 @@ const HomeContent = () => {
           <Chat />
         </div>
       </div>
+      <ReleaseAnnouncementDialog />
     </HomeContext.Provider>
   );
 };

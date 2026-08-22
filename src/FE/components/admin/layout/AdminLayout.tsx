@@ -82,7 +82,7 @@ const AdminMenu = ({
               }}
             >
               <span className="flex items-center justify-center w-5 h-5 min-w-5 min-h-5">
-                {menu.icon(isActive(menu.url) ? '' : '')}
+                {menu.icon()}
               </span>
               <span>{menu.title}</span>
             </Link>

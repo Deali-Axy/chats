@@ -76,9 +76,13 @@ function getIcon(title: string, iconMap: Record<string, React.ReactNode>): React
 
 interface ReleasePosterProps {
   data: ChangelogData;
+  posterId?: string;
 }
 
-const ReleasePoster: React.FC<ReleasePosterProps> = ({ data }) => {
+const ReleasePoster: React.FC<ReleasePosterProps> = ({
+  data,
+  posterId = 'release-poster',
+}) => {
   const { version, date, tagline, features, uiImprovements, bugFixes, otherUpdates } = data;
 
   // 格式化日期为中文格式
@@ -93,7 +97,7 @@ const ReleasePoster: React.FC<ReleasePosterProps> = ({ data }) => {
 
   return (
     <div
-      id="release-poster"
+      id={posterId}
       className="relative w-[1080px] overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900"
       style={{ fontFamily: "'Inter', 'Noto Sans SC', sans-serif" }}
     >

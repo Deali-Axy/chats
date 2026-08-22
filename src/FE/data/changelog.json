@@ -1,91 +1,51 @@
 {
-  "version": "1.15.0",
-  "date": "2026-08-19",
-  "tagline": "从 1.12 跨越到 1.15：MCP、联网搜索与模型配置全面升级",
+  "version": "1.16.0",
+  "date": "2026-08-22",
+  "tagline": "分支聊天更轻快，消息编辑更完整，版本公告与分享海报焕新",
   "features": [
     {
-      "title": "MCP 快捷开关",
-      "description": "把常用 MCP 固定到输入框，一键为当前对话启用或关闭，不用反复进配置"
+      "title": "分支消息懒加载",
+      "description": "首次打开只加载当前可见消息路径，切换分支时再按需获取，大型聊天响应更快"
     },
     {
-      "title": "智能联网搜索",
-      "description": "OpenAI / Azure、DeepSeek、小米 MiMo 支持原生 web_search，搜索过程与引用来源完整展示"
+      "title": "消息与图片编辑",
+      "description": "用户消息可一起修改文字和图片，支持上传、粘贴、拖拽及远程文件选择"
     },
     {
-      "title": "系统预设模型组",
-      "description": "管理员可把预设标为系统预设，全员可见、可应用和克隆，普通用户不能改删"
+      "title": "模型物理删除",
+      "description": "管理员可删除 Model 和 Model Key，同时保留历史快照并清理活动关联"
     },
     {
-      "title": "模型请求自定义",
-      "description": "Model Key / Model 双层自定义 Header、JSON Patch 请求体和模型级 URL，适配更多网关和私有参数"
-    },
-    {
-      "title": "配置快照",
-      "description": "密钥、模型和聊天配置改为不可变快照，改价格或 URL 不再改写历史用量与账单"
-    },
-    {
-      "title": "用户上下文快照",
-      "description": "发给模型的时间、环境和文件信息在消息创建时冻结，续聊更稳，也更利于 Prompt Cache"
-    },
-    {
-      "title": "MCP 并行与重试",
-      "description": "只读工具最多 4 路并行，幂等失败自动重试；协议名与显示名分离，工具调用更稳定"
-    },
-    {
-      "title": "管理员用户管控",
-      "description": "支持重置密码、开关 API Key、初始配置预授 MCP；用户菜单只对有权限的人显示 API 入口"
+      "title": "回答长图导出",
+      "description": "助手回答可直接导出为跟随深浅主题的 PNG 长图，保留公式、流程图、代码和表格"
     }
   ],
   "uiImprovements": [
     {
-      "title": "工具调用卡片",
-      "description": "并行工具各自独立展开，执行中保持打开，完成后短暂展示再收起"
+      "title": "移动端工具栏",
+      "description": "MCP、联网搜索和 Agent 控件在窄屏下保持单行，发送操作更顺手"
     },
     {
-      "title": "模型选择",
-      "description": "下拉框可按模型名和提供商搜索，移动端二级选择更顺手"
+      "title": "统一加载动画",
+      "description": "聊天、上传、会话管理和管理后台共用稳定的加载图标动画"
     },
     {
-      "title": "图片预览",
-      "description": "支持缩放、拖拽和双指 pinch，并可跨消息浏览图片画廊"
-    },
-    {
-      "title": "MCP 用户分配",
-      "description": "分配窗口改为紧凑四列表格，请求头与快捷方式一目了然"
-    },
-    {
-      "title": "代码块",
-      "description": "支持一键复制、展开/折叠，长代码阅读更轻松"
-    },
-    {
-      "title": "聊天布局",
-      "description": "桌面端单列居中，公式不再误伤金额和 URL，流式光标也不再打乱排版"
+      "title": "会话标题显示",
+      "description": "修复 g、j、p、q、y 等下伸字符在会话列表中被裁切的问题"
     }
   ],
   "bugFixes": [
-    "修复 Responses 推理签名被拼坏，导致后续请求 invalid_encrypted_content",
-    "修复流式工具调用交错保存失败、DeepSeek 多轮工具调用失败",
-    "修复 Anthropic 并行工具结果没有合并到同一条用户消息",
-    "关闭单美元数学语法，避免金额、URL、Shell 变量被当成公式",
-    "局域网 HTTP 访问时，代码块和消息复制按钮可正常使用",
-    "修复 MCP 预设重复插入、快捷开关冲突，以及网页搜索卡片不收起"
+    "修复 Responses API 仅含 reasoning 签名时重复显示空白思考区块的问题",
+    "修复 Model Key 的 possible-models 接口因 EF Core GroupBy 翻译失败而报错"
   ],
   "otherUpdates": [
     {
-      "title": "Prompt 纯文本化",
-      "description": "{{CURRENT_DATE}} 等变量不再替换，选中 Prompt 后原样插入输入框"
+      "title": "SQLite 自动迁移",
+      "description": "Ayaka Chats 的 1.12+ SQLite 数据库会在启动时通过 EF Core 自动完成 1.16 schema 升级"
     },
     {
-      "title": "瞬态错误重试",
-      "description": "首段输出前对 429 / 5xx 自动退避重试，配置改为 Chat:MaxTransientRetries"
-    },
-    {
-      "title": "Claude Code 兼容",
-      "description": "支持 Anthropic role=system，保留 thinking blocks，推理档位扩展到 minimal / xhigh / max"
-    },
-    {
-      "title": "依赖升级",
-      "description": "前端升级 Node.js 24，MCP SDK 2.0，以及 .NET / EF Core / Playwright 等同步更新"
+      "title": "版本公告",
+      "description": "登录后显示本次更新海报；勾选后会按版本保存在浏览器中，不再重复提示"
     }
   ]
 }

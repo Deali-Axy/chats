@@ -1,6 +1,6 @@
 import React from 'react';
 import Head from 'next/head';
-import { ArrowLeft, Image, Sparkles, Layout, Bug, Package } from 'lucide-react';
+import { ArrowLeft, Sparkles, Layout, Bug, Package } from 'lucide-react';
 import Link from 'next/link';
 import changelogData from '@/data/changelog.json';
 import type { ChangelogData, ChangelogFeature } from '@/types/changelog';
@@ -67,13 +67,6 @@ export default function ChangelogPage() {
             >
               <ArrowLeft className="h-4 w-4" />
               返回首页
-            </Link>
-            <Link
-              href="/poster"
-              className="inline-flex items-center gap-2 text-sm text-purple-400 transition-colors hover:text-purple-300"
-            >
-              <Image className="h-4 w-4" />
-              生成分享海报
             </Link>
           </div>
 
