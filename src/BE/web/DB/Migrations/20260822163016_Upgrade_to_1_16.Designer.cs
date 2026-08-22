@@ -3,6 +3,7 @@ using System;
 using Chats.DB;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,10 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace Chats.BE.DB.Migrations
 {
     [DbContext(typeof(ChatsDB))]
-    // Fully qualify EF base type — entity Chats.DB.ModelSnapshot would otherwise collide.
-    partial class ChatsDBModelSnapshot : Microsoft.EntityFrameworkCore.Infrastructure.ModelSnapshot
+    [Migration("20260822163016_Upgrade_to_1_16")]
+    partial class Upgrade_to_1_16
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.11");

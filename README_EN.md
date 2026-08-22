@@ -77,18 +77,18 @@ Inherited from upstream except for database engines and the upgrade path:
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 Latest Release (1.15.0)
+## 🆕 Latest Release (1.16.0)
 
-- 📅 Release Date: 2026-08-19
-- 📝 Prompt convergence: keeps Prompt management and `/xxx` shortcuts, inserts selected content verbatim, removes all `{{...}}` substitutions
-- 🧩 MCP metadata: separates protocol/display names, editable tool metadata, four annotation hints
-- ⚡ MCP execution: up to four read-only tools in parallel, bounded retries for idempotent failures
-- 🧰 Tool-call UX: parallel tools expand independently and collapse after completion
-- 🧠 Responses reasoning: preserves signature boundaries and original item order
-- 👥 MCP user assignment: compact four-column table
-- ⬆️ **This fork**: existing 1.12+ DBs pick up `Upgrade_to_1_15` on startup; 1.11 and older use `tools/DataMigration`. Do not run upstream `1.15.0.sql`
+- 📅 Release Date: 2026-08-22
+- 🌳 Branching chat loading: loads only the visible message path initially and fetches other branches on demand
+- 🖼️ Rich message editing: edit user text and images together with upload, paste, drag-and-drop, and remote-file selection
+- 🗑️ Model lifecycle: physically delete Models and Model Keys while preserving historical snapshots and cleaning active associations
+- 🖼️ Assistant answer export: download theme-aware PNG long images with formulas, diagrams, code, tables, and images
+- 🔄 Interaction polish: unified loading animations, improved mobile toolbars, and fixed clipped session-list titles
+- 🐛 Stability fixes: corrected Responses reasoning display and the Model Key possible-models query
+- ⬆️ **This fork**: existing 1.12+ SQLite databases apply `Upgrade_to_1_16` automatically at startup; 1.11 and older use `tools/DataMigration`. Do not run upstream SQL scripts.
 
-👉 [View 1.15.0 Release Notes](./doc/en-US/release-notes/1.15.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.16.0 Release Notes](./doc/en-US/release-notes/1.16.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
