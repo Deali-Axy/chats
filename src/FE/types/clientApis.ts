@@ -1,4 +1,4 @@
-import { ChatStatus, ResponseContent, UsageSource } from './chat';
+import { ChatStatus, RequestContent, ResponseContent, UsageSource } from './chat';
 import { IChatMessage } from './chatMessage';
 import { DBModelProvider } from './model';
 import { Paging } from './page';
@@ -261,8 +261,16 @@ export interface GetChatShareResult {
   spans: ChatSpanDto[];
   groupId: string;
   tags: string[];
-  leafMessageId: string;
+  leafMessageId?: string;
   updatedAt: string;
+}
+
+export interface ChatMessageViewResult {
+  messages: IChatMessage[];
+  leafMessageId: string | null;
+}
+
+export interface GetAdminChatDetailsResult extends GetChatShareResult {
   messages: IChatMessage[];
 }
 
@@ -287,6 +295,11 @@ export interface PutResponseMessageEditInPlaceParams {
   messageId: string;
   contentId: string;
   c: string;
+}
+
+export interface EditUserMessageParams {
+  messageId: string;
+  contents: RequestContent[];
 }
 
 export interface PutChatSpanParams {

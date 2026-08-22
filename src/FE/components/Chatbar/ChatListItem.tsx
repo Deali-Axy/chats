@@ -289,7 +289,11 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
               </div>
             </div>
 
-            <span className="flex-1 truncate text-[12.5px]">
+            <div
+              className={`relative max-h-5 flex-1 overflow-hidden text-ellipsis whitespace-nowrap text-sm break-all text-left text-[12.5px] ${
+                selectChatId === chat.id ? 'pr-12' : 'pr-1'
+              }`}
+            >
               {chat.isTemp && (
                 <IconBolt
                   size={14}
@@ -297,7 +301,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
                 />
               )}
               {chat.title}
-            </span>
+            </div>
           </a>
         </SidebarMenuButton>
       )}
@@ -306,7 +310,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
         <div className="absolute right-1 z-10 flex text-muted-foreground">
           <SidebarActionButton handleClick={handleConfirm} disabled={isConfirming}>
             {isConfirming ? (
-              <IconLoader size={18} className="animate-spin" />
+              <IconLoader size={18} />
             ) : (
               <IconCheck size={18} />
             )}

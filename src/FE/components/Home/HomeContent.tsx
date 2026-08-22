@@ -17,7 +17,7 @@ import {
   IChatPaging,
 } from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
-import { ChatResult, GetChatsParams } from '@/types/clientApis';
+import { ChatMessageViewResult, ChatResult, GetChatsParams } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
 
 import {
@@ -64,7 +64,7 @@ import {
   getChatsByPaging,
   getDefaultPrompt,
   getUserChatGroupWithMessages,
-  getUserMessages,
+  getChatMessages,
   getUserModels,
   getUserPromptBrief,
   postChats,
@@ -166,7 +166,7 @@ const HomeContent = () => {
     messageDispatch(setMessages([]));
     messageDispatch(setSelectedMessages([]));
 
-    getUserMessages(chatId)
+    getChatMessages(chatId)
       .then((data) => {
         const isLatestRequest = requestVersion === messageLoadRequestRef.current;
         const isStillSelected = selectedChatIdRef.current === chatId;
@@ -229,13 +229,14 @@ const HomeContent = () => {
     initialState,
   });
 
-  const selectChatMessage = (
-    messages: IChatMessage[],
-    leafMessageId?: string,
-  ) => {
+  const selectChatMessage = ({ messages, leafMessageId }: ChatMessageViewResult) => {
     messageDispatch(setMessages(messages));
-    let leafMsgId = leafMessageId;
+    let leafMsgId = leafMessageId ?? undefined;
     if (!leafMsgId) {
+      if (messages.length === 0) {
+        messageDispatch(setSelectedMessages([]));
+        return;
+      }
       const messageCount = messages.length - 1;
       leafMsgId = messages[messageCount].id;
     }

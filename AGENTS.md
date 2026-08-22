@@ -11,7 +11,7 @@
 - `origin` → `git@github.com:Deali-Axy/chats.git`
 - `upstream` → `git@github.com:sdcb/chats.git`
 
-当前产品版本 `1.15.0`。后端 `net10.0`，前端 Next.js 16 / React 19。
+当前产品版本 `1.16.0`。后端 `net10.0`，前端 Next.js 16 / React 19。
 
 `tools/DataMigration/AGENTS.md` 只约束那个 ETL 控制台，不要和本文件混用。
 
@@ -81,6 +81,7 @@ CORS 已放行 `FE_URL` 以及 `http://localhost:12836` 和 `http://localhost:30
 |---|---|
 | `20260805155346_InitialCreate_v1_12` | 1.12 全量建表。已含 Fork 字段 `Chat.IsTemp` |
 | `20260820131401_Upgrade_to_1_15` | 1.13–1.15 的增量（列/索引 + `migrationBuilder.Sql` 数据回填，例如 MCP `Label` → `DisplayName`/`Name`） |
+| `Upgrade_to_1_16` | 1.16 的 Model 物理删除支持（`ChatConfig.ModelId` 可空及相关外键删除策略） |
 
 `__EFMigrationsHistory` 是已应用版本的唯一真相。运行时：`InitService.Init` → `MigrateAsync` → 仅当 `Users` 为空才 `InsertInitialData`。
 

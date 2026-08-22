@@ -247,7 +247,7 @@ const Sidebar = <T,>({
                 className="h-9 w-9 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
               >
                 {isCreating ? (
-                  <IconLoader size={18} className="animate-spin" />
+                  <IconLoader size={18} />
                 ) : (
                   <IconSquarePlus size={18} />
                 )}
@@ -265,7 +265,7 @@ const Sidebar = <T,>({
                   className="h-9 w-9 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
                 >
                   {isCreatingTemp ? (
-                    <IconLoader size={18} className="animate-spin" />
+                    <IconLoader size={18} />
                   ) : (
                     <IconBolt size={18} />
                   )}
