@@ -19,13 +19,12 @@ const FeatureToggle = (props: {
   }, [enable]);
 
   return (
-    <div className="flex flex-col">
-      <div className="flex items-center justify-between gap-1">
-        <span className='flex gap-1 items-center text-neutral-700 dark:text-neutral-400'>
-          {icon}
+    <div className="flex items-center justify-between gap-4 rounded-xl border border-border/70 bg-muted/25 px-4 py-3 transition-colors hover:bg-muted/45">
+        <span className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <span className="text-muted-foreground">{icon}</span>
           {label}
         </span>
-        <div className="flex gap-1 items-center">
+        <div className="flex items-center gap-2">
           <Switch
             checked={check}
             onCheckedChange={(state: boolean) => {
@@ -36,11 +35,10 @@ const FeatureToggle = (props: {
           />
           <label
             htmlFor={`feature-${label}`}
-            className="text-neutral-900 dark:text-neutral-100"
+            className="min-w-8 text-right text-xs font-medium text-muted-foreground"
           >
             {check ? t('Enable') : t('Close')}
           </label>
-        </div>
       </div>
     </div>
   );

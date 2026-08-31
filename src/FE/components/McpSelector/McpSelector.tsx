@@ -179,10 +179,10 @@ const McpSelector: FC<Props> = ({
   };
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-between">
-        <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-          <IconTools size={20} />
+    <div className="rounded-xl border border-border/70 bg-muted/25 p-4">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <IconTools size={18} className="text-muted-foreground" />
           {t('MCP Tools')}
         </div>
         <Button
@@ -190,21 +190,21 @@ const McpSelector: FC<Props> = ({
           size="sm"
           onClick={handleAddMcp}
           disabled={isLoading || (mcpServersLoaded && !hasAvailableServers())}
-          className="h-6 w-6 p-0"
+          className="h-8 w-8 rounded-lg border border-border bg-background p-0 shadow-sm hover:bg-muted"
         >
           <IconPlus size={20} />
         </Button>
       </div>
 
       {value.length > 0 && (
-        <div className="flex flex-col gap-2">
+        <div className="mt-4 flex flex-col gap-3">
           {value.map((mcp, index) => (
             <div
               key={index}
-              className="flex items-center gap-2 p-2 border rounded"
+              className="grid gap-3 rounded-lg border border-border/80 bg-background p-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] sm:items-end"
             >
               <div className="flex-1">
-                <div className="text-xs text-gray-500 mb-1">
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">
                   {t('Tool Name')}
                 </div>
                 <Select
@@ -214,7 +214,7 @@ const McpSelector: FC<Props> = ({
                   }
                   disabled={isLoading}
                 >
-                  <SelectTrigger className="h-8">
+                  <SelectTrigger className="h-9 border-border/80 bg-muted/20">
                     <SelectValue
                       placeholder={
                         isLoading ? t('Loading...') : t('Select Tool')
@@ -242,7 +242,7 @@ const McpSelector: FC<Props> = ({
               </div>
 
               <div className="flex-1">
-                <div className="text-xs text-gray-500 mb-1">
+                <div className="mb-1.5 text-xs font-medium text-muted-foreground">
                   {t('Custom Headers (JSON)')}
                 </div>
                 <Input
@@ -251,7 +251,7 @@ const McpSelector: FC<Props> = ({
                     handleUpdateMcp(index, 'customHeaders', e.target.value)
                   }
                   placeholder='{"key": "value"}'
-                  className="h-8"
+                  className="h-9 border-border/80 bg-muted/20"
                 />
               </div>
 
@@ -259,7 +259,7 @@ const McpSelector: FC<Props> = ({
                 variant="ghost"
                 size="sm"
                 onClick={() => handleDeleteMcp(index)}
-                className="h-6 w-6 p-0 text-red-500 hover:text-red-700"
+                className="h-9 w-9 rounded-lg p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
                 <IconTrash size={16} />
               </Button>

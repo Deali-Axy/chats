@@ -14,6 +14,7 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -292,25 +293,32 @@ const ChatModelSettingModal = (props: Props) => {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-full sm:w-[560px] max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-        <DialogTitle></DialogTitle>
+      <DialogContent className="flex h-[min(90vh,780px)] w-[calc(100%-2rem)] max-w-[720px] flex-col gap-0 overflow-hidden rounded-2xl border-border/70 p-0 shadow-2xl sm:w-full">
         {span && (
-          <div className="flex-1 overflow-y-auto p-4 mt-5">
-            <div className="space-y-3 rounded-lg">
-              <div className="flex flex-col gap-1">
+          <>
+            <div className="shrink-0 border-b border-border/70 bg-gradient-to-br from-muted/70 via-background to-primary/5 px-5 pb-4 pt-5 sm:px-6">
+              <DialogTitle className="text-xl font-semibold tracking-tight">
+                {t('Model Settings')}
+              </DialogTitle>
+              <DialogDescription className="mt-1">
+                {t('Configure this model for the current conversation')}
+              </DialogDescription>
+              <div className="mt-4 flex flex-col gap-1.5">
                 <ChatModelDropdownMenu
                   className="p-0"
                   triggerClassName={
-                    'hover:bg-transparent px-4 border w-full h-10'
+                    'h-14 w-full rounded-xl border-border/80 bg-background/90 px-4 text-base font-medium shadow-sm transition-colors hover:border-primary/40 hover:bg-background'
                   }
-                    groupClassName="scroller md:!max-h-80 md:!overflow-y-auto"
+                  groupClassName="scroller md:!max-h-80 md:!overflow-y-auto"
                   models={models}
                   content={
-                    <div className="flex gap-2 items-center">
+                    <div className="flex min-w-0 items-center gap-3">
                       {span.modelProviderId != null && (
                         <ModelProviderIcon providerId={span.modelProviderId} />
                       )}
-                      {model?.name || span.modelName || t('Model not available')}
+                      <span className="truncate">
+                        {model?.name || span.modelName || t('Model not available')}
+                      </span>
                     </div>
                   }
                   hideIcon={true}
@@ -318,9 +326,16 @@ const ChatModelSettingModal = (props: Props) => {
                     onChangeModel(model);
                   }}
                 />
-                {span.modelId != null && <ChatModelInfo modelId={span.modelId} />}
+                {span.modelId != null && (
+                  <div className="px-1 text-xs text-muted-foreground">
+                    <ChatModelInfo modelId={span.modelId} />
+                  </div>
+                )}
               </div>
-              
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-y-auto px-5 py-4 overscroll-contain sm:px-6">
+              <div className="space-y-4 pb-1">
               {/* 根据模型的 API 类型显示不同的配置组件 */}
               {model && (
                 <>
@@ -371,21 +386,24 @@ const ChatModelSettingModal = (props: Props) => {
                   )}
                 </>
               )}
+              </div>
             </div>
-          </div>
+          </>
         )}
-        <DialogFooter className="px-4 py-3 border-t">
-          <div className="flex gap-4 justify-end items-center">
-            <Switch
-              onCheckedChange={onChangeSpanEnable}
-              checked={span?.enabled}
-            />
+        <DialogFooter className="shrink-0 border-t border-border/70 bg-muted/30 px-5 py-3 sm:px-6">
+          <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <label className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm font-medium sm:justify-start">
+              <span>{span?.enabled ? t('Enabled') : t('Disabled')}</span>
+              <Switch onCheckedChange={onChangeSpanEnable} checked={span?.enabled} />
+            </label>
+            <div className="flex items-center justify-end gap-2">
             <Button
-              variant="destructive"
+              variant="outline"
               onClick={() => {
                 onRemove(spanId);
                 onClose();
               }}
+              className="border-destructive/30 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
             >
               {t('Remove')}
             </Button>
@@ -398,6 +416,7 @@ const ChatModelSettingModal = (props: Props) => {
             >
               {isLoading ? t('Saving...') : t('Save')}
             </Button>
+            </div>
           </div>
         </DialogFooter>
       </DialogContent>
