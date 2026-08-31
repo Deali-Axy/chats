@@ -46,7 +46,8 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
                     Format = span.ChatConfig.Format,
-                    Compression = span.ChatConfig.Compression,
+                Compression = span.ChatConfig.Compression,
+                Background = span.ChatConfig.Background,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps
                         .Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders })
@@ -101,7 +102,8 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     ReasoningEffort = span.ChatConfig.Effort,
                     ImageSize = span.ChatConfig.ImageSize,
                     Format = span.ChatConfig.Format,
-                    Compression = span.ChatConfig.Compression,
+                Compression = span.ChatConfig.Compression,
+                Background = span.ChatConfig.Background,
                     ThinkingBudget = span.ChatConfig.ThinkingBudget,
                     Mcps = span.ChatConfig.ChatConfigMcps.Select(x => new ChatSpanMcp { Id = x.McpServerId, CustomHeaders = x.CustomHeaders }).ToArray(),
                 }).ToArray(),
@@ -146,7 +148,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             .Include(x => x.ChatSpans)
                 .ThenInclude(span => span.ChatConfig)
                     .ThenInclude(config => config.Model)
-                        .ThenInclude(model => model.CurrentSnapshot)
+                        .ThenInclude(model => model!.CurrentSnapshot)
                             .ThenInclude(snapshot => snapshot.ModelKeySnapshot)
             .Include(x => x.ChatShares)
             .Include(x => x.ChatTurns)
