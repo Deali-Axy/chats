@@ -94,6 +94,7 @@ export interface ChatSpanDto {
   imageSize: string | null;
   format: string | null;
   compression: number | null;
+  background: string | null;
   thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
 }
@@ -181,6 +182,7 @@ export interface PostUserChatSpanParams {
   imageSize?: string | null;
   format?: string | null;
   compression?: number | null;
+  background?: string | null;
   thinkingBudget?: number | null;
 }
 
@@ -198,6 +200,7 @@ export interface PostUserChatSpanResult {
   imageSize: string | null;
   format: string | null;
   compression: number | null;
+  background: string | null;
   thinkingBudget: number | null;
   mcps: ChatSpanMcp[];
 }
@@ -314,6 +317,7 @@ export interface PutChatSpanParams {
   imageSize?: string | null;
   format?: string | null;
   compression?: number | null;
+  background?: string | null;
   thinkingBudget?: number | null;
   mcps?: ChatSpanMcp[];
 }

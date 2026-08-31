@@ -141,11 +141,17 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
 
   const handleOpenChangeTitleModal: MouseEventHandler<HTMLDivElement> = (e) => {
     e.stopPropagation();
+    if (selectChatId !== chat.id) {
+      handleSelectChat(chat);
+    }
     setTitleChanging(true);
-    selectChatId && setTitle(chat.title);
+    setTitle(chat.title);
   };
   const handleOpenDeleteModal: MouseEventHandler<HTMLDivElement> = (e) => {
     e.stopPropagation();
+    if (selectChatId !== chat.id) {
+      handleSelectChat(chat);
+    }
     setIsDeleting(true);
   };
   const handleOpenShareModal: MouseEventHandler<HTMLDivElement> = (e) => {
@@ -208,16 +214,34 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
 
   return (
     <SidebarMenuItem>
-      {isChanging && selectChatId === chat.id ? (
-        <div className="flex w-full items-center gap-2 rounded-lg bg-background px-3 py-2 border border-input">
-          <input
-            className="flex-1 overflow-hidden overflow-ellipsis bg-transparent text-left text-sm outline-none text-foreground"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            onKeyDown={handleEnterDown}
-            autoFocus
-          />
+      {(isChanging || isDeleting) && selectChatId === chat.id ? (
+        <div className="flex w-full items-center gap-2 rounded-lg border border-input bg-background px-3 py-2">
+          {isChanging ? (
+            <input
+              className="min-w-0 flex-1 overflow-hidden overflow-ellipsis bg-transparent text-left text-sm outline-none text-foreground"
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onKeyDown={handleEnterDown}
+              autoFocus
+            />
+          ) : (
+            <span className="min-w-0 flex-1 truncate text-sm text-muted-foreground">
+              {chat.title}
+            </span>
+          )}
+          <div className="flex shrink-0 text-muted-foreground">
+            <SidebarActionButton handleClick={handleConfirm} disabled={isConfirming}>
+              {isConfirming ? (
+                <IconLoader size={18} />
+              ) : (
+                <IconCheck size={18} />
+              )}
+            </SidebarActionButton>
+            <SidebarActionButton handleClick={handleCancel} disabled={isConfirming}>
+              <IconX size={18} />
+            </SidebarActionButton>
+          </div>
         </div>
       ) : (
         <SidebarMenuButton
@@ -306,7 +330,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
         </SidebarMenuButton>
       )}
 
-      {(isDeleting || isChanging || isArchive) && selectChatId === chat.id && (
+      {isArchive && selectChatId === chat.id && (
         <div className="absolute right-1 z-10 flex text-muted-foreground">
           <SidebarActionButton handleClick={handleConfirm} disabled={isConfirming}>
             {isConfirming ? (
@@ -321,7 +345,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
         </div>
       )}
 
-      {selectChatId === chat.id && !isDeleting && !isChanging && !isArchive && (
+      {!isDeleting && !isChanging && !isArchive && (
         <DropdownMenu>
           <DropdownMenuTrigger asChild disabled={chatting}>
             <SidebarMenuAction showOnHover>

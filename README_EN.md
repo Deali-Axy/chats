@@ -26,6 +26,8 @@ Current EF history:
 
 - `InitialCreate_v1_12`: 1.12 baseline (includes fork fields such as `Chat.IsTemp`)
 - `Upgrade_to_1_15`: one migration covering upstream 1.13–1.15 schema (plus data-backfill SQL)
+- `Upgrade_to_1_16`: support physical Model deletion (`ChatConfig.ModelId` becomes nullable and related foreign-key policies)
+- `Upgrade_to_1_17`: image-generation background mode (`Background` on `ChatConfig` and its snapshots)
 
 New upstream SQL is **reference only**. After a merge, translate it into a new EF migration (e.g. `Upgrade_to_1_16`); do not execute it on this fork’s databases.
 
@@ -77,18 +79,18 @@ Inherited from upstream except for database engines and the upgrade path:
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 Latest Release (1.16.0)
+## 🆕 Latest Release (1.17.0)
 
-- 📅 Release Date: 2026-08-22
-- 🌳 Branching chat loading: loads only the visible message path initially and fetches other branches on demand
-- 🖼️ Rich message editing: edit user text and images together with upload, paste, drag-and-drop, and remote-file selection
-- 🗑️ Model lifecycle: physically delete Models and Model Keys while preserving historical snapshots and cleaning active associations
-- 🖼️ Assistant answer export: download theme-aware PNG long images with formulas, diagrams, code, tables, and images
-- 🔄 Interaction polish: unified loading animations, improved mobile toolbars, and fixed clipped session-list titles
-- 🐛 Stability fixes: corrected Responses reasoning display and the Model Key possible-models query
-- ⬆️ **This fork**: existing 1.12+ SQLite databases apply `Upgrade_to_1_16` automatically at startup; 1.11 and older use `tools/DataMigration`. Do not run upstream SQL scripts.
+- 📅 Release Date: 2026-08-27
+- ⚡ Response speed: token speed excludes first-token (TTFT) latency and measures generation only
+- 🖼️ Image-generation backgrounds: supports provider default, `auto`, `opaque`, and `transparent`
+- 🧠 Context prompts: sends original user text to image-generation models and preserves required runtime context
+- 🌳 Branching stability: fixes live SSE branch metadata and invalid subtree requests
+- 👥 User management: separates user-edit and password-change forms and improves password-manager compatibility
+- 🐛 Stability fixes: corrects duplicated `/v1` image endpoints, validates missing models, and adds regression coverage
+- ⬆️ **This fork**: existing 1.12+ SQLite databases apply `Upgrade_to_1_17` automatically at startup; 1.11 and older use `tools/DataMigration`. Do not run upstream SQL scripts.
 
-👉 [View 1.16.0 Release Notes](./doc/en-US/release-notes/1.16.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
+👉 [View 1.17.0 Release Notes](./doc/en-US/release-notes/1.17.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 

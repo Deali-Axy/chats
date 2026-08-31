@@ -26,6 +26,8 @@ Ayaka Chats 是一个大语言模型统一前端，支持 22+ 主流 AI 模型�
 
 - `InitialCreate_v1_12`：1.12 基线（含本 Fork 的 `Chat.IsTemp` 等字段）
 - `Upgrade_to_1_15`：一次覆盖上游 1.13–1.15 的 schema 变更（含必要的数据回填 SQL）
+- `Upgrade_to_1_16`：Model 物理删除支持（`ChatConfig.ModelId` 可空及相关外键删除策略）
+- `Upgrade_to_1_17`：图像生成背景模式（`ChatConfig` 及其快照的 `Background` 字段）
 
 上游每次发版新增的 SQL **只作对照**，合并后要翻译成新的 EF migration（例如 `Upgrade_to_1_16`），而不是拿到生产库上执行。
 
@@ -77,18 +79,18 @@ Ayaka Chats 是一个大语言模型统一前端，支持 22+ 主流 AI 模型�
 
 <img alt="chats" src="https://github.com/user-attachments/assets/106ece3f-d94d-460e-9313-4a01f624a647" />
 
-## 🆕 最新版本（1.16.0）
+## 🆕 最新版本（1.17.0）
 
-- 📅 发布日期：2026-08-22
-- 🌳 聊天分支懒加载：首次只加载当前可见消息路径，其他分支按需获取
-- 🖼️ 消息图片编辑：支持文本与图片一起编辑，以及上传、粘贴、拖拽和远程文件选择
-- 🗑️ 模型生命周期：支持物理删除 Model 和 Model Key，同时保留历史快照并清理活动关联
-- 🖼️ 回答长图导出：助手回答可导出为跟随主题的 PNG 长图，保留公式、流程图、代码、表格和图片
-- 🔄 交互体验：统一加载动画，优化移动端工具栏，并修复会话标题裁切
-- 🐛 稳定性修复：修复 Responses 推理内容展示和 Model Key 可用模型查询问题
-- ⬆️ **本 Fork 升级**：已有 1.12+ SQLite 库启动时自动应用 `Upgrade_to_1_16`；1.11 及更早请用 `tools/DataMigration`。不要执行上游 SQL 脚本。
+- 📅 发布日期：2026-08-27
+- ⚡ 响应速度统计：Token 速度排除首 Token（TTFT）等待时间，仅统计生成阶段
+- 🖼️ 图像生成背景模式：支持默认、`auto`、`opaque` 和 `transparent`
+- 🧠 模型上下文提示词：图像生成直接使用用户原文，保留必要运行时上下文
+- 🌳 聊天分支稳定性：修复实时 SSE 分支元数据和无效子树请求
+- 👥 用户管理：拆分用户编辑和修改密码表单，改善密码管理器兼容性
+- 🐛 稳定性修复：修复图像接口重复 `/v1`、缺少模型校验并增加回归测试
+- ⬆️ **本 Fork 升级**：已有 1.12+ SQLite 库启动时自动应用 `Upgrade_to_1_17`；1.11 及更早请用 `tools/DataMigration`。不要执行上游 SQL 脚本。
 
-👉 [查看 1.16.0 发布说明](./doc/zh-CN/release-notes/1.16.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
+👉 [查看 1.17.0 发布说明](./doc/zh-CN/release-notes/1.17.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 

@@ -1,51 +1,52 @@
 {
-  "version": "1.16.0",
-  "date": "2026-08-22",
-  "tagline": "分支聊天更轻快，消息编辑更完整，版本公告与分享海报焕新",
+  "version": "1.17.0",
+  "date": "2026-08-27",
+  "tagline": "图像生成背景可控，聊天分支更稳定，用户管理更顺手",
   "features": [
     {
-      "title": "分支消息懒加载",
-      "description": "首次打开只加载当前可见消息路径，切换分支时再按需获取，大型聊天响应更快"
+      "title": "图像生成背景模式",
+      "description": "图片生成支持默认、自动、不透明和透明背景；透明背景会自动约束为 PNG 或 WebP 输出"
     },
     {
-      "title": "消息与图片编辑",
-      "description": "用户消息可一起修改文字和图片，支持上传、粘贴、拖拽及远程文件选择"
+      "title": "更准确的响应速度",
+      "description": "Token 生成速度会排除首 Token 等待时间（TTFT），更贴近实际生成阶段的速度"
     },
     {
-      "title": "模型物理删除",
-      "description": "管理员可删除 Model 和 Model Key，同时保留历史快照并清理活动关联"
+      "title": "图像提示词直达模型",
+      "description": "图像生成直接使用你的原始文本提示词，避免上下文模板影响绘图结果"
     },
     {
-      "title": "回答长图导出",
-      "description": "助手回答可直接导出为跟随深浅主题的 PNG 长图，保留公式、流程图、代码和表格"
+      "title": "聊天分支实时同步",
+      "description": "新生成消息会即时带回完整分支信息，重新生成和失败恢复时能正确定位当前分支"
     }
   ],
   "uiImprovements": [
     {
-      "title": "移动端工具栏",
-      "description": "MCP、联网搜索和 Agent 控件在窄屏下保持单行，发送操作更顺手"
+      "title": "图像参数配置",
+      "description": "模型设置和预设中可直接选择图片背景，默认值与自定义选项更清晰"
     },
     {
-      "title": "统一加载动画",
-      "description": "聊天、上传、会话管理和管理后台共用稳定的加载图标动画"
+      "title": "用户资料编辑",
+      "description": "新增用户、编辑用户和修改密码拆分为独立表单，避免密码字段干扰资料保存"
     },
     {
-      "title": "会话标题显示",
-      "description": "修复 g、j、p、q、y 等下伸字符在会话列表中被裁切的问题"
+      "title": "密码输入体验",
+      "description": "修改密码时显示实际账号，并补充浏览器密码管理器和明文查看支持"
     }
   ],
   "bugFixes": [
-    "修复 Responses API 仅含 reasoning 签名时重复显示空白思考区块的问题",
-    "修复 Model Key 的 possible-models 接口因 EF Core GroupBy 翻译失败而报错"
+    "修复模型地址已包含 /v1 时，图像生成和编辑接口重复拼接路径的问题",
+    "修复模型被删除或未配置时可能触发空引用的问题，现会返回明确的配置错误",
+    "修复实时 SSE 分支元数据缺失导致前端显示 0/N 或请求无效子树的问题"
   ],
   "otherUpdates": [
     {
       "title": "SQLite 自动迁移",
-      "description": "Ayaka Chats 的 1.12+ SQLite 数据库会在启动时通过 EF Core 自动完成 1.16 schema 升级"
+      "description": "Ayaka Chats 的 1.12+ SQLite 数据库会在启动时通过 EF Core 自动完成 Upgrade_to_1_17，加入图像背景配置字段"
     },
     {
       "title": "版本公告",
-      "description": "登录后显示本次更新海报；勾选后会按版本保存在浏览器中，不再重复提示"
+      "description": "登录后会显示本次更新公告；勾选“不再提示”后会按版本保存在浏览器中"
     }
   ]
 }

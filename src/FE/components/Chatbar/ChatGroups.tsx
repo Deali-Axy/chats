@@ -30,7 +30,7 @@ const ChatGroups = ({ onShowMore }: Props) => {
   const {
     state: { chats, chatGroups },
     chatDispatch,
-    handleNewChat,
+    handleCreateChat,
   } = useContext(HomeContext);
 
   const groupRefs = useRef<any>({});
@@ -164,7 +164,7 @@ const ChatGroups = ({ onShowMore }: Props) => {
   };
 
   const handleGroupNewChat = async (groupId: string) => {
-    await handleNewChat(groupId);
+    await handleCreateChat(groupId);
   };
 
   const ChatGroupsRender = (chatGroup: IChatGroup) => {

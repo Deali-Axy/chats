@@ -94,7 +94,10 @@ export interface HomeContextProps {
   promptDispatch: Dispatch<PromptAction>;
 
   hasModel: () => boolean;
-  handleNewChat: (groupId?: string | null) => void;
+  /** 显示新聊天欢迎页，不创建持久化聊天。 */
+  handleNewChat: () => void;
+  /** 创建持久化聊天，用于欢迎页和分组内的新建操作。 */
+  handleCreateChat: (groupId?: string | null) => Promise<void>;
   /** 创建临时聊天 */
   handleNewTempChat: () => void;
   /** 结束临时对话 */

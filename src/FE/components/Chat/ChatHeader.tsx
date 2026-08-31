@@ -92,6 +92,7 @@ const ChatHeader = () => {
           imageSize: span?.imageSize || null,
           format: span?.format || null,
           compression: span?.compression ?? null,
+          background: span?.background ?? null,
           mcps: span?.mcps || [],
           thinkingBudget: span?.thinkingBudget ?? null,
         }))
@@ -131,6 +132,7 @@ const ChatHeader = () => {
                 imageSize: data.imageSize,
                 format: data.format,
                 compression: data.compression,
+                background: data.background,
                 thinkingBudget: data.thinkingBudget,
                 mcps: data.mcps,
               };

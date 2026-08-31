@@ -277,7 +277,7 @@ const HomeContent = () => {
     return chat;
   }
 
-  const handleNewChat = (groupId: string | null = null) => {
+  const handleCreateChat = (groupId: string | null = null) => {
     return postChats({
       title: t('New Conversation'),
       groupId,
@@ -295,6 +295,37 @@ const HomeContent = () => {
       const chatId = data.id;
       router.push('#/' + chatId);
     });
+  };
+
+  /**
+   * 打开新聊天欢迎页。侧边栏的“新建对话”不应在用户发送第一条消息前
+   * 产生空的持久化聊天记录。
+   */
+  const handleNewChat = () => {
+    // 先清空地址栏中的旧会话 ID，避免下方的 URL 初始化逻辑在状态更新间隙
+    // 读取旧 hash 并重新选中刚离开的会话。
+    if (typeof window !== 'undefined') {
+      window.location.hash = '/';
+    } else {
+      router.push('#/');
+    }
+
+    const tempId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
+    if (tempId) {
+      tempChatIdRef.current = null;
+      setTempChat(null);
+      deleteTempChats(tempId).catch(() => {});
+
+      const chatList = chatsRef.current.filter((chat) => chat.id !== tempId);
+      chatsRef.current = chatList;
+      chatDispatch(setChats(chatList));
+    }
+
+    selectedChatIdRef.current = undefined;
+    chatDispatch(setSelectedChatId(undefined));
+    invalidatePendingMessageLoad();
+    messageDispatch(setMessages([]));
+    messageDispatch(setSelectedMessages([]));
   };
 
   /**
@@ -618,6 +649,7 @@ const HomeContent = () => {
         promptDispatch: promptDispatch,
 
         handleNewChat,
+        handleCreateChat,
         handleNewTempChat,
         handleEndTempChat,
         tempChat,

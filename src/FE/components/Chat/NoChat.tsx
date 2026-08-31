@@ -15,7 +15,7 @@ import HomeContext from '@/contexts/home.context';
 const NoChat = () => {
   const { t } = useTranslation();
 
-  const { handleNewChat, handleNewTempChat } = useContext(HomeContext);
+  const { handleCreateChat, handleNewTempChat } = useContext(HomeContext);
 
   return (
     <div className="w-full flex items-center justify-center p-8">
@@ -34,7 +34,7 @@ const NoChat = () => {
         <div className="grid gap-4 md:grid-cols-2">
           <Card
             className="cursor-pointer hover:border-primary/50 hover:shadow-md transition-all"
-            onClick={() => handleNewChat()}
+            onClick={() => handleCreateChat()}
           >
             <CardHeader className="space-y-1">
               <div className="flex items-center gap-2">

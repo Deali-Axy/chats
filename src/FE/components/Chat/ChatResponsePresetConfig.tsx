@@ -73,7 +73,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
   const { t } = useTranslation();
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-4">
       {/* System Prompt */}
       <SystemPrompt
         currentPrompt={systemPrompt}
@@ -124,10 +124,10 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
 
       {/* Temperature */}
       {model.minTemperature !== model.maxTemperature && (
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between">
-            <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-              <IconTemperature size={20} />
+        <div className="rounded-xl border border-border/70 bg-muted/25 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <IconTemperature size={18} className="text-muted-foreground" />
               {t('Temperature')}
             </div>
             <Button
@@ -140,13 +140,13 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                   onChangeTemperature(null);
                 }
               }}
-              className="h-6 px-2 text-sm"
+              className="h-7 rounded-md px-2 text-xs"
             >
               {temperature === null ? t('Default') : t('Custom')}
             </Button>
           </div>
           {temperature !== null && (
-            <div className="px-2">
+            <div className="mt-4 px-1">
               <Slider
                 className="cursor-pointer"
                 min={model.minTemperature}
@@ -157,7 +157,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                   onChangeTemperature(values[0]);
                 }}
               />
-              <div className="text-xs text-gray-500 mt-1">
+              <div className="mt-2 text-xs font-medium text-muted-foreground">
                 {temperature || DEFAULT_TEMPERATURE}
               </div>
             </div>
@@ -166,10 +166,10 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
       )}
 
       {/* Max Output Tokens */}
-      <div className="flex flex-col gap-4">
-        <div className="flex justify-between">
-          <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-            <IconTokens size={20} />
+      <div className="rounded-xl border border-border/70 bg-muted/25 p-4">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+            <IconTokens size={18} className="text-muted-foreground" />
             {t('Max Output Tokens')}
           </div>
           <Button
@@ -182,13 +182,13 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                 onChangeMaxOutputTokens(null);
               }
             }}
-            className="h-6 px-2 text-sm"
+            className="h-7 rounded-md px-2 text-xs"
           >
             {maxOutputTokens === null ? t('Default') : t('Custom')}
           </Button>
         </div>
         {maxOutputTokens !== null && (
-          <div className="px-2">
+          <div className="mt-4 px-1">
             <Slider
               className="cursor-pointer"
               min={0}
@@ -199,7 +199,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                 onChangeMaxOutputTokens(values[0]);
               }}
             />
-            <div className="text-xs text-gray-500 mt-1">
+            <div className="mt-2 text-xs font-medium text-muted-foreground">
               {maxOutputTokens || model.maxResponseTokens}
             </div>
           </div>
@@ -208,10 +208,10 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
 
       {/* Thinking Budget */}
       {model.maxThinkingBudget != null && (
-        <div className="flex flex-col gap-4">
-          <div className="flex justify-between">
-            <div className="flex gap-1 items-center text-neutral-700 dark:text-neutral-400">
-              <IconReasoning size={20} />
+        <div className="rounded-xl border border-border/70 bg-muted/25 p-4">
+          <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+              <IconReasoning size={18} className="text-muted-foreground" />
               {t('Thinking Budget')}
             </div>
             <Button
@@ -224,13 +224,13 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                   onChangeThinkingBudget(null);
                 }
               }}
-              className="h-6 px-2 text-sm"
+              className="h-7 rounded-md px-2 text-xs"
             >
               {thinkingBudget === null ? t('No Thinking') : t('Custom')}
             </Button>
           </div>
           {thinkingBudget !== null && (
-            <div className="px-2">
+            <div className="mt-4 px-1">
               <Slider
                 className="cursor-pointer"
                 min={0}
@@ -241,7 +241,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
                   onChangeThinkingBudget(values[0]);
                 }}
               />
-              <div className="text-sm text-gray-500 mt-1">
+              <div className="mt-2 text-sm font-medium text-muted-foreground">
                 {thinkingBudget || 0}
               </div>
             </div>

@@ -161,15 +161,18 @@ const SystemPrompt: FC<Props> = ({
   }, []);
 
   return (
-    <div className="flex flex-col">
-      <label className="mb-2 text-left text-neutral-700 dark:text-neutral-400 flex gap-1 items-center">
-        <IconMessage size={20} />
-        {t('System Prompt')}
-      </label>
+    <div className="rounded-xl border border-border/70 bg-muted/25 p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <label className="flex items-center gap-2 text-sm font-medium text-foreground">
+          <IconMessage size={18} className="text-muted-foreground" />
+          {t('System Prompt')}
+        </label>
+        <span className="text-xs text-muted-foreground">/ {t('Prompt')}</span>
+      </div>
       {isEditing ? (
         <textarea
           ref={textareaRef}
-          className="w-full rounded-lg border border-neutral-200 bg-transparent px-4 py-3 text-neutral-900 dark:border-neutral-600 dark:text-neutral-100"
+          className="w-full rounded-lg border border-border bg-background px-3 py-2.5 text-sm leading-6 text-foreground shadow-sm outline-none transition-shadow placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/15"
           style={{
             resize: 'none',
             maxHeight: `${TEXTAREA_MAX_HEIGHT}px`,
@@ -191,7 +194,7 @@ const SystemPrompt: FC<Props> = ({
         />
       ) : (
         <div
-          className="w-full rounded-lg border border-neutral-200 bg-transparent px-4 py-3 text-neutral-900 dark:border-neutral-600 dark:text-neutral-100 cursor-text min-h-[2.75rem]"
+          className="min-h-[5.5rem] w-full cursor-text rounded-lg border border-border bg-background px-3 py-2.5 text-sm leading-6 text-foreground shadow-sm transition-colors hover:border-primary/40"
           style={{
             maxHeight: `${TEXTAREA_MAX_HEIGHT}px`,
             overflow: 'auto',
@@ -201,7 +204,7 @@ const SystemPrompt: FC<Props> = ({
           onClick={() => setIsEditing(true)}
         >
           {rawValue || (
-            <span className="text-neutral-400">
+            <span className="text-muted-foreground">
               {t(`Enter a prompt or type "/" to select a prompt...`) || ''}
             </span>
           )}
