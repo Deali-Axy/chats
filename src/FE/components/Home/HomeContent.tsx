@@ -302,6 +302,14 @@ const HomeContent = () => {
    * 产生空的持久化聊天记录。
    */
   const handleNewChat = () => {
+    // 先清空地址栏中的旧会话 ID，避免下方的 URL 初始化逻辑在状态更新间隙
+    // 读取旧 hash 并重新选中刚离开的会话。
+    if (typeof window !== 'undefined') {
+      window.location.hash = '/';
+    } else {
+      router.push('#/');
+    }
+
     const tempId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
     if (tempId) {
       tempChatIdRef.current = null;
@@ -318,7 +326,6 @@ const HomeContent = () => {
     invalidatePendingMessageLoad();
     messageDispatch(setMessages([]));
     messageDispatch(setSelectedMessages([]));
-    router.push('#/');
   };
 
   /**
