@@ -132,6 +132,7 @@ const HomeContent = () => {
   const messageLoadRequestRef = useRef(0);
   /** 防止临时聊天被并发创建 */
   const creatingTempChatRef = useRef(false);
+  const [isSessionReady] = useState(() => Boolean(getUserSession()));
 
   useEffect(() => {
     chatsRef.current = chats;
@@ -583,12 +584,11 @@ const HomeContent = () => {
   }, []);
 
   useEffect(() => {
-    const session = getUserSession();
-    if (!session) {
+    if (!isSessionReady) {
       redirectToLoginPage();
       return;
     }
-    
+
     // 所有请求并行发起，不互相依赖
     chatDispatch(setIsChatsLoading(true));
     
@@ -612,7 +612,7 @@ const HomeContent = () => {
     getUserPromptBrief().then((data) => {
       promptDispatch(setPrompts(data));
     });
-  }, []);
+  }, [isSessionReady]);
 
   // useEffect(() => {
   //   const handlePopState = (event: PopStateEvent) => {
@@ -626,6 +626,10 @@ const HomeContent = () => {
   //     window.removeEventListener('popstate', handlePopState);
   //   };
   // }, [chats]);
+
+  if (!isSessionReady) {
+    return null;
+  }
 
   return (
     <HomeContext.Provider

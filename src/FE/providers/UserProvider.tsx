@@ -1,20 +1,36 @@
 'use client';
 
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useEffect, useState } from 'react';
 
-import { UserInfo, getUserInfo, redirectToLoginPage } from '@/utils/user';
+import {
+  UserInfo,
+  getUserInfo,
+  getUserSession,
+  redirectToLoginPage,
+} from '@/utils/user';
 
 const UserContext = createContext<UserInfo | null>(null);
 
+const getAuthenticatedUser = (): UserInfo | null => {
+  const userInfo = getUserInfo();
+  if (!userInfo || !getUserSession()) {
+    return null;
+  }
+  return userInfo;
+};
+
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user] = useState<UserInfo | null>(() => {
-    const userInfo = getUserInfo();
-    if (!userInfo) {
+  const [user] = useState<UserInfo | null>(() => getAuthenticatedUser());
+
+  useEffect(() => {
+    if (!user) {
       redirectToLoginPage();
-      return null;
     }
-    return userInfo;
-  });
+  }, [user]);
+
+  if (!user) {
+    return null;
+  }
 
   return <UserContext.Provider value={user}>{children}</UserContext.Provider>;
 };

@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Bug, CalendarDays, Sparkles } from 'lucide-react';
 
+import { getUserSession } from '@/utils/user';
+
 import changelogData from '@/data/changelog.json';
 import type { ChangelogData } from '@/types/changelog';
 
@@ -27,6 +29,9 @@ const ReleaseAnnouncementDialog = () => {
   );
 
   useEffect(() => {
+    if (!getUserSession()) {
+      return;
+    }
     setOpen(localStorage.getItem(DISMISS_STORAGE_KEY) !== 'true');
   }, []);
 

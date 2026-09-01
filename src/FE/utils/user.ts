@@ -30,8 +30,23 @@ export const getLoginUrl = () => {
   return '/login';
 };
 
+const PUBLIC_PATHS = new Set(['/login', '/authorizing']);
+
+export const isPublicPath = (pathname: string) => {
+  if (PUBLIC_PATHS.has(pathname)) {
+    return true;
+  }
+  return pathname === '/share' || pathname.startsWith('/share/');
+};
+
 export const redirectToLoginPage = () => {
-  location.href = getLoginUrl();
+  if (typeof window === 'undefined') {
+    return;
+  }
+  if (isPublicPath(window.location.pathname)) {
+    return;
+  }
+  window.location.replace(getLoginUrl());
 };
 
 export const redirectToHomePage = (ms?: number) => {
@@ -61,6 +76,8 @@ export const getUserSession = (): string => {
     return session.sessionId;
   return '';
 };
+
+export const isLoggedIn = () => Boolean(getUserSession() && getUserInfo());
 
 export const clearUserSession = () => {
   localStorage.removeItem('session');
