@@ -238,24 +238,22 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
         };
 
         Chat? lastChat = await db.Chats
-            .Include(x => x.ChatSpans.OrderBy(x => x.SpanId)).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatConfigMcps)
+            .Include(x => x.ChatSpans).ThenInclude(x => x.ChatConfig).ThenInclude(x => x.ChatConfigMcps)
             .Where(x => x.UserId == currentUser.Id && !x.IsArchived && x.ChatSpans.Any())
             .OrderByDescending(x => x.CreatedAt)
             .FirstOrDefaultAsync(cancellationToken);
-        if (lastChat != null && lastChat.ChatSpans.All(cs => cs.ChatConfig.ModelId.HasValue && validModels.ContainsKey(cs.ChatConfig.ModelId.Value)))
+        ChatSpan? lastSpan = lastChat?.ChatSpans.SingleOrDefault();
+        if (lastSpan?.ChatConfig.ModelId is short modelId && validModels.TryGetValue(modelId, out UserModel? model))
         {
-            chat.ChatSpans = [.. lastChat.ChatSpans.Select((cs, i) =>
+            ChatSpan newSpan = new()
             {
-                ChatSpan newCs = new()
-                {
-                    Enabled = cs.Enabled,
-                    ChatConfig = cs.ChatConfig.Clone(),
-                    SpanId = (byte)i,
-                };
-                newCs.ChatConfig.Id = 0;
-                newCs.ChatConfig.Model = validModels[cs.ChatConfig.ModelId!.Value].Model;
-                return newCs;
-            })];
+                Enabled = true,
+                SpanId = 0,
+                ChatConfig = lastSpan.ChatConfig.Clone(),
+            };
+            newSpan.ChatConfig.Id = 0;
+            newSpan.ChatConfig.Model = model.Model;
+            chat.ChatSpans = [newSpan];
         }
         else
         {
@@ -420,13 +418,10 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             return NotFound();
         }
 
-        ChatSpan? firstEnabledSpan = chat.ChatSpans
-            .Where(x => x.Enabled)
-            .OrderBy(x => x.SpanId)
-            .FirstOrDefault();
-        if (firstEnabledSpan?.ChatConfig.ModelId is not short modelId)
+        ChatSpan? span = chat.ChatSpans.SingleOrDefault();
+        if (span?.ChatConfig.ModelId is not short modelId)
         {
-            return BadRequest("No enabled spans");
+            return BadRequest("No chat model");
         }
 
         UserModel? userModel = await userModelManager.GetUserModel(currentUser.Id, modelId, cancellationToken);
@@ -443,7 +438,7 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
 
         string title = await chatTitleSummaryService.GenerateTitleAsync(
             chat.Id,
-            firstEnabledSpan.ChatConfig.SystemPrompt,
+            span.ChatConfig.SystemPrompt,
             userModel,
             chatHistory,
             cancellationToken);

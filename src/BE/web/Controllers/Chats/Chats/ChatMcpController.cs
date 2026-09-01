@@ -13,7 +13,7 @@ namespace Chats.BE.Controllers.Chats.Chats;
 public class ChatMcpController(ChatsDB db, IUrlEncryptionService idEncryption, CurrentUser currentUser) : ControllerBase
 {
     [HttpPut("{mcpServerId:int}")]
-    public async Task<ActionResult<ChatSpanDto[]>> Enable(
+    public async Task<ActionResult<ChatSpanDto>> Enable(
         string encryptedChatId,
         int mcpServerId,
         CancellationToken cancellationToken)
@@ -22,7 +22,7 @@ public class ChatMcpController(ChatsDB db, IUrlEncryptionService idEncryption, C
     }
 
     [HttpDelete("{mcpServerId:int}")]
-    public async Task<ActionResult<ChatSpanDto[]>> Disable(
+    public async Task<ActionResult<ChatSpanDto>> Disable(
         string encryptedChatId,
         int mcpServerId,
         CancellationToken cancellationToken)
@@ -30,7 +30,7 @@ public class ChatMcpController(ChatsDB db, IUrlEncryptionService idEncryption, C
         return await SetEnabled(encryptedChatId, mcpServerId, false, cancellationToken);
     }
 
-    private async Task<ActionResult<ChatSpanDto[]>> SetEnabled(
+    private async Task<ActionResult<ChatSpanDto>> SetEnabled(
         string encryptedChatId,
         int mcpServerId,
         bool enabled,
@@ -61,10 +61,14 @@ public class ChatMcpController(ChatsDB db, IUrlEncryptionService idEncryption, C
             return NotFound();
         }
 
-        ChatConfig[] targetConfigs = [.. chat.ChatSpans
-            .Where(x => x.ChatConfig.Model?.CurrentSnapshot.AllowToolCall == true)
-            .GroupBy(x => x.ChatConfigId)
-            .Select(x => x.First().ChatConfig)];
+        ChatSpan? span = chat.ChatSpans.SingleOrDefault();
+        if (span is null)
+        {
+            return BadRequest("Chat has no model configuration");
+        }
+        ChatConfig[] targetConfigs = span.ChatConfig.Model?.CurrentSnapshot.AllowToolCall == true
+            ? [span.ChatConfig]
+            : [];
 
         if (enabled)
         {
@@ -88,10 +92,7 @@ public class ChatMcpController(ChatsDB db, IUrlEncryptionService idEncryption, C
             await db.SaveChangesAsync(cancellationToken);
         }
 
-        ChatSpanDto[] result = [.. chat.ChatSpans
-            .OrderBy(x => x.SpanId)
-            .Select(ChatSpanDto.FromDB)];
-        return Ok(result);
+        return Ok(ChatSpanDto.FromDB(span));
     }
 
     internal static void ApplyMcpState(IEnumerable<ChatConfig> targetConfigs, int mcpServerId, bool enabled)

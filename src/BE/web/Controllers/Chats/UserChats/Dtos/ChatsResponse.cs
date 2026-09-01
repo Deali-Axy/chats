@@ -147,31 +147,6 @@ public record ChatSpanDto
             })],
     };
 
-    public static ChatSpanDto FromDB(ChatPresetSpan span) => new()
-    {
-        SpanId = span.SpanId,
-        Enabled = span.Enabled,
-        SystemPrompt = span.ChatConfig.SystemPrompt,
-        ModelId = span.ChatConfig.ModelId,
-        ModelName = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.Name,
-        ModelProviderId = span.ChatConfig.Model == null ? null : span.ChatConfig.Model.CurrentSnapshot.ModelKeySnapshot.ModelProviderId,
-        Temperature = span.ChatConfig.Temperature,
-        WebSearchEnabled = span.ChatConfig.WebSearchEnabled,
-        CodeExecutionEnabled = span.ChatConfig.CodeExecutionEnabled,
-        MaxOutputTokens = span.ChatConfig.MaxOutputTokens,
-        ReasoningEffort = span.ChatConfig.Effort,
-        ImageSize = span.ChatConfig.ImageSize,
-        Format = span.ChatConfig.Format,
-        Compression = span.ChatConfig.Compression,
-        Background = span.ChatConfig.Background,
-        ThinkingBudget = span.ChatConfig.ThinkingBudget,
-        Mcps = [.. span.ChatConfig.ChatConfigMcps.Select(
-            x => new ChatSpanMcp
-            {
-                Id = x.McpServerId,
-                CustomHeaders = x.CustomHeaders
-            })],
-    };
 }
 
 public record ChatSpanMcp

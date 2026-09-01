@@ -161,15 +161,10 @@ public sealed class ChatMessageViewService(
             else
             {
                 TurnMeta[] assistantSiblings = [.. turns.Where(x => !x.IsUser && x.ParentId == parentId)];
-                List<TurnMeta> group = [];
-                foreach (IGrouping<byte?, TurnMeta> spanGroup in assistantSiblings.GroupBy(x => x.SpanId))
-                {
-                    TurnMeta? selected = spanGroup.FirstOrDefault(x => x.Id == current.Id)
-                        ?? (previousUser == null ? null : spanGroup.FirstOrDefault(x => previousUser.ParentId == x.Id))
-                        ?? spanGroup.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Last();
-                    group.Add(selected);
-                }
-                levels.Insert(0, [.. group.OrderBy(x => x.SpanId).ThenBy(x => x.CreatedAt).ThenBy(x => x.Id)]);
+                TurnMeta selected = assistantSiblings.FirstOrDefault(x => x.Id == current.Id)
+                    ?? (previousUser == null ? null : assistantSiblings.FirstOrDefault(x => previousUser.ParentId == x.Id))
+                    ?? assistantSiblings.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Last();
+                levels.Insert(0, [selected]);
             }
 
             current = parentId.HasValue ? turnMap.GetValueOrDefault(parentId.Value) : null;
@@ -225,7 +220,7 @@ public sealed class ChatMessageViewService(
 
     internal static long[] GetSiblingIds(IReadOnlyList<TurnMeta> turns, TurnMeta turn) =>
         [.. turns
-            .Where(x => x.ParentId == turn.ParentId && x.IsUser == turn.IsUser && (turn.IsUser || x.SpanId == turn.SpanId))
+            .Where(x => x.ParentId == turn.ParentId && x.IsUser == turn.IsUser)
             .OrderBy(x => x.CreatedAt)
             .ThenBy(x => x.Id)
             .Select(x => x.Id)];

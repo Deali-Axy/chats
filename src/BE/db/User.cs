@@ -59,9 +59,6 @@ public partial class User
     public virtual ICollection<ChatGroup> ChatGroups { get; set; } = new List<ChatGroup>();
 
     [InverseProperty("User")]
-    public virtual ICollection<ChatPreset> ChatPresets { get; set; } = new List<ChatPreset>();
-
-    [InverseProperty("User")]
     public virtual ICollection<Chat> Chats { get; set; } = new List<Chat>();
 
     [InverseProperty("CreateUser")]

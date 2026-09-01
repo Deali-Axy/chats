@@ -48,9 +48,6 @@ public partial class ChatConfig
     public virtual ICollection<ChatConfigMcp> ChatConfigMcps { get; set; } = new List<ChatConfigMcp>();
 
     [InverseProperty("ChatConfig")]
-    public virtual ICollection<ChatPresetSpan> ChatPresetSpans { get; set; } = new List<ChatPresetSpan>();
-
-    [InverseProperty("ChatConfig")]
     public virtual ICollection<ChatSpan> ChatSpans { get; set; } = new List<ChatSpan>();
 
     [ForeignKey("ModelId")]

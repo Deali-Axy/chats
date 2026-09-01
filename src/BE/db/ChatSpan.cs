@@ -9,6 +9,7 @@ namespace Chats.DB;
 [PrimaryKey("ChatId", "SpanId")]
 [Table("ChatSpan")]
 [Index("ChatConfigId", Name = "IX_ChatSpan_ChatConfigId")]
+[Index("ChatId", IsUnique = true, Name = "IX_ChatSpan_ChatId")]
 public partial class ChatSpan
 {
     [Key]

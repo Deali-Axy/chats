@@ -25,10 +25,6 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<ChatGroup> ChatGroups { get; set; }
 
-    public virtual DbSet<ChatPreset> ChatPresets { get; set; }
-
-    public virtual DbSet<ChatPresetSpan> ChatPresetSpans { get; set; }
-
     public virtual DbSet<ChatShare> ChatShares { get; set; }
 
     public virtual DbSet<ChatSpan> ChatSpans { get; set; }
@@ -208,20 +204,6 @@ public partial class ChatsDB : DbContext
             entity.HasOne(d => d.User).WithMany(p => p.ChatGroups)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatGroup_User");
-        });
-
-        modelBuilder.Entity<ChatPreset>(entity =>
-        {
-            entity.HasOne(d => d.User).WithMany(p => p.ChatPresets).HasConstraintName("FK_ChatPreset_User");
-        });
-
-        modelBuilder.Entity<ChatPresetSpan>(entity =>
-        {
-            entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatPresetSpans)
-                .OnDelete(DeleteBehavior.ClientSetNull)
-                .HasConstraintName("FK_ChatPresetSpan_Config");
-
-            entity.HasOne(d => d.ChatPreset).WithMany(p => p.ChatPresetSpans).HasConstraintName("FK_ChatPresetSpan_Preset");
         });
 
         modelBuilder.Entity<ChatShare>(entity =>

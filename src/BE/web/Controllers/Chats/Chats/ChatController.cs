@@ -204,12 +204,13 @@ public class ChatController(
             return turn is null ? [] : ChatMessageViewService.GetSiblingIds(turns, turn);
         }
 
-        // ensure chat.ChatSpan contains all span ids that in request, otherwise return error
+        // A chat always has one active model. Regeneration may choose a temporary
+        // model for that request, but never creates a parallel response branch.
         ChatSpan[] toGenerateSpans = null!;
         if (req is RegenerateAssistantMessageRequest rr)
         {
-            ChatSpan? span = chat.ChatSpans.FirstOrDefault(y => y.SpanId == rr.SpanId);
-            if (span == null)
+            ChatSpan? span = chat.ChatSpans.SingleOrDefault();
+            if (span == null || rr.SpanId != span.SpanId)
             {
                 return BadRequest($"Invalid span id: {rr.SpanId}");
             }
@@ -220,9 +221,7 @@ public class ChatController(
         }
         else if (req is GeneralChatRequest or RegenerateAllAssistantMessageRequest)
         {
-            toGenerateSpans = [..chat.ChatSpans
-                .Where(x => x.Enabled)
-                .Select(x => x.Clone())];
+            toGenerateSpans = [..chat.ChatSpans.Select(x => x.Clone())];
         }
         if (toGenerateSpans.Length == 0)
         {

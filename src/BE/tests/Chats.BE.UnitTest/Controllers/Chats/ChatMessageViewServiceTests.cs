@@ -6,7 +6,7 @@ namespace Chats.BE.UnitTest.Controllers.Chats;
 public class ChatMessageViewServiceTests
 {
     [Fact]
-    public void BuildVisibleLevels_ReturnsCurrentPathAndOneAssistantPerSpan()
+    public void BuildVisibleLevels_ReturnsOnlyTheCurrentAssistantBranch()
     {
         Meta[] turns =
         [
@@ -22,7 +22,7 @@ public class ChatMessageViewServiceTests
 
         Assert.Equal(4, levels.Count);
         Assert.Equal([1], levels[0].Select(x => x.Id));
-        Assert.Equal([3, 4], levels[1].Select(x => x.Id));
+        Assert.Equal([3], levels[1].Select(x => x.Id));
         Assert.Equal([5], levels[2].Select(x => x.Id));
         Assert.Equal([6], levels[3].Select(x => x.Id));
     }
@@ -91,7 +91,7 @@ public class ChatMessageViewServiceTests
     }
 
     [Fact]
-    public void GetSiblingIds_GroupsAssistantBranchesBySpan()
+    public void GetSiblingIds_ReturnsAllAssistantBranches()
     {
         Meta[] turns =
         [
@@ -101,8 +101,8 @@ public class ChatMessageViewServiceTests
             M(4, 1, user: false, 4, span: 1),
         ];
 
-        Assert.Equal([2, 3], ChatMessageViewService.GetSiblingIds(turns, turns[1]));
-        Assert.Equal([4], ChatMessageViewService.GetSiblingIds(turns, turns[3]));
+        Assert.Equal([2, 3, 4], ChatMessageViewService.GetSiblingIds(turns, turns[1]));
+        Assert.Equal([2, 3, 4], ChatMessageViewService.GetSiblingIds(turns, turns[3]));
     }
 
     private static Meta M(long id, long? parentId, bool user, int minute, byte? span = null) =>
