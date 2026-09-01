@@ -1,4 +1,9 @@
-import { ChatStatus, RequestContent, ResponseContent, UsageSource } from './chat';
+import {
+  ChatStatus,
+  RequestContent,
+  ResponseContent,
+  UsageSource,
+} from './chat';
 import { IChatMessage } from './chatMessage';
 import { DBModelProvider } from './model';
 import { Paging } from './page';
@@ -382,6 +387,49 @@ export interface GetUserFilesResult {
   fileName: string;
   contentType: string;
   url: string;
+}
+
+export type LibraryItemKind = 'image' | 'file' | 'note';
+
+export interface LibraryFolder {
+  id: number;
+  parentId: number | null;
+  name: string;
+  updatedAt: string;
+}
+
+export interface LibraryItem {
+  id: number;
+  folderId: number | null;
+  title: string;
+  kind: LibraryItemKind;
+  content: string | null;
+  file: GetUserFilesResult | null;
+  updatedAt: string;
+}
+
+export interface GetLibraryItemsParams extends Paging {
+  folderId?: number;
+  kind?: LibraryItemKind;
+  query?: string;
+  includeArchived?: boolean;
+}
+
+export interface CreateLibraryFolderParams {
+  name: string;
+  parentId?: number | null;
+}
+
+export interface CreateLibraryNoteParams {
+  title: string;
+  content: string;
+  folderId?: number | null;
+}
+
+export interface UpdateLibraryItemParams {
+  title?: string;
+  folderId?: number | null;
+  isArchived?: boolean;
 }
 
 // MCP related types

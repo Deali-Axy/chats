@@ -8,11 +8,14 @@ import {
   useState,
 } from 'react';
 
+import Link from 'next/link';
+
 import { useIsMobile } from '@/hooks/useMobile';
 import useTranslation from '@/hooks/useTranslation';
 
 import {
   IconBolt,
+  IconFolder,
   IconLayoutSidebar,
   IconLayoutSidebarRight,
   IconLoader,
@@ -238,6 +241,20 @@ function Sidebar<T>({
           </Button>
         }
       />
+      <Tips
+        trigger={
+          <Button
+            asChild
+            variant="ghost"
+            className="h-9 w-9 rounded-lg p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+          >
+            <Link href="/library">
+              <IconFolder size={18} />
+            </Link>
+          </Button>
+        }
+        content="资料库"
+      />
       {hasModel() && (
         <>
           <Tips
@@ -343,6 +360,16 @@ function Sidebar<T>({
                 </span>
               </div>
             </div>
+            <Button
+              asChild
+              variant="ghost"
+              className="h-10 w-full justify-start gap-3 rounded-lg px-3 text-[15px] font-medium hover:bg-sidebar-accent"
+            >
+              <Link href="/library">
+                <IconFolder size={18} />
+                <span>资料库</span>
+              </Link>
+            </Button>
             {hasModel() && (
               <div className="space-y-1">
                 <Button

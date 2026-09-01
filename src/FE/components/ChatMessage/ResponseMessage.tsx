@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import toast from 'react-hot-toast';
 
-import useTranslation from '@/hooks/useTranslation';
 import useMathCopy from '@/hooks/useMathCopy';
+import useTranslation from '@/hooks/useTranslation';
 
 import { isChatting } from '@/utils/chats';
 import { copyTextToClipboard } from '@/utils/clipboard';
@@ -11,27 +12,28 @@ import {
   ChatStatus,
   EMPTY_ID,
   FileDef,
-  getFileUrl,
   MessageContentType,
   ResponseContent,
   ToolCallContent,
   ToolResponseContent,
+  getFileUrl,
 } from '@/types/chat';
 import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
 
-import { loadComponentOnce } from '@/components/common/loadComponentOnce';
+import FilePreview from '@/components/FilePreview/FilePreview';
+import ImagePreview from '@/components/ImagePreview/ImagePreview';
 import MarkdownRenderer from '@/components/Markdown/MarkdownRenderer';
 import { MarkdownLoadingFallback } from '@/components/Markdown/markdownShared';
-import ImagePreview from '@/components/ImagePreview/ImagePreview';
-import FilePreview from '@/components/FilePreview/FilePreview';
-import StepInfoBubble from './StepInfoBubble';
+import { loadComponentOnce } from '@/components/common/loadComponentOnce';
 
 import ChatError from '../ChatError/ChatError';
-import { IconCopy, IconEdit } from '../Icons';
+import { IconCopy, IconEdit, IconNotes } from '../Icons';
 import Tips from '../Tips/Tips';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
+import StepInfoBubble from './StepInfoBubble';
 
+import { postLibraryNote } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 const ToolCallBlock = loadComponentOnce<{
@@ -40,7 +42,8 @@ const ToolCallBlock = loadComponentOnce<{
   chatStatus?: ChatSpanStatus;
 }>({
   cacheKey: 'Markdown/ToolCallBlock',
-  loader: () => import('@/components/Markdown/ToolCallBlock').then((mod) => mod.default),
+  loader: () =>
+    import('@/components/Markdown/ToolCallBlock').then((mod) => mod.default),
   renderFallback: () => (
     <div className="h-8 w-40 animate-pulse rounded-md bg-muted" />
   ),
@@ -62,14 +65,22 @@ const ThinkingMessage = loadComponentOnce<{
 });
 
 // 骨架动画组件
-const SkeletonLine = ({ width = '100%', height = '1rem', delay = '0s' }: { width?: string; height?: string; delay?: string }) => (
-  <div 
-    className="animate-pulse bg-muted rounded" 
-    style={{ 
-      width, 
+const SkeletonLine = ({
+  width = '100%',
+  height = '1rem',
+  delay = '0s',
+}: {
+  width?: string;
+  height?: string;
+  delay?: string;
+}) => (
+  <div
+    className="animate-pulse bg-muted rounded"
+    style={{
+      width,
       height,
       animationDelay: delay,
-      animationDuration: '1.5s'
+      animationDuration: '1.5s',
     }}
   />
 );
@@ -102,7 +113,15 @@ interface Props {
 }
 
 const ResponseMessage = (props: Props) => {
-  const { message, chatStatus, readonly, chatId, chatShareId, groupImageUrls, onEditResponseMessage } = props;
+  const {
+    message,
+    chatStatus,
+    readonly,
+    chatId,
+    chatShareId,
+    groupImageUrls,
+    onEditResponseMessage,
+  } = props;
   const { t } = useTranslation();
 
   // 启用数学公式复制功能（复制时保留原始 LaTeX）
@@ -119,14 +138,16 @@ const ResponseMessage = (props: Props) => {
   const [previewImages, setPreviewImages] = useState<string[]>([]);
   const [previewIndex, setPreviewIndex] = useState(0);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
-  const [sourceImageElement, setSourceImageElement] = useState<HTMLImageElement | null>(null);
+  const [sourceImageElement, setSourceImageElement] =
+    useState<HTMLImageElement | null>(null);
 
   const handleEditMessage = (isCopyAndSave: boolean = false) => {
     const newContent = messageContent.find((c) => c.i === editId)!;
     // Only text content can be edited
     if (newContent.$type === MessageContentType.text) {
       newContent.c = contentText;
-      onEditResponseMessage && onEditResponseMessage(messageId, newContent, isCopyAndSave);
+      onEditResponseMessage &&
+        onEditResponseMessage(messageId, newContent, isCopyAndSave);
     }
     setEditId(EMPTY_ID);
   };
@@ -155,7 +176,24 @@ const ResponseMessage = (props: Props) => {
     void copyTextToClipboard(text || '');
   };
 
-  const handleImageClick = (imageUrl: string, allImages: string[], event: React.MouseEvent<HTMLImageElement>) => {
+  const handleSaveToLibrary = async (text: string) => {
+    if (!text.trim()) return;
+    try {
+      await postLibraryNote({
+        title: message.modelName ? `${message.modelName} 回复` : '对话摘录',
+        content: text,
+      });
+      toast.success('已保存到资料库');
+    } catch {
+      toast.error('保存到资料库失败');
+    }
+  };
+
+  const handleImageClick = (
+    imageUrl: string,
+    allImages: string[],
+    event: React.MouseEvent<HTMLImageElement>,
+  ) => {
     const normalizedImages = allImages.length > 0 ? allImages : [imageUrl];
     const previewImageList = normalizedImages.includes(imageUrl)
       ? normalizedImages
@@ -178,10 +216,12 @@ const ResponseMessage = (props: Props) => {
   type ProcessedContent = ResponseContent | ToolGroupContent;
 
   // 按原始顺序处理内容，将工具调用和响应组合
-  const processContentInOrder = (content: ResponseContent[]): ProcessedContent[] => {
+  const processContentInOrder = (
+    content: ResponseContent[],
+  ): ProcessedContent[] => {
     const toolResponseMap: { [toolCallId: string]: ToolResponseContent } = {};
     const processedContent: ProcessedContent[] = [];
-    
+
     // 首先收集所有工具响应
     content.forEach((c) => {
       if (c.$type === MessageContentType.toolResponse) {
@@ -199,7 +239,7 @@ const ResponseMessage = (props: Props) => {
           $type: 'toolGroup',
           toolCall,
           toolResponse,
-          originalIndex: index
+          originalIndex: index,
         });
       } else if (c.$type !== MessageContentType.toolResponse) {
         // 跳过工具响应，因为它们已经被组合到工具调用中了
@@ -210,22 +250,35 @@ const ResponseMessage = (props: Props) => {
     return processedContent;
   };
 
-  const renderToolGroup = (toolGroup: ToolGroupContent, index: number, stepInfo?: { step: IStep; isLastInStep: boolean }) => {
+  const renderToolGroup = (
+    toolGroup: ToolGroupContent,
+    index: number,
+    stepInfo?: { step: IStep; isLastInStep: boolean },
+  ) => {
     const { toolCall, toolResponse } = toolGroup;
-    const showStepInfo = showPerStepActions && stepInfo?.isLastInStep && !stepInfo.step.edited && stepInfo.step.id;
+    const showStepInfo =
+      showPerStepActions &&
+      stepInfo?.isLastInStep &&
+      !stepInfo.step.edited &&
+      stepInfo.step.id;
 
     return (
-      <div key={`tool-group-${index}`} className={cn("relative group/item", index > 0 ? "my-1" : "")}>
+      <div
+        key={`tool-group-${index}`}
+        className={cn('relative group/item', index > 0 ? 'my-1' : '')}
+      >
         <ToolCallBlock
           toolCall={toolCall}
           toolResponse={toolResponse}
           chatStatus={messageStatus}
         />
         {showStepInfo && (
-          <div className={cn(
-            'pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-end pr-1',
-            isChatting(chatStatus) && 'hidden',
-          )}>
+          <div
+            className={cn(
+              'pointer-events-none absolute inset-x-0 bottom-0 z-10 flex justify-end pr-1',
+              isChatting(chatStatus) && 'hidden',
+            )}
+          >
             <div className="pointer-events-auto invisible group-hover/item:visible">
               <StepInfoBubble
                 stepId={stepInfo!.step.id}
@@ -242,7 +295,7 @@ const ResponseMessage = (props: Props) => {
 
   useEffect(() => {
     setMessageContent(structuredClone(content));
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [message.steps]);
 
   useEffect(() => {
@@ -259,22 +312,27 @@ const ResponseMessage = (props: Props) => {
   // 收集所有图片URL用于预览（类型守卫确保 c 上有属性）
   const imageContents = contentToProcess.filter(
     (c): c is ResponseContent & { c: FileDef } =>
-      c.$type === MessageContentType.fileId || c.$type === MessageContentType.tempFileId,
+      c.$type === MessageContentType.fileId ||
+      c.$type === MessageContentType.tempFileId,
   );
   const messageImageUrls = imageContents.map((c) => getFileUrl(c.c as FileDef));
-  const previewGalleryImages = groupImageUrls && groupImageUrls.length > 0
-    ? groupImageUrls
-    : messageImageUrls;
+  const previewGalleryImages =
+    groupImageUrls && groupImageUrls.length > 0
+      ? groupImageUrls
+      : messageImageUrls;
 
   // 计算每个 content 属于哪个 step，以及是否为该 step 的最后一个 content
   const contentStepMap = useMemo(() => {
-    const map = new Map<string, { stepIndex: number; step: IStep; isLastInStep: boolean }>();
+    const map = new Map<
+      string,
+      { stepIndex: number; step: IStep; isLastInStep: boolean }
+    >();
     message.steps.forEach((step, stepIndex) => {
       step.contents.forEach((c, contentIndex) => {
-        map.set(c.i, { 
-          stepIndex, 
+        map.set(c.i, {
+          stepIndex,
           step,
-          isLastInStep: contentIndex === step.contents.length - 1
+          isLastInStep: contentIndex === step.contents.length - 1,
         });
       });
     });
@@ -282,10 +340,13 @@ const ResponseMessage = (props: Props) => {
   }, [message.steps]);
 
   // 将连续的图片内容分组
-  type GroupedItem = { type: 'content'; item: ProcessedContent | ProcessedContent[] };
+  type GroupedItem = {
+    type: 'content';
+    item: ProcessedContent | ProcessedContent[];
+  };
   const groupedContent: GroupedItem[] = [];
   let currentImageGroup: ProcessedContent[] = [];
-  
+
   // 获取 content 的 ID（ToolGroupContent 使用 toolCall.i）
   const getContentId = (c: ProcessedContent): string => {
     if (c.$type === 'toolGroup') {
@@ -293,9 +354,12 @@ const ResponseMessage = (props: Props) => {
     }
     return (c as ResponseContent).i;
   };
-  
+
   processedContent.forEach((c) => {
-    if (c.$type === MessageContentType.fileId || c.$type === MessageContentType.tempFileId) {
+    if (
+      c.$type === MessageContentType.fileId ||
+      c.$type === MessageContentType.tempFileId
+    ) {
       currentImageGroup.push(c);
     } else {
       if (currentImageGroup.length > 0) {
@@ -305,17 +369,21 @@ const ResponseMessage = (props: Props) => {
       groupedContent.push({ type: 'content', item: c });
     }
   });
-  
+
   // 处理最后一组图片
   if (currentImageGroup.length > 0) {
     groupedContent.push({ type: 'content', item: currentImageGroup });
   }
 
   // 判断是否应该显示骨架动画
-  const shouldShowSkeleton = 
-    (messageStatus === ChatSpanStatus.Pending || messageStatus === ChatSpanStatus.Chatting) &&
-    (!contentToProcess || contentToProcess.length === 0 || 
-     (contentToProcess.length === 1 && contentToProcess[0].$type === MessageContentType.text && !contentToProcess[0].c));
+  const shouldShowSkeleton =
+    (messageStatus === ChatSpanStatus.Pending ||
+      messageStatus === ChatSpanStatus.Chatting) &&
+    (!contentToProcess ||
+      contentToProcess.length === 0 ||
+      (contentToProcess.length === 1 &&
+        contentToProcess[0].$type === MessageContentType.text &&
+        !contentToProcess[0].c));
 
   // 如果应该显示骨架动画，则直接返回骨架
   if (shouldShowSkeleton) {
@@ -343,7 +411,10 @@ const ResponseMessage = (props: Props) => {
         // 如果是文件数组，用容器包裹并横向排列
         if (Array.isArray(item)) {
           return (
-            <div key={`file-group-${groupIndex}`} className="flex flex-wrap gap-2">
+            <div
+              key={`file-group-${groupIndex}`}
+              className="flex flex-wrap gap-2"
+            >
               {item.map((c, index) => {
                 if (c.$type === MessageContentType.fileId) {
                   return (
@@ -359,20 +430,26 @@ const ResponseMessage = (props: Props) => {
                   const imageUrl = getFileUrl(c.c as FileDef);
                   const fileDef = c.c as FileDef;
                   const isImage = fileDef.contentType.startsWith('image/');
-                  
+
                   if (isImage) {
                     return (
-                      <div key={'temp-file-' + groupIndex + '-' + index} className="relative rounded-md overflow-hidden" style={{ height: 300, maxWidth: '100%' }}>
+                      <div
+                        key={'temp-file-' + groupIndex + '-' + index}
+                        className="relative rounded-md overflow-hidden"
+                        style={{ height: 300, maxWidth: '100%' }}
+                      >
                         <img
                           alt={t('Loading...')}
                           className="h-full w-auto rounded-md cursor-pointer hover:opacity-90 transition-opacity"
                           style={{ maxWidth: '100%' }}
                           src={imageUrl}
-                          onClick={(e) => handleImageClick(imageUrl, previewGalleryImages, e)}
+                          onClick={(e) =>
+                            handleImageClick(imageUrl, previewGalleryImages, e)
+                          }
                         />
                         {/* 蓝色激光扫描效果 */}
                         <div className="absolute inset-0 pointer-events-none">
-                          <div 
+                          <div
                             className="absolute w-full h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent shadow-[0_0_20px_rgba(59,130,246,0.8)]"
                             style={{
                               animation: 'scan 2s linear infinite',
@@ -402,7 +479,10 @@ const ResponseMessage = (props: Props) => {
                   } else {
                     // 非图片临时文件显示普通加载状态
                     return (
-                      <div key={'temp-file-' + groupIndex + '-' + index} className="relative">
+                      <div
+                        key={'temp-file-' + groupIndex + '-' + index}
+                        className="relative"
+                      >
                         <FilePreview
                           file={fileDef}
                           onImageClick={handleImageClick}
@@ -418,11 +498,11 @@ const ResponseMessage = (props: Props) => {
             </div>
           );
         }
-        
+
         // 处理非图片内容
         const c = item as ProcessedContent;
         const index = groupIndex;
-        
+
         if (c.$type === 'toolGroup') {
           const toolGroupContent = c as ToolGroupContent;
           const contentInfo = contentStepMap.get(toolGroupContent.toolCall.i);
@@ -506,9 +586,16 @@ const ResponseMessage = (props: Props) => {
           ) : (
             (() => {
               const contentInfo = contentStepMap.get(c.i);
-              const showStepInfo = showPerStepActions && contentInfo?.isLastInStep && !contentInfo.step.edited && contentInfo.step.id;
+              const showStepInfo =
+                showPerStepActions &&
+                contentInfo?.isLastInStep &&
+                !contentInfo.step.edited &&
+                contentInfo.step.id;
               return (
-                <div key={'text-' + index} className="relative group/item w-full min-w-0">
+                <div
+                  key={'text-' + index}
+                  className="relative group/item w-full min-w-0"
+                >
                   {message.displayType === 'Raw' ? (
                     <div className="prose dark:prose-invert [--tw-prose-body:#000] [--tw-prose-headings:#000] rounded-r-md flex-1 overflow-auto text-sm leading-4 font-normal py-2 px-3 group/item">
                       <div className="whitespace-pre-wrap font-mono">{c.c}</div>
@@ -556,6 +643,22 @@ const ResponseMessage = (props: Props) => {
                           )}
                           <Tips
                             side="top"
+                            content="保存到资料库"
+                            trigger={
+                              <button
+                                disabled={isChatting(messageStatus)}
+                                className="invisible group-hover/item:visible rounded-full p-0.5 transition-opacity hover:opacity-60"
+                                onClick={(e) => {
+                                  void handleSaveToLibrary(c.c);
+                                  e.stopPropagation();
+                                }}
+                              >
+                                <IconNotes size={16} />
+                              </button>
+                            }
+                          />
+                          <Tips
+                            side="top"
                             content={t('Edit')}
                             trigger={
                               <button
@@ -573,10 +676,12 @@ const ResponseMessage = (props: Props) => {
                         </>
                       )}
                       {showStepInfo && (
-                        <div className={cn(
-                          'invisible group-hover/item:visible',
-                          isChatting(chatStatus) && 'hidden',
-                        )}>
+                        <div
+                          className={cn(
+                            'invisible group-hover/item:visible',
+                            isChatting(chatStatus) && 'hidden',
+                          )}
+                        >
                           <StepInfoBubble
                             stepId={contentInfo!.step.id}
                             edited={contentInfo!.step.edited}

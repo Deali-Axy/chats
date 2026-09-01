@@ -53,6 +53,10 @@ public partial class ChatsDB : DbContext
 
     public virtual DbSet<KeycloakAttempt> KeycloakAttempts { get; set; }
 
+    public virtual DbSet<LibraryFolder> LibraryFolders { get; set; }
+
+    public virtual DbSet<LibraryItem> LibraryItems { get; set; }
+
     public virtual DbSet<LoginService> LoginServices { get; set; }
 
     public virtual DbSet<McpServer> McpServers { get; set; }
@@ -291,6 +295,42 @@ public partial class ChatsDB : DbContext
         modelBuilder.Entity<LoginService>(entity =>
         {
             entity.HasKey(e => e.Id).HasName("PK_LoginServices2");
+        });
+
+        modelBuilder.Entity<LibraryFolder>(entity =>
+        {
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_LibraryFolder_User");
+
+            entity.HasOne(x => x.Parent)
+                .WithMany(x => x.Children)
+                .HasForeignKey(x => x.ParentId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_LibraryFolder_Parent");
+        });
+
+        modelBuilder.Entity<LibraryItem>(entity =>
+        {
+            entity.HasOne<User>()
+                .WithMany()
+                .HasForeignKey(x => x.UserId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_LibraryItem_User");
+
+            entity.HasOne(x => x.File)
+                .WithMany()
+                .HasForeignKey(x => x.FileId)
+                .OnDelete(DeleteBehavior.Cascade)
+                .HasConstraintName("FK_LibraryItem_File");
+
+            entity.HasOne(x => x.Folder)
+                .WithMany()
+                .HasForeignKey(x => x.FolderId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .HasConstraintName("FK_LibraryItem_Folder");
         });
 
         modelBuilder.Entity<McpServer>(entity =>

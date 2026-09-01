@@ -36,6 +36,7 @@ public class DBFileService(ChatsDB db, IFileServiceFactory fsf, CurrentUser curr
             FileImageInfo = imageInfo,
         };
         db.Files.Add(file);
+        db.LibraryItems.Add(LibraryItem.FromFile(file));
         await db.SaveChangesAsync(cancellationToken);
 
         return file;
@@ -76,6 +77,7 @@ public class DBFileService(ChatsDB db, IFileServiceFactory fsf, CurrentUser curr
             FileImageInfo = imageInfo,
         };
         db.Files.Add(file);
+        db.LibraryItems.Add(LibraryItem.FromFile(file));
         await db.SaveChangesAsync(cancellationToken);
 
         return file;

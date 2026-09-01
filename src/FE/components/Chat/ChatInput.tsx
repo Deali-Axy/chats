@@ -8,6 +8,7 @@ import {
 } from 'react';
 import toast from 'react-hot-toast';
 
+import { useSendMode } from '@/hooks/useSendMode';
 import useTranslation from '@/hooks/useTranslation';
 
 import { isMobile } from '@/utils/common';
@@ -21,40 +22,43 @@ import {
 } from '@/types/chat';
 import { Prompt } from '@/types/prompt';
 
+import FilePreview from '@/components/FilePreview/FilePreview';
 import {
   IconArrowCompactDown,
   IconArrowsDiagonal,
   IconArrowsDiagonalMinimize,
   IconCamera,
+  IconFolder,
   IconLoader,
   IconPaperclip,
   IconPlus,
   IconStopFilled,
-  IconFolder,
 } from '@/components/Icons/index';
-import { Button } from '@/components/ui/button';
-import { Textarea } from '@/components/ui/textarea';
-import { SendButton } from '@/components/ui/send-button';
-import { useSendMode } from '@/hooks/useSendMode';
 import Tips from '@/components/Tips/Tips';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Button } from '@/components/ui/button';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { SendButton } from '@/components/ui/send-button';
+import { Textarea } from '@/components/ui/textarea';
 
-import { setShowChatInput } from '@/actions/setting.actions';
-import HomeContext from '@/contexts/home.context';
 import UploadButton from '../Button/UploadButton';
-import PasteUpload from '../PasteUpload/PasteUpload';
 import DragUpload from '../DragUpload/DragUpload';
+import PasteUpload from '../PasteUpload/PasteUpload';
 import FilesPopover from '../Popover/FilesPopover';
-import FilePreview from '@/components/FilePreview/FilePreview';
-import PromptList from './PromptList';
-
-import { defaultFileConfig } from '@/apis/adminApis';
-import { getUserPromptDetail } from '@/apis/clientApis';
-import { cn } from '@/lib/utils';
 import CodeExecutionControl from './CodeExecutionControl';
 import McpShortcutControl from './McpShortcutControl';
+import PromptList from './PromptList';
 import WebSearchControl from './WebSearchControl';
+
+import { setShowChatInput } from '@/actions/setting.actions';
+import { defaultFileConfig } from '@/apis/adminApis';
+import { getUserPromptDetail } from '@/apis/clientApis';
 import { ANIMATION_DURATION_MS } from '@/constants/animation';
+import HomeContext from '@/contexts/home.context';
+import { cn } from '@/lib/utils';
 
 // 文本框配置
 const TEXTAREA_LINE_HEIGHT = 24;
@@ -66,6 +70,7 @@ const TEXTAREA_MIN_HEIGHT =
 const TEXTAREA_MAX_HEIGHT =
   TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS + TEXTAREA_PADDING_Y; // 256px
 const PROMPT_TRIGGER_PATTERN = /\/([^\s/]*)$/;
+const PENDING_LIBRARY_FILE_KEY = 'ayaka.pendingLibraryFile';
 
 interface Props {
   onSend: (message: Message) => void;
@@ -73,11 +78,7 @@ interface Props {
   onHeightChange?: (height: number) => void;
 }
 
-const ChatInput = ({
-  onSend,
-  onChangePrompt,
-  onHeightChange,
-}: Props) => {
+const ChatInput = ({ onSend, onChangePrompt, onHeightChange }: Props) => {
   const { t } = useTranslation();
 
   const {
@@ -91,9 +92,26 @@ const ChatInput = ({
   const promptListRef = useRef<HTMLUListElement | null>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
   const rootContainerRef = useRef<HTMLDivElement>(null);
-  const prevChatStatusRef = useRef<ChatStatus>(selectedChat?.status || ChatStatus.None);
+  const prevChatStatusRef = useRef<ChatStatus>(
+    selectedChat?.status || ChatStatus.None,
+  );
   const [contentText, setContentText] = useState('');
   const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
+
+  useEffect(() => {
+    const pendingFile = window.sessionStorage.getItem(PENDING_LIBRARY_FILE_KEY);
+    if (!pendingFile) return;
+
+    window.sessionStorage.removeItem(PENDING_LIBRARY_FILE_KEY);
+    try {
+      const file = JSON.parse(pendingFile) as FileDef;
+      if (file.id && file.contentType) {
+        setContentFiles([file]);
+      }
+    } catch {
+      // A stale or malformed handoff should never block the chat input.
+    }
+  }, []);
 
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [uploading, setUploading] = useState<boolean>(false);
@@ -102,7 +120,9 @@ const ChatInput = ({
   const [promptInputValue, setPromptInputValue] = useState('');
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
-  const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(TEXTAREA_MIN_HEIGHT);
+  const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(
+    TEXTAREA_MIN_HEIGHT,
+  );
   const [showFloatingControls, setShowFloatingControls] = useState(false);
   // 动画状态：
   // 'idle' - 无动画
@@ -110,7 +130,9 @@ const ChatInput = ({
   // 'expanding' - 展开中（ChatInput飞入，按钮飞出）
   // 'pre-collapsing' - 准备收起（ChatInput可见，按钮在屏幕外）
   // 'collapsing' - 收起中（ChatInput飞出，按钮飞入）
-  const [animationState, setAnimationState] = useState<'idle' | 'pre-expanding' | 'expanding' | 'pre-collapsing' | 'collapsing'>('idle');
+  const [animationState, setAnimationState] = useState<
+    'idle' | 'pre-expanding' | 'expanding' | 'pre-collapsing' | 'collapsing'
+  >('idle');
   // 用于控制实际渲染状态（动画结束后才真正隐藏）
   const [renderExpanded, setRenderExpanded] = useState(showChatInput);
 
@@ -138,7 +160,10 @@ const ChatInput = ({
     const el = textareaRef.current;
     const original = el.style.height;
     el.style.height = 'auto';
-    const height = Math.min(Math.max(el.scrollHeight, TEXTAREA_MIN_HEIGHT), TEXTAREA_MAX_HEIGHT);
+    const height = Math.min(
+      Math.max(el.scrollHeight, TEXTAREA_MIN_HEIGHT),
+      TEXTAREA_MAX_HEIGHT,
+    );
     el.style.height = original;
     return height;
   }, []);
@@ -148,8 +173,10 @@ const ChatInput = ({
     if (isFullWriting) return;
     setTextareaHeight(getContentHeight());
     if (textareaRef.current) {
-      textareaRef.current.style.overflow = 
-        textareaRef.current.scrollHeight > TEXTAREA_MAX_HEIGHT ? 'auto' : 'hidden';
+      textareaRef.current.style.overflow =
+        textareaRef.current.scrollHeight > TEXTAREA_MAX_HEIGHT
+          ? 'auto'
+          : 'hidden';
     }
   }, [contentText, contentFiles, isFullWriting, getContentHeight]);
 
@@ -239,7 +266,10 @@ const ChatInput = ({
     let lastHeight = -1;
 
     const emit = () => {
-      const nextHeight = Math.max(0, Math.round(el.getBoundingClientRect().height));
+      const nextHeight = Math.max(
+        0,
+        Math.round(el.getBoundingClientRect().height),
+      );
       if (Math.abs(nextHeight - lastHeight) <= 1) return;
       lastHeight = nextHeight;
       onHeightChange(nextHeight);
@@ -266,8 +296,7 @@ const ChatInput = ({
   );
   const hasCodeExecutionUploadCapability = selectedChat.spans.some(
     (span) =>
-      modelMap[span.modelId]?.allowCodeExecution &&
-      span.codeExecutionEnabled,
+      modelMap[span.modelId]?.allowCodeExecution && span.codeExecutionEnabled,
   );
   const hasUploadCapability =
     hasVisionUploadCapability || hasCodeExecutionUploadCapability;
@@ -480,7 +509,8 @@ const ChatInput = ({
   const showDeviceUpload = canUpload;
   const showCameraUpload = canUpload && hasVisionUploadCapability && isMobile();
   const showRemoteFiles = canUpload;
-  const showUploadMenu = showDeviceUpload || showCameraUpload || showRemoteFiles;
+  const showUploadMenu =
+    showDeviceUpload || showCameraUpload || showRemoteFiles;
   const isMobileDevice = isMobile();
 
   return (
@@ -542,7 +572,9 @@ const ChatInput = ({
               <div
                 className={cn(
                   'absolute right-2 top-2 z-10 flex items-center gap-1 transition-opacity',
-                  showFloatingControls ? 'opacity-100' : 'opacity-0 pointer-events-none',
+                  showFloatingControls
+                    ? 'opacity-100'
+                    : 'opacity-0 pointer-events-none',
                 )}
               >
                 <Tips
@@ -552,7 +584,10 @@ const ChatInput = ({
                       className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
                       onClick={handleToggleVisibility}
                     >
-                      <IconArrowCompactDown size={14} className="text-foreground/80" />
+                      <IconArrowCompactDown
+                        size={14}
+                        className="text-foreground/80"
+                      />
                     </Button>
                   }
                   side="left"
@@ -599,7 +634,9 @@ const ChatInput = ({
                       maxHeight={80}
                       showDelete={true}
                       onDelete={() => {
-                        setContentFiles((prev) => prev.filter((f) => f !== file));
+                        setContentFiles((prev) =>
+                          prev.filter((f) => f !== file),
+                        );
                       }}
                     />
                   ))}
@@ -612,11 +649,14 @@ const ChatInput = ({
                   className={cn(
                     'm-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6 min-h-0',
                     `transition-[height] ease-out`,
-                    isFullWriting && 'overflow-auto'
+                    isFullWriting && 'overflow-auto',
                   )}
                   style={{
-                    height: textareaHeight === 'full' ? 'calc(100vh - 108px)' : `${textareaHeight}px`,
-                    transitionDuration: `${ANIMATION_DURATION_MS}ms`
+                    height:
+                      textareaHeight === 'full'
+                        ? 'calc(100vh - 108px)'
+                        : `${textareaHeight}px`,
+                    transitionDuration: `${ANIMATION_DURATION_MS}ms`,
                   }}
                   placeholder={
                     t('Type a message or type "/" to select a prompt...') || ''
@@ -640,7 +680,9 @@ const ChatInput = ({
                         maxHeight={80}
                         showDelete={true}
                         onDelete={() => {
-                          setContentFiles((prev) => prev.filter((f) => f !== file));
+                          setContentFiles((prev) =>
+                            prev.filter((f) => f !== file),
+                          );
                         }}
                       />
                     ))}
@@ -662,7 +704,11 @@ const ChatInput = ({
                           <IconPlus size={18} />
                         </Button>
                       </PopoverTrigger>
-                      <PopoverContent side="top" align="start" className="w-56 p-2">
+                      <PopoverContent
+                        side="top"
+                        align="start"
+                        className="w-56 p-2"
+                      >
                         <div className="flex flex-col gap-1">
                           {showDeviceUpload && (
                             <UploadButton
@@ -730,9 +776,7 @@ const ChatInput = ({
                               }}
                             >
                               <IconCamera size={18} />
-                              <span className="text-sm">
-                                {t('Take photo')}
-                              </span>
+                              <span className="text-sm">{t('Take photo')}</span>
                             </UploadButton>
                           )}
                         </div>
@@ -767,7 +811,9 @@ const ChatInput = ({
                       onUploading={handleUploading}
                       onFailed={handleUploadFailed}
                       onSuccessful={handleUploadSuccessful}
-                      containerRef={inputContainerRef as React.RefObject<HTMLElement>}
+                      containerRef={
+                        inputContainerRef as React.RefObject<HTMLElement>
+                      }
                     />
                   )}
                   <McpShortcutControl
@@ -806,10 +852,7 @@ const ChatInput = ({
                       content={t('Stop Generating')}
                     />
                   ) : (
-                    <SendButton
-                      onSend={handleSend}
-                      size="sm"
-                    />
+                    <SendButton onSend={handleSend} size="sm" />
                   )}
                 </div>
               </div>
@@ -825,7 +868,6 @@ const ChatInput = ({
                   />
                 </div>
               )}
-
             </div>
           </div>
         </div>
@@ -848,7 +890,10 @@ const ChatInput = ({
                 className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                 onClick={handleToggleVisibility}
               >
-                <IconArrowCompactDown size={20} className={'rotate-180 text-foreground/70'} />
+                <IconArrowCompactDown
+                  size={20}
+                  className={'rotate-180 text-foreground/70'}
+                />
               </Button>
             }
             side="bottom"

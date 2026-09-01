@@ -17,11 +17,16 @@ import {
   ChatMessageViewResult,
   ChatResult,
   ChatSpanDto,
+  ChatTitleSummaryResult,
+  CreateLibraryFolderParams,
+  CreateLibraryNoteParams,
+  EditUserMessageParams,
   FetchToolsRequest,
   FetchToolsResponse,
   GetBalance7DaysUsageResult,
   GetChatShareResult,
   GetChatsParams,
+  GetLibraryItemsParams,
   GetLoginProvidersResult,
   GetRechargeParams,
   GetRechargeResult,
@@ -34,6 +39,8 @@ import {
   GetUserChatGroupWithMessagesResult as GetUserChatGroupWithChatsResult,
   GetUserFilesParams,
   GetUserFilesResult,
+  LibraryFolder,
+  LibraryItem,
   LoginConfigsResult,
   McpServerDetailsDto,
   McpServerListItemDto,
@@ -44,20 +51,19 @@ import {
   PostChatParams,
   PostUserChatShareResult,
   PostUserPassword,
+  PutChatConfigParams,
   PutChatGroupParams,
   PutChatParams,
-  PutChatConfigParams,
   PutMoveChatGroupParams,
   PutResponseMessageEditAndSaveNewParams,
   PutResponseMessageEditInPlaceParams,
-  EditUserMessageParams,
   SingInParams,
   SingInResult,
   TitleSummaryConfig,
-  ChatTitleSummaryResult,
   TitleSummaryDefaultTemplateDto,
   TitleSummarySettingsDto,
   UnassignedUserDto,
+  UpdateLibraryItemParams,
   UpdateMcpServerRequest,
   UpdateMyMcpAssignmentRequest,
 } from '@/types/clientApis';
@@ -74,7 +80,9 @@ export const changeUserPassword = (params: PostUserPassword) => {
   });
 };
 
-export const getChatMessages = (chatId: string): Promise<ChatMessageViewResult> => {
+export const getChatMessages = (
+  chatId: string,
+): Promise<ChatMessageViewResult> => {
   const fetchService = createFetchClient();
   return fetchService.get(`/api/chats/${chatId}/messages`);
 };
@@ -467,7 +475,9 @@ export const getSharedChatMessages = (
   encryptedChatShareId: string,
 ): Promise<ChatMessageViewResult> => {
   const fetchServer = createFetchClient();
-  return fetchServer.get(`/api/public/chat-share/${encryptedChatShareId}/messages`);
+  return fetchServer.get(
+    `/api/public/chat-share/${encryptedChatShareId}/messages`,
+  );
 };
 
 export const getSharedChatMessageSubtree = (
@@ -475,7 +485,9 @@ export const getSharedChatMessageSubtree = (
   turnId: string,
 ): Promise<ChatMessageViewResult> => {
   const fetchServer = createFetchClient();
-  return fetchServer.get(`/api/public/chat-share/${encryptedChatShareId}/messages/${turnId}/subtree`);
+  return fetchServer.get(
+    `/api/public/chat-share/${encryptedChatShareId}/messages/${turnId}/subtree`,
+  );
 };
 
 export const putResponseMessageEditAndSaveNew = (
@@ -501,18 +513,28 @@ export const putResponseMessageEditInPlace = (
   );
 };
 
-export const patchUserMessageEdit = (params: EditUserMessageParams): Promise<IChatMessage> => {
+export const patchUserMessageEdit = (
+  params: EditUserMessageParams,
+): Promise<IChatMessage> => {
   const fetchServer = createFetchClient();
-  return fetchServer.patch<IChatMessage>(`/api/messages/${params.messageId}/edit`, {
-    body: { contents: params.contents },
-  });
+  return fetchServer.patch<IChatMessage>(
+    `/api/messages/${params.messageId}/edit`,
+    {
+      body: { contents: params.contents },
+    },
+  );
 };
 
-export const patchUserMessageEditAndSaveNew = (params: EditUserMessageParams): Promise<IChatMessage> => {
+export const patchUserMessageEditAndSaveNew = (
+  params: EditUserMessageParams,
+): Promise<IChatMessage> => {
   const fetchServer = createFetchClient();
-  return fetchServer.patch<IChatMessage>(`/api/messages/${params.messageId}/edit-and-save-new`, {
-    body: { contents: params.contents },
-  });
+  return fetchServer.patch<IChatMessage>(
+    `/api/messages/${params.messageId}/edit-and-save-new`,
+    {
+      body: { contents: params.contents },
+    },
+  );
 };
 
 export const deleteMessage = (messageId: string, leafId: string | null) => {
@@ -538,9 +560,7 @@ export const putChatMcp = (
   mcpServerId: number,
 ): Promise<ChatSpanDto> => {
   const fetchServer = createFetchClient();
-  return fetchServer.put(
-    `/api/chat/${encryptedChatId}/mcp/${mcpServerId}`,
-  );
+  return fetchServer.put(`/api/chat/${encryptedChatId}/mcp/${mcpServerId}`);
 };
 
 export const deleteChatMcp = (
@@ -548,9 +568,7 @@ export const deleteChatMcp = (
   mcpServerId: number,
 ): Promise<ChatSpanDto> => {
   const fetchServer = createFetchClient();
-  return fetchServer.delete(
-    `/api/chat/${encryptedChatId}/mcp/${mcpServerId}`,
-  );
+  return fetchServer.delete(`/api/chat/${encryptedChatId}/mcp/${mcpServerId}`);
 };
 
 export const responseContentToRequest = (
@@ -649,6 +667,40 @@ export const getUserFiles = (params: GetUserFilesParams) => {
   return fetchServer.get<PageResult<GetUserFilesResult[]>>('/api/file', {
     params: params,
   });
+};
+
+export const getLibraryFolders = (): Promise<LibraryFolder[]> => {
+  const fetchService = createFetchClient();
+  return fetchService.get('/api/library/folders');
+};
+
+export const postLibraryFolder = (
+  params: CreateLibraryFolderParams,
+): Promise<LibraryFolder> => {
+  const fetchService = createFetchClient();
+  return fetchService.post('/api/library/folders', { body: params });
+};
+
+export const getLibraryItems = (
+  params: GetLibraryItemsParams,
+): Promise<PageResult<LibraryItem[]>> => {
+  const fetchService = createFetchClient();
+  return fetchService.get('/api/library/items', { params });
+};
+
+export const postLibraryNote = (
+  params: CreateLibraryNoteParams,
+): Promise<LibraryItem> => {
+  const fetchService = createFetchClient();
+  return fetchService.post('/api/library/notes', { body: params });
+};
+
+export const patchLibraryItem = (
+  id: number,
+  params: UpdateLibraryItemParams,
+): Promise<LibraryItem> => {
+  const fetchService = createFetchClient();
+  return fetchService.patch(`/api/library/items/${id}`, { body: params });
 };
 
 // MCP APIs

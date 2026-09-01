@@ -124,6 +124,7 @@ public class FileController(ChatsDB db, IFileServiceFactory fileServiceFactory, 
             FileImageInfo = imageInfo
         };
         db.Files.Add(dbFile);
+        db.LibraryItems.Add(LibraryItem.FromFile(dbFile));
         await db.SaveChangesAsync(cancellationToken);
 
         FileDto fileDto = fdup.CreateFileDto(dbFile);
