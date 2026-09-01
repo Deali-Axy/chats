@@ -2,40 +2,29 @@
 
 **English** | [简体中文](README.md)
 
-> A community fork of [sdcb/chats](https://github.com/sdcb/chats). Merge and schema rules for coding agents live in [AGENTS.md](./AGENTS.md) (Chinese).
+> Ayaka Chats is an independently maintained open-source project. Repository conventions for coding agents live in [AGENTS.md](./AGENTS.md) (Chinese).
 
-Ayaka Chats is a unified frontend for large language models, supporting 22+ mainstream AI providers. On top of upstream, this fork uses an independent **SQLite + EF Core migrations** path, plus UI/UX work, developer toolchain changes, and features that are not in upstream.
+Ayaka Chats is a unified frontend for large language models, supporting 22+ mainstream AI providers. It uses **SQLite + EF Core migrations** and continues to improve UI/UX, developer tooling, and product features.
 
-Starting with **1.12**, schema evolution has diverged: upstream still ships hand-written SQL; this fork manages SQLite with EF Core and applies pending migrations on startup. Do **not** run files under `src/scripts/db-migration/` against a database that belongs to this fork.
+Starting with **1.12**, schema evolution is managed by EF Core migrations, which are applied on startup. Do **not** run files under `src/scripts/db-migration/` against a production database.
 
-## 🌸 Fork Highlights
+## 🌸 Highlights
 
 ### 🗄️ Database: EF Core migrations since 1.12
 
-This is the most important difference, and the one most likely to break an upstream merge.
-
-| | Upstream `sdcb/chats` | This fork `Ayaka Chats` |
-|---|---|---|
-| Engines | SQLite / SQL Server / PostgreSQL | **SQLite only** (PostgreSQL not enabled; SQL Server removed) |
-| Empty database | `EnsureCreatedAsync` | `Database.MigrateAsync` |
-| Version upgrades | Run `src/scripts/db-migration/{ver}/*.sql` by hand | EF migrations applied on startup |
-| Where history lives | No EF history; SQL scripts per version | `src/BE/web/DB/Migrations/` |
-| Pre-1.12 production DBs | Follow upstream SQL step by step | Use `tools/DataMigration` ETL. **Do not** `ef database update` on those files |
+Ayaka Chats supports SQLite only. Empty databases and databases already using this project's migrations are upgraded through `Database.MigrateAsync`; migrations live under `src/BE/web/DB/Migrations/`.
 
 Current EF history:
 
 - `InitialCreate_v1_12`: 1.12 baseline (includes fork fields such as `Chat.IsTemp`)
-- `Upgrade_to_1_15`: one migration covering upstream 1.13–1.15 schema (plus data-backfill SQL)
+- `Upgrade_to_1_15`: schema changes and required data backfills for 1.13–1.15
 - `Upgrade_to_1_16`: support physical Model deletion (`ChatConfig.ModelId` becomes nullable and related foreign-key policies)
 - `Upgrade_to_1_17`: image-generation background mode (`Background` on `ChatConfig` and its snapshots)
 
-New upstream SQL is **reference only**. After a merge, translate it into a new EF migration (e.g. `Upgrade_to_1_16`); do not execute it on this fork’s databases.
-
 Upgrade notes:
 
-- **This fork, 1.12+ SQLite**: start the backend; no manual SQL.
+- **1.12+ SQLite**: start the backend; no manual SQL.
 - **1.11 and older SQLite**: [`tools/DataMigration`](./tools/DataMigration/README.md).
-- Upstream “run `1.15.0.sql` / `1.15.0-sqlite.sql` first” does **not** apply here.
 
 ### 🎨 UI/UX
 
@@ -52,7 +41,7 @@ Upgrade notes:
 - **pnpm** instead of npm (do not commit `package-lock.json`)
 - **Taskfile + goreman**: `task dev` starts both sides (frontend `http://localhost:12836`)
 - **EF commands**: `task ef:add` / `task ef:update` / `task ef:list`
-- **Release pipeline**: `scripts/build_push.py` publishes backend, builds frontend, and pushes this fork’s `ayaka-chats` image
+- **Release pipeline**: `scripts/build_push.py` publishes backend, builds frontend, and pushes the configured `ayaka-chats` image
 - **Poster data**: `task generate:poster` writes `src/FE/data/changelog.json` from git history
 
 ### 📢 Independent Features
@@ -65,10 +54,8 @@ Upgrade notes:
 
 ## ✨ Core Features
 
-Inherited from upstream except for database engines and the upgrade path:
-
 - 🚀 **All-in-One**: one hub for 22+ AI model providers
-- 🎯 **Ready in minutes**: SQLite; empty DB is created, migrated, and seeded on startup
+- 🎯 **Ready in minutes**: SQLite; an empty DB is created, migrated, and seeded on startup
 - 🐳 **Code Interpreter**: Docker sandbox (browser, code, Excel, and more)
 - 🔌 **API Gateway**: Chat Completions/Messages compatible, works with Claude Code
 - 🌐 **Standard APIs**: Chat Completions/Messages/Responses/Gemini, interleaved thinking
@@ -88,13 +75,13 @@ Inherited from upstream except for database engines and the upgrade path:
 - 🌳 Branching stability: fixes live SSE branch metadata and invalid subtree requests
 - 👥 User management: separates user-edit and password-change forms and improves password-manager compatibility
 - 🐛 Stability fixes: corrects duplicated `/v1` image endpoints, validates missing models, and adds regression coverage
-- ⬆️ **This fork**: existing 1.12+ SQLite databases apply `Upgrade_to_1_17` automatically at startup; 1.11 and older use `tools/DataMigration`. Do not run upstream SQL scripts.
+- ⬆️ **Upgrade**: existing 1.12+ SQLite databases apply `Upgrade_to_1_17` automatically at startup; 1.11 and older use `tools/DataMigration`.
 
 👉 [View 1.17.0 Release Notes](./doc/en-US/release-notes/1.17.0.md) · [View All Releases](./doc/en-US/release-notes/README.md)
 
 ## Quick Start
 
-This fork’s default path (needs [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), [Node.js](https://nodejs.org/) ≥ 20, [pnpm](https://pnpm.io/), [Task](https://taskfile.dev/); concurrent start also needs [goreman](https://github.com/mattn/goreman)):
+The default development path (needs [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0), [Node.js](https://nodejs.org/) ≥ 20, [pnpm](https://pnpm.io/), [Task](https://taskfile.dev/); concurrent start also needs [goreman](https://github.com/mattn/goreman)):
 
 ```bash
 git clone https://github.com/Deali-Axy/chats.git
@@ -117,26 +104,22 @@ cd src/BE/web && dotnet run --project Chats.BE.csproj
 cd src/FE && pnpm run dev
 ```
 
-Production builds use `task deploy` (`scripts/build_push.py`). The image name is this fork’s `ayaka-chats`, not upstream `sdcb/chats`.
-
-> The public image `sdcb/chats:latest` is **upstream**. It still supports SQL Server/PostgreSQL and hand-written SQL upgrades. It does **not** include this fork’s UI, temporary chats, or EF migrations. Do not deploy it as Ayaka Chats.
+Production builds use `task deploy` (`scripts/build_push.py`). The default image name is `ayaka-chats`.
 
 📖 **[Development Guide](./doc/en-US/build.md)** · **[Configuration](./doc/en-US/configuration.md)**
-
-> Some pages under `doc/` still describe upstream (SQL Server, manual SQL). Treat this README and [AGENTS.md](./AGENTS.md) as the source of truth for the fork.
 
 ---
 
 ## 📚 Documentation
 
-- [🚀 Quick Start](./doc/en-US/quick-start.md) — includes upstream multi-database notes; this fork is SQLite only
-- [💾 Downloads](./doc/en-US/downloads.md) — upstream Docker / executables
+- [🚀 Quick Start](./doc/en-US/quick-start.md) — deployment guide
+- [💾 Downloads](./doc/en-US/downloads.md) — project release and build information
 - [🤖 Supported Model Providers](./doc/en-US/model-providers.md)
 - [🛠️ Development Guide](./doc/en-US/build.md)
 - [⚙️ Configuration Guide](./doc/en-US/configuration.md)
 - [📝 Release Notes](./doc/en-US/release-notes/README.md)
 - [❓ FAQ](./doc/en-US/faq.md)
-- [🤖 Agent notes](./AGENTS.md) — upstream merges, EF migrations, fork-only changes
+- [🤖 Agent notes](./AGENTS.md) — repository maintenance and EF migration conventions
 
 ---
 
@@ -150,25 +133,7 @@ Production builds use `task deploy` (`scripts/build_push.py`). The image name is
 | Storage | Local filesystem / AWS S3 / Aliyun OSS / Azure Blob / MinIO |
 | Package Manager | pnpm (frontend) / NuGet (backend) / `dotnet-ef` (local tool) |
 | Dev | Task / goreman / Procfile |
-| Container | Docker (fork image `ayaka-chats`) |
-
----
-
-## Relationship with Upstream
-
-Forked from [sdcb/chats](https://github.com/sdcb/chats) (`upstream` remote). Features track upstream, but the **schema upgrade path is independent**, and UI/toolchain have lasting forks. Read [AGENTS.md](./AGENTS.md) before merging.
-
-- **This repo**: [github.com/Deali-Axy/chats](https://github.com/Deali-Axy/chats)
-- **Upstream**: [github.com/sdcb/chats](https://github.com/sdcb/chats)
-- **Upstream docs**: [DeepWiki](https://deepwiki.com/sdcb/chats)
-- **Upstream issues**: [https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
-
-Do not revert these decisions in a merge:
-
-1. `InitService` must call `MigrateAsync`, never `EnsureCreatedAsync`
-2. `DBConfigure` accepts `sqlite` only; do not restore SQL Server / Npgsql packages unless that work is explicitly requested
-3. New upstream SQL becomes a new file under `src/BE/web/DB/Migrations/`, not a runtime script
-4. Keep `Chat.IsTemp`, in-message search, pnpm, the sidebar, poster/changelog, and Ayaka branding
+| Container | Docker (image `ayaka-chats`) |
 
 ---
 

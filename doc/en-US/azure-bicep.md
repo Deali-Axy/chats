@@ -1,24 +1,9 @@
-# Quick Deploy on Azure Container Apps
+# Azure Container Apps Deployment
 
-[中文](../zh-CN/azure-bicep.md) | **English**
+**English** | [简体中文](../zh-CN/azure-bicep.md)
 
-This guide provides a quick way to deploy the SDCB Chats application on Azure Container Apps using Bicep templates. It automates the deployment process, including creating necessary resources like storage accounts and container apps.
+To deploy Ayaka Chats to Azure Container Apps, first build and publish an image with `task deploy`, then create a container app and persistent storage in Azure.
 
-Note: For manual deployment, refer to the [manual deployment guide](https://edi.wang/post/2025/7/25/deploy-sdcb-chats-on-azure-container-apps).
+Mount persistent storage for the SQLite file and point `ConnectionStrings__ChatsDB` to that volume, for example `Data Source=/data/chats.db`. Also configure `ENCRYPTION_PASSWORD`, `FE_URL`, and the required model-provider credentials.
 
-Prerequisites:
-- Azure CLI installed and logged in
-- Azure Bicep CLI installed
-
-## Run the following commands in your terminal:
-
-e.g. Deploy to a resource group named `sdcbchats-rg` in the `japaneast` region.
-
-```powershell
-az group create --name sdcbchats-rg --location japaneast
-az deployment group create --resource-group sdcbchats-rg --template-file main.bicep --parameters storageAccountName=sdcbchatsstorage2996
-```
-
-## Access the deployed application
-
-After the deployment is complete, you can access the application using the URL provided in the Azure Portal under the Container Apps resource.
+After deployment, confirm container restarts preserve `/data/chats.db` and change the default administrator password after the first sign-in.

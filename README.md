@@ -2,40 +2,29 @@
 
 [English](README_EN.md) | **简体中文**
 
-> 基于 [sdcb/chats](https://github.com/sdcb/chats) 的社区 Fork。给编码 Agent 的合并约定见 [AGENTS.md](./AGENTS.md)。
+> Ayaka Chats 是一个独立维护的开源项目。给编码 Agent 的仓库约定见 [AGENTS.md](./AGENTS.md)。
 
-Ayaka Chats 是一个大语言模型统一前端，支持 22+ 主流 AI 模型服务商。本 Fork 在上游功能之上，走 **SQLite + EF Core migrations** 的独立数据库路线，并持续做 UI/UX、开发工具链和独立功能迭代。
+Ayaka Chats 是一个大语言模型统一前端，支持 22+ 主流 AI 模型服务商，使用 **SQLite + EF Core migrations** 管理数据库，并持续迭代 UI/UX、开发工具链和产品功能。
 
-从 **1.12** 起，本仓库与上游在表结构演进上已经分叉：上游继续用手工 SQL 改库；本 Fork 用 EF Core 管理 SQLite schema，启动时自动 `Migrate`。不要再对本 Fork 的数据库执行 `src/scripts/db-migration/` 里的 SQL。
+从 **1.12** 起，数据库 schema 由 EF Core migrations 管理，后端启动时自动 `Migrate`。不要对生产数据库手工执行 `src/scripts/db-migration/` 里的 SQL。
 
-## 🌸 Fork 特色
+## 🌸 项目特色
 
 ### 🗄️ 数据库：从 1.12 起使用 EF Core migrations
 
-这是本 Fork 与上游最关键、也最容易在合并时踩坑的差异。
-
-| | 上游 `sdcb/chats` | 本 Fork `Ayaka Chats` |
-|---|---|---|
-| 支持的库 | SQLite / SQL Server / PostgreSQL | **仅 SQLite**（PostgreSQL 未启用；SQL Server 已移除） |
-| 空库初始化 | `EnsureCreatedAsync` | `Database.MigrateAsync` |
-| 版本升级 | 手工跑 `src/scripts/db-migration/{ver}/*.sql` | 启动时自动应用 EF migrations |
-| Migration 位置 | 无 EF 历史；SQL 脚本按版本堆积 | `src/BE/web/DB/Migrations/` |
-| 1.11 及更早的生产库 | 按上游 SQL 逐步升级 | 用 `tools/DataMigration` ETL，**不要**对旧库直接 `ef database update` |
+Ayaka Chats 仅支持 SQLite。空库与已使用本项目 migration 的数据库会在启动时通过 `Database.MigrateAsync` 自动升级；migration 位于 `src/BE/web/DB/Migrations/`。
 
 当前 EF 历史：
 
 - `InitialCreate_v1_12`：1.12 基线（含本 Fork 的 `Chat.IsTemp` 等字段）
-- `Upgrade_to_1_15`：一次覆盖上游 1.13–1.15 的 schema 变更（含必要的数据回填 SQL）
+- `Upgrade_to_1_15`：1.13–1.15 的 schema 变更与必要的数据回填
 - `Upgrade_to_1_16`：Model 物理删除支持（`ChatConfig.ModelId` 可空及相关外键删除策略）
 - `Upgrade_to_1_17`：图像生成背景模式（`ChatConfig` 及其快照的 `Background` 字段）
 
-上游每次发版新增的 SQL **只作对照**，合并后要翻译成新的 EF migration（例如 `Upgrade_to_1_16`），而不是拿到生产库上执行。
-
 升级注意：
 
-- **本 Fork 1.12+ 的 SQLite**：启动后端即可，无需手工 SQL。
+- **1.12+ 的 SQLite**：启动后端即可，无需手工 SQL。
 - **1.11 及更早的 SQLite**：走 [`tools/DataMigration`](./tools/DataMigration/README.md)，把扁平结构灌进当前 EF schema。
-- 上游文档里「先跑 `1.15.0.sql` / `1.15.0-sqlite.sql`」的步骤 **不适用于本 Fork**。
 
 ### 🎨 UI/UX
 
@@ -52,7 +41,7 @@ Ayaka Chats 是一个大语言模型统一前端，支持 22+ 主流 AI 模型�
 - **pnpm**：前端从 npm 迁到 pnpm（不要再提交 `package-lock.json`）
 - **Taskfile + goreman**：`task dev` 一键起前后端（前端默认 `http://localhost:12836`）
 - **EF 命令**：`task ef:add` / `task ef:update` / `task ef:list`
-- **构建部署**：`scripts/build_push.py` 发布后端、构建前端、打 Docker 并推送到本 Fork 的镜像仓库
+- **构建部署**：`scripts/build_push.py` 发布后端、构建前端、打 Docker 并推送到配置的镜像仓库
 - **海报数据**：`task generate:poster` 从 git 历史生成 `src/FE/data/changelog.json`
 
 ### 📢 独立功能
@@ -65,10 +54,8 @@ Ayaka Chats 是一个大语言模型统一前端，支持 22+ 主流 AI 模型�
 
 ## ✨ 核心功能
 
-继承自上游（除数据库引擎与升级方式外）：
-
 - 🚀 **一站式**：22+ 模型服务商，一个入口
-- 🎯 **分钟级上手**：本 Fork 以 SQLite 为主，空库启动即自动建表和种子数据
+- 🎯 **分钟级上手**：以 SQLite 为主，空库启动即自动建表和种子数据
 - 🐳 **代码解释器**：Docker 沙箱，内置浏览器/代码执行/Excel 等工具
 - 🔌 **API 网关**：Chat Completions/Messages 兼容，支持 Claude Code
 - 🌐 **标准协议**：Chat Completions/Messages/Responses/Gemini，支持交错思考
@@ -88,13 +75,13 @@ Ayaka Chats 是一个大语言模型统一前端，支持 22+ 主流 AI 模型�
 - 🌳 聊天分支稳定性：修复实时 SSE 分支元数据和无效子树请求
 - 👥 用户管理：拆分用户编辑和修改密码表单，改善密码管理器兼容性
 - 🐛 稳定性修复：修复图像接口重复 `/v1`、缺少模型校验并增加回归测试
-- ⬆️ **本 Fork 升级**：已有 1.12+ SQLite 库启动时自动应用 `Upgrade_to_1_17`；1.11 及更早请用 `tools/DataMigration`。不要执行上游 SQL 脚本。
+- ⬆️ **升级**：已有 1.12+ SQLite 库启动时自动应用 `Upgrade_to_1_17`；1.11 及更早请用 `tools/DataMigration`。
 
 👉 [查看 1.17.0 发布说明](./doc/zh-CN/release-notes/1.17.0.md) · [查看全部版本](./doc/zh-CN/release-notes/README.md)
 
 ## 快速开始
 
-本 Fork 的开发默认路径（需要 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)、[Node.js](https://nodejs.org/) ≥ 20、[pnpm](https://pnpm.io/)、[Task](https://taskfile.dev/)；并发启动还需要 [goreman](https://github.com/mattn/goreman)）：
+开发默认路径（需要 [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0)、[Node.js](https://nodejs.org/) ≥ 20、[pnpm](https://pnpm.io/)、[Task](https://taskfile.dev/)；并发启动还需要 [goreman](https://github.com/mattn/goreman)）：
 
 ```bash
 git clone https://github.com/Deali-Axy/chats.git
@@ -117,26 +104,22 @@ cd src/BE/web && dotnet run --project Chats.BE.csproj
 cd src/FE && pnpm run dev
 ```
 
-生产构建走 `task deploy`（`scripts/build_push.py`），镜像名是本 Fork 的 `ayaka-chats`，不是上游的 `sdcb/chats`。
-
-> 公开镜像 `sdcb/chats:latest` 是**上游**产物：它仍支持 SQL Server/PostgreSQL，并用手工 SQL 升级，**不包含**本 Fork 的 UI、临时聊天、EF migrations。不要拿它当 Ayaka Chats 来部署。
+生产构建走 `task deploy`（`scripts/build_push.py`），默认镜像名是 `ayaka-chats`。
 
 📖 **[开发指南](./doc/zh-CN/build.md)** · **[配置说明](./doc/zh-CN/configuration.md)**
-
-> 文档中心里部分页面仍沿用上游表述（例如 SQL Server / 手工 SQL）。以本 README 和 [AGENTS.md](./AGENTS.md) 为准。
 
 ---
 
 ## 📚 文档中心
 
-- [🚀 快速开始](./doc/zh-CN/quick-start.md) - 部署指南（含上游多数据库说明，本 Fork 仅 SQLite）
-- [💾 下载地址](./doc/zh-CN/downloads.md) - 上游 Docker / 可执行文件
+- [🚀 快速开始](./doc/zh-CN/quick-start.md) - 部署指南
+- [💾 下载地址](./doc/zh-CN/downloads.md) - 本项目发布与构建说明
 - [🤖 支持的模型提供商](./doc/zh-CN/model-providers.md)
 - [🛠️ 开发指南](./doc/zh-CN/build.md)
 - [⚙️ 配置说明](./doc/zh-CN/configuration.md)
 - [📝 更新日志](./doc/zh-CN/release-notes/README.md)
 - [❓ 常见问题](./doc/zh-CN/faq.md)
-- [🤖 Agent 约定](./AGENTS.md) - 上游合并、EF migration、不要覆盖的 Fork 改动
+- [🤖 Agent 约定](./AGENTS.md) - 仓库维护与 EF migration 约定
 
 ---
 
@@ -150,25 +133,7 @@ cd src/FE && pnpm run dev
 | 存储 | 本地文件系统 / AWS S3 / 阿里云 OSS / Azure Blob / MinIO |
 | 包管理 | pnpm（前端）/ NuGet（后端）/ `dotnet-ef`（本地工具） |
 | 开发 | Task / goreman / Procfile |
-| 容器 | Docker（本 Fork 镜像 `ayaka-chats`） |
-
----
-
-## 与上游的关系
-
-本项目 Fork 自 [sdcb/chats](https://github.com/sdcb/chats)，remote 名为 `upstream`。功能会跟进上游，但 **schema 升级路径已经独立**，UI 与工具链也有长期分叉。合并前请读 [AGENTS.md](./AGENTS.md)。
-
-- **本仓库**：[github.com/Deali-Axy/chats](https://github.com/Deali-Axy/chats)
-- **上游仓库**：[github.com/sdcb/chats](https://github.com/sdcb/chats)
-- **上游文档**：[DeepWiki](https://deepwiki.com/sdcb/chats)
-- **上游 Issues**：[https://github.com/sdcb/chats/issues](https://github.com/sdcb/chats/issues)
-
-合并时不要还原这些决定：
-
-1. `InitService` 必须 `MigrateAsync`，禁止改回 `EnsureCreatedAsync`
-2. `DBConfigure` 只接受 `sqlite`；不要把 SQL Server / Npgsql 包和 `UseSqlServer` / `UseNpgsql` 加回来（除非明确要重新启用）
-3. 上游新 SQL 要变成 `src/BE/web/DB/Migrations/` 里的新 migration，而不是运行时执行
-4. 保留 `Chat.IsTemp`、消息内容搜索、pnpm、侧边栏、海报/changelog、Ayaka 品牌
+| 容器 | Docker（镜像 `ayaka-chats`） |
 
 ---
 
