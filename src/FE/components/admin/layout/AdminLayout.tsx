@@ -248,7 +248,7 @@ const AdminLayout = ({
             <ToastAction
               altText={t('Go to upgrade')}
               onClick={() => {
-                location.href = 'https://github.com/sdcb/chats/releases';
+                location.href = 'https://github.com/Deali-Axy/chats/releases';
               }}
             >
               {t('Go to upgrade')}

@@ -451,7 +451,7 @@ public sealed class ChatDockerSessionsController(
         return Ok();
     }
 
-    private const string UserEnvFilePath = "/etc/profile.d/sdcb-chats-env.sh";
+    private const string UserEnvFilePath = "/etc/profile.d/ayaka-chats-env.sh";
 
     [HttpGet("{encryptedSessionId}/environment-variables")]
     public async Task<ActionResult<EnvironmentVariablesResponse>> GetEnvironmentVariables(

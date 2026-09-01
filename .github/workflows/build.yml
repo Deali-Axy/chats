@@ -381,7 +381,7 @@ jobs:
           Replace \`r${{ github.run_number }}\` with \`latest\` in the download link to get the latest version, for example: \`${{ vars.R2_URL }}/release/latest/chats-win-x64.zip\`
 
           ### Full Changelogs
-          https://github.com/sdcb/chats/compare/$PREVIOUS_REV...$CURRENT_REV
+          https://github.com/${{ github.repository }}/compare/$PREVIOUS_REV...$CURRENT_REV
 
           Commits between \`$PREVIOUS_REV\` and \`$CURRENT_REV\`:
           END

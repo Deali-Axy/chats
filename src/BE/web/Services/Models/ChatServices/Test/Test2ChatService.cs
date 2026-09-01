@@ -23,8 +23,8 @@ public class Test2ChatService : ChatService
         """,
 
         $$"""
-        我们致力于不断改善您的体验，欢迎您在我们的GitHub页面：https://github.com/sdcb/chats 上提出宝贵的建议。您也可以加入我们的QQ群：498452653，与其他用户交流，获取帮助。感谢您的支持与信赖！🙏
-        We are committed to continuously improving your experience. Feel free to provide valuable feedback on our GitHub page: https://github.com/sdcb/chats. You can also join our QQ group: 498452653 to interact with other users and get help. Thank you for your support and trust! 🙏
+        我们致力于不断改善您的体验，欢迎您在 Ayaka Chats 的 GitHub 页面：https://github.com/Deali-Axy/chats 提出宝贵建议。感谢您的支持与信赖！🙏
+        We are committed to continuously improving your experience. Please share feedback through Ayaka Chats on GitHub: https://github.com/Deali-Axy/chats. Thank you for your support and trust! 🙏
         """
     ];
     string[] urls =
