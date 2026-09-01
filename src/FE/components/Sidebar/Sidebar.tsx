@@ -337,8 +337,8 @@ function Sidebar<T>({
                 side === 'right' && 'flex-row-reverse',
               )}
             >
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="truncate text-[21px] font-semibold tracking-[-0.04em] text-foreground">
+              <div className="flex min-w-0 items-center px-3 pt-2">
+                <span className="text-[21px] font-semibold tracking-[-0.04em] text-foreground">
                   Ayaka Chats
                 </span>
               </div>
