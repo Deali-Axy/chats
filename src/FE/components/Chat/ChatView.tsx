@@ -52,35 +52,35 @@ import {
 } from '@/types/chatMessage';
 import { ChatSpanDto } from '@/types/clientApis';
 
-import {
-  setChats,
-  setStopIds,
-} from '@/actions/chat.actions';
-import {
-  setMessages,
-  setSelectedMessages,
-} from '@/actions/message.actions';
-import HomeContext from '@/contexts/home.context';
+import { ChatMessage } from '@/components/ChatMessage';
+
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
-import ChatMiniMap from './ChatMiniMap';
-import { ChatMessage } from '@/components/ChatMessage';
 import ChatMessagesSkeleton from './ChatMessagesSkeleton';
+import ChatMiniMap from './ChatMiniMap';
 import NoChat from './NoChat';
 import NoModel from './NoModel';
 
+import { setChats, setStopIds } from '@/actions/chat.actions';
+import { setMessages, setSelectedMessages } from '@/actions/message.actions';
+import {
+  ChatApiError,
+  streamGeneralChat,
+  streamRegenerateAllAssistant,
+  streamRegenerateAssistant,
+} from '@/apis/chatApi';
 import {
   deleteMessage,
   getChatMessageSubtree,
+  patchUserMessageEdit,
   putChats,
   putMessageReactionClear,
   putMessageReactionUp,
-  patchUserMessageEdit,
   putResponseMessageEditAndSaveNew,
   putResponseMessageEditInPlace,
   responseContentToRequest,
 } from '@/apis/clientApis';
-import { streamGeneralChat, streamRegenerateAssistant, streamRegenerateAllAssistant, ChatApiError } from '@/apis/chatApi';
+import HomeContext from '@/contexts/home.context';
 
 const ChatView = memo(() => {
   const { t } = useTranslation();
@@ -127,7 +127,9 @@ const ChatView = memo(() => {
   const pendingScrollToUserMessageIdRef = useRef<string | null>(null);
   const pendingScrollBehaviorRef = useRef<ScrollBehavior>('smooth');
   const suppressAutoScrollRef = useRef<boolean>(false);
-  const [responseMessageMinHeight, setResponseMessageMinHeight] = useState<string | undefined>(undefined);
+  const [responseMessageMinHeight, setResponseMessageMinHeight] = useState<
+    string | undefined
+  >(undefined);
   const [chatInputInsetPx, setChatInputInsetPx] = useState<number>(0);
   const responseMessageSpacerPx = useMemo(() => {
     if (!responseMessageMinHeight) return 0;
@@ -175,8 +177,14 @@ const ChatView = memo(() => {
   }, [selectedMessages]);
 
   const lastUserMessageId = useMemo(() => {
-    for (let groupIndex = selectedMessages.length - 1; groupIndex >= 0; groupIndex--) {
-      const userMessage = selectedMessages[groupIndex]?.find((m) => m.role === ChatRole.User);
+    for (
+      let groupIndex = selectedMessages.length - 1;
+      groupIndex >= 0;
+      groupIndex--
+    ) {
+      const userMessage = selectedMessages[groupIndex]?.find(
+        (m) => m.role === ChatRole.User,
+      );
       if (userMessage) return userMessage.id;
     }
     return null;
@@ -197,7 +205,7 @@ const ChatView = memo(() => {
         const anchorUserMessageId =
           leafMessage.role === ChatRole.User
             ? leafMessage.id
-            : (leafMessage.parentId || null);
+            : leafMessage.parentId || null;
 
         if (anchorUserMessageId) {
           pendingScrollToUserMessageIdRef.current = anchorUserMessageId;
@@ -211,19 +219,22 @@ const ChatView = memo(() => {
     }
   }, [isMessagesLoading, selectedMessages]);
 
-  const checkSelectChatModelIsExist = useCallback((spans: ChatSpanDto[]) => {
-    const modelList = spans
-      .filter((x) => !models.find((m) => m.modelId === x.modelId))
-      .map((x) => x.modelName);
-    const count = modelList.length;
-    count > 0 &&
-      toast.error(
-        t('The model {{modelName}} does not exist', {
-          modelName: modelList.join(' '),
-        }),
-      );
-    return count === 0;
-  }, [models, t]);
+  const checkSelectChatModelIsExist = useCallback(
+    (spans: ChatSpanDto[]) => {
+      const modelList = spans
+        .filter((x) => !models.find((m) => m.modelId === x.modelId))
+        .map((x) => x.modelName);
+      const count = modelList.length;
+      count > 0 &&
+        toast.error(
+          t('The model {{modelName}} does not exist', {
+            modelName: modelList.join(' '),
+          }),
+        );
+      return count === 0;
+    },
+    [models, t],
+  );
 
   const scrollDown = useCallback(() => {
     if (!autoScrollEnabled) return;
@@ -281,7 +292,13 @@ const ChatView = memo(() => {
     if (suppressAutoScrollRef.current) return;
     if (responseMessageSpacerPx > 0) return;
     throttledScrollDown();
-  }, [autoScrollEnabled, responseMessageSpacerPx, chatInputInsetPx, selectedChat, throttledScrollDown]);
+  }, [
+    autoScrollEnabled,
+    responseMessageSpacerPx,
+    chatInputInsetPx,
+    selectedChat,
+    throttledScrollDown,
+  ]);
 
   useEffect(() => {
     const container = chatContainerRef.current;
@@ -351,18 +368,22 @@ const ChatView = memo(() => {
         const responseContentElement = container.querySelector(
           `[data-response-content="true"][data-response-group-index="${responseMessageMinHeightGroupIndex}"]`,
         ) as HTMLElement | null;
-        responseContentElement && resizeObserver?.observe(responseContentElement);
+        responseContentElement &&
+          resizeObserver?.observe(responseContentElement);
       }
 
       const containerRect = container.getBoundingClientRect();
       const userRect = userMessageElement.getBoundingClientRect();
-      const userOffsetTop = Math.round(userRect.top - containerRect.top + container.scrollTop);
+      const userOffsetTop = Math.round(
+        userRect.top - containerRect.top + container.scrollTop,
+      );
 
       const scrollHeightWithoutSpacer = Math.max(
         0,
         container.scrollHeight - responseMessageSpacerPxRef.current,
       );
-      const requiredSpacerRaw = userOffsetTop + container.clientHeight - scrollHeightWithoutSpacer;
+      const requiredSpacerRaw =
+        userOffsetTop + container.clientHeight - scrollHeightWithoutSpacer;
       const requiredSpacer = Math.max(0, Math.ceil(requiredSpacerRaw));
       const stableSpacer = requiredSpacer <= 2 ? 0 : requiredSpacer;
       const next = stableSpacer > 0 ? `${stableSpacer}px` : undefined;
@@ -389,10 +410,7 @@ const ChatView = memo(() => {
     return () => {
       resizeObserver?.disconnect();
     };
-  }, [
-    lastUserMessageId,
-    responseMessageMinHeightGroupIndex,
-  ]);
+  }, [lastUserMessageId, responseMessageMinHeightGroupIndex]);
 
   useLayoutEffect(() => {
     const pendingScrollTarget = pendingScrollToUserMessageIdRef.current;
@@ -440,9 +458,7 @@ const ChatView = memo(() => {
 
       // 临时对话需要更新 tempChat 而非 chats 数组
       if (selectedChat.isTemp && tempChat) {
-        const nextTitle = append
-          ? `${tempChat.title ?? ''}${title}`
-          : title;
+        const nextTitle = append ? `${tempChat.title ?? ''}${title}` : title;
         setTempChat({ ...tempChat, title: nextTitle } as IChat);
         return;
       }
@@ -453,9 +469,7 @@ const ChatView = memo(() => {
             return chat;
           }
 
-          const nextTitle = append
-            ? `${chat.title ?? ''}${title}`
-            : title;
+          const nextTitle = append ? `${chat.title ?? ''}${title}` : title;
 
           return { ...chat, title: nextTitle };
         }),
@@ -509,7 +523,14 @@ const ChatView = memo(() => {
     if (msg.steps.length === 0) {
       return {
         ...msg,
-        steps: [{ id: '', contents: newContents, edited: false, createdAt: new Date().toISOString() }],
+        steps: [
+          {
+            id: '',
+            contents: newContents,
+            edited: false,
+            createdAt: new Date().toISOString(),
+          },
+        ],
       };
     }
     const newSteps = [...msg.steps];
@@ -537,7 +558,12 @@ const ChatView = memo(() => {
           const newSteps = [...x.steps];
           newSteps[newSteps.length - 1] = stepData;
           // Add a new empty step for upcoming content
-          newSteps.push({ id: '', contents: [], edited: false, createdAt: new Date().toISOString() });
+          newSteps.push({
+            id: '',
+            contents: [],
+            edited: false,
+            createdAt: new Date().toISOString(),
+          });
           return { ...x, steps: newSteps };
         }
         return x;
@@ -574,7 +600,7 @@ const ChatView = memo(() => {
           const newText = oldText + text;
           newContent[lastContentIndex] = {
             ...newContent[lastContentIndex],
-            c: newText
+            c: newText,
           } as TextContent;
         } else {
           newContent.push({ i: '', $type: MessageContentType.text, c: text });
@@ -630,11 +656,15 @@ const ChatView = memo(() => {
           // 更新现有的预览图片
           newContent[lastContentIndex] = {
             ...newContent[lastContentIndex],
-            c: text
+            c: text,
           } as TempFileContent;
         } else {
           // 插入新的预览位置
-          newContent.push({ i: '', $type: MessageContentType.tempFileId, c: text });
+          newContent.push({
+            i: '',
+            $type: MessageContentType.tempFileId,
+            c: text,
+          });
         }
 
         return withUpdatedLastStepContents(x, newContent);
@@ -670,7 +700,7 @@ const ChatView = memo(() => {
           newContent[lastContentIndex] = {
             ...newContent[lastContentIndex],
             $type: MessageContentType.fileId,
-            c: text
+            c: text,
           } as FileContent;
         } else {
           // 没有预览图片，直接追加最终图片
@@ -790,10 +820,14 @@ const ChatView = memo(() => {
 
         // 查找是否已存在该工具调用/响应
         const callIndex = newContent.findIndex(
-          (c) => c.$type === MessageContentType.toolCall && (c as ToolCallContent).u === toolCallId,
+          (c) =>
+            c.$type === MessageContentType.toolCall &&
+            (c as ToolCallContent).u === toolCallId,
         );
         const respIndex = newContent.findIndex(
-          (c) => c.$type === MessageContentType.toolResponse && (c as ToolResponseContent).u === toolCallId,
+          (c) =>
+            c.$type === MessageContentType.toolResponse &&
+            (c as ToolResponseContent).u === toolCallId,
         );
 
         if (callIndex >= 0) {
@@ -850,15 +884,21 @@ const ChatView = memo(() => {
 
         // 查找是否已存在该工具调用/响应
         const callIndex = newContent.findIndex(
-          (c) => c.$type === MessageContentType.toolCall && (c as ToolCallContent).u === toolCallId,
+          (c) =>
+            c.$type === MessageContentType.toolCall &&
+            (c as ToolCallContent).u === toolCallId,
         );
         const respIndex = newContent.findIndex(
-          (c) => c.$type === MessageContentType.toolResponse && (c as ToolResponseContent).u === toolCallId,
+          (c) =>
+            c.$type === MessageContentType.toolResponse &&
+            (c as ToolResponseContent).u === toolCallId,
         );
 
         if (respIndex >= 0) {
           // 更新现有工具响应
-          const existingToolResponse = newContent[respIndex] as ToolResponseContent;
+          const existingToolResponse = newContent[
+            respIndex
+          ] as ToolResponseContent;
           newContent[respIndex] = {
             ...existingToolResponse,
             r: result,
@@ -913,19 +953,28 @@ const ChatView = memo(() => {
       let newContent = [...currentContents];
 
       const callIndex = newContent.findIndex(
-        (c) => c.$type === MessageContentType.toolCall && (c as ToolCallContent).u === toolCallId,
+        (c) =>
+          c.$type === MessageContentType.toolCall &&
+          (c as ToolCallContent).u === toolCallId,
       );
       const respIndex = newContent.findIndex(
-        (c) => c.$type === MessageContentType.toolResponse && (c as ToolResponseContent).u === toolCallId,
+        (c) =>
+          c.$type === MessageContentType.toolResponse &&
+          (c as ToolResponseContent).u === toolCallId,
       );
 
       const deltaText = deltaToText(progress);
 
       if (respIndex >= 0) {
-        const existingToolResponse = newContent[respIndex] as ToolResponseContent;
+        const existingToolResponse = newContent[
+          respIndex
+        ] as ToolResponseContent;
 
         // 如果已经是最终结果（存在非空 r，且没有 progress），则忽略后续 progress，避免与 k=15 冲突
-        if (!existingToolResponse.progress && (existingToolResponse.r ?? '').trim() !== '') {
+        if (
+          !existingToolResponse.progress &&
+          (existingToolResponse.r ?? '').trim() !== ''
+        ) {
           return x;
         }
 
@@ -1137,7 +1186,8 @@ const ChatView = memo(() => {
       const currentToolCallIdBySpan = new Map<number, string>();
       const finishReasoningForAllSpans = () => {
         const lastMessageGroupIndex = selectedMessageList.length - 1;
-        const lastMessageGroup = selectedMessageList[lastMessageGroupIndex] ?? [];
+        const lastMessageGroup =
+          selectedMessageList[lastMessageGroupIndex] ?? [];
         for (const message of lastMessageGroup) {
           if (message.id.startsWith(ResponseMessageTempId)) {
             selectedMessageList = changeSelectedResponseReasoningFinish(
@@ -1158,108 +1208,137 @@ const ChatView = memo(() => {
             );
           }
 
-        if (value.k === SseResponseKind.StopId) {
-          chatDispatch(setStopIds([value.r]));
-        } else if (value.k === SseResponseKind.ReasoningSegment) {
-          const { r: msg, i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseReason(selectedMessageList, msgId, msg);
-        } else if (value.k === SseResponseKind.Segment) {
-          const { r: msg, i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseMessage(
-            selectedMessageList,
-            msgId,
-            msg,
-            ChatSpanStatus.Chatting,
-          );
-        } else if (value.k === SseResponseKind.Error) {
-          const { r: msg, i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseMessage(
-            selectedMessageList,
-            msgId,
-            msg,
-            ChatSpanStatus.Failed,
-          );
-        } else if (value.k === SseResponseKind.UserMessage) {
-          messageList.push(value.r);
-        } else if (value.k === SseResponseKind.ResponseMessage) {
-          const { r: msg, i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseMessage(
-            selectedMessageList,
-            msgId,
-            '',
-            ChatSpanStatus.None,
-          );
-          selectedMessageList = changeSelectedResponseMessageInfo(selectedMessageList, spanId, msg);
-          messageList.push(msg);
-        } else if (value.k === SseResponseKind.StartResponse) {
-          // StartResponse only carries response timing metadata.
-        } else if (value.k === SseResponseKind.FileGenerating) {
-          const { r, i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseFilePreview(selectedMessageList, msgId, r);
-        } else if (value.k === SseResponseKind.FileGenerated) {
-          const { r, i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseFileFinal(selectedMessageList, msgId, r);
-        } else if (value.k === SseResponseKind.CallingTool) {
-          // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
-          const { u, r: toolName, p: parameters, d: displayName, c: completed, i: spanId } = value;
-          if (u) {
-            currentToolCallIdBySpan.set(spanId, u);
+          if (value.k === SseResponseKind.StopId) {
+            chatDispatch(setStopIds([value.r]));
+          } else if (value.k === SseResponseKind.ReasoningSegment) {
+            const { r: msg, i: spanId } = value;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseReason(
+              selectedMessageList,
+              msgId,
+              msg,
+            );
+          } else if (value.k === SseResponseKind.Segment) {
+            const { r: msg, i: spanId } = value;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseMessage(
+              selectedMessageList,
+              msgId,
+              msg,
+              ChatSpanStatus.Chatting,
+            );
+          } else if (value.k === SseResponseKind.Error) {
+            const { r: msg, i: spanId } = value;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseMessage(
+              selectedMessageList,
+              msgId,
+              msg,
+              ChatSpanStatus.Failed,
+            );
+          } else if (value.k === SseResponseKind.UserMessage) {
+            messageList.push(value.r);
+          } else if (value.k === SseResponseKind.ResponseMessage) {
+            const { r: msg, i: spanId } = value;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseMessage(
+              selectedMessageList,
+              msgId,
+              '',
+              ChatSpanStatus.None,
+            );
+            selectedMessageList = changeSelectedResponseMessageInfo(
+              selectedMessageList,
+              spanId,
+              msg,
+            );
+            messageList.push(msg);
+          } else if (value.k === SseResponseKind.StartResponse) {
+            // StartResponse only carries response timing metadata.
+          } else if (value.k === SseResponseKind.FileGenerating) {
+            const { r, i: spanId } = value;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseFilePreview(
+              selectedMessageList,
+              msgId,
+              r,
+            );
+          } else if (value.k === SseResponseKind.FileGenerated) {
+            const { r, i: spanId } = value;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseFileFinal(
+              selectedMessageList,
+              msgId,
+              r,
+            );
+          } else if (value.k === SseResponseKind.CallingTool) {
+            // 13 事件：u 仅在首个片段非空，后续片段 u/r 可能为 null，只携带 p（参数增量）
+            const {
+              u,
+              r: toolName,
+              p: parameters,
+              d: displayName,
+              c: completed,
+              i: spanId,
+            } = value;
+            if (u) {
+              currentToolCallIdBySpan.set(spanId, u);
+            }
+            const toolCallId = (u ?? currentToolCallIdBySpan.get(spanId)) as
+              | string
+              | undefined;
+            if (!toolCallId) {
+              // 尚未获取到工具调用 ID，无法归并，跳过本片段
+              continue;
+            }
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseToolCall(
+              selectedMessageList,
+              msgId,
+              toolCallId,
+              toolName ?? '',
+              parameters ?? '',
+              displayName,
+              completed,
+            );
+          } else if (value.k === SseResponseKind.ToolCompleted) {
+            const { u: toolCallId, r: result, i: spanId } = value as any;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseToolResult(
+              selectedMessageList,
+              msgId,
+              toolCallId,
+              result,
+            );
+            // 若该 span 的活动调用已完成，清除追踪
+            if (currentToolCallIdBySpan.get(spanId) === toolCallId) {
+              currentToolCallIdBySpan.delete(spanId);
+            }
+          } else if (value.k === SseResponseKind.ToolProgress) {
+            const { u: toolCallId, r: progress, i: spanId } = value;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            selectedMessageList = changeSelectedResponseToolProgress(
+              selectedMessageList,
+              msgId,
+              toolCallId,
+              progress,
+            );
+          } else if (value.k === SseResponseKind.EndStep) {
+            const { r: stepData, i: spanId } = value;
+            const msgId = `${ResponseMessageTempId}-${spanId}`;
+            // End current step and start a new one. The boundary handler above closes reasoning.
+            selectedMessageList = changeSelectedResponseEndStep(
+              selectedMessageList,
+              msgId,
+              stepData,
+            );
+          } else if (value.k === SseResponseKind.UpdateTitle) {
+            changeChatTitle(value.r);
+          } else if (value.k === SseResponseKind.TitleSegment) {
+            changeChatTitle(value.r, true);
+          } else {
+            console.log('Unknown message', value);
           }
-          const toolCallId = (u ?? currentToolCallIdBySpan.get(spanId)) as string | undefined;
-          if (!toolCallId) {
-            // 尚未获取到工具调用 ID，无法归并，跳过本片段
-            continue;
-          }
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseToolCall(
-            selectedMessageList,
-            msgId,
-            toolCallId,
-            toolName ?? '',
-            parameters ?? '',
-            displayName,
-            completed,
-          );
-        } else if (value.k === SseResponseKind.ToolCompleted) {
-          const { u: toolCallId, r: result, i: spanId } = value as any;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseToolResult(
-            selectedMessageList,
-            msgId,
-            toolCallId,
-            result,
-          );
-          // 若该 span 的活动调用已完成，清除追踪
-          if (currentToolCallIdBySpan.get(spanId) === toolCallId) {
-            currentToolCallIdBySpan.delete(spanId);
-          }
-        } else if (value.k === SseResponseKind.ToolProgress) {
-          const { u: toolCallId, r: progress, i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          selectedMessageList = changeSelectedResponseToolProgress(
-            selectedMessageList,
-            msgId,
-            toolCallId,
-            progress,
-          );
-        } else if (value.k === SseResponseKind.EndStep) {
-          const { r: stepData, i: spanId } = value;
-          const msgId = `${ResponseMessageTempId}-${spanId}`;
-          // End current step and start a new one. The boundary handler above closes reasoning.
-          selectedMessageList = changeSelectedResponseEndStep(selectedMessageList, msgId, stepData);
-        } else if (value.k === SseResponseKind.UpdateTitle) {
-          changeChatTitle(value.r);
-        } else if (value.k === SseResponseKind.TitleSegment) {
-          changeChatTitle(value.r, true);
-        } else {
-          console.log('Unknown message', value);
-        }
         }
       } finally {
         finishReasoningForAllSpans();
@@ -1278,9 +1357,7 @@ const ChatView = memo(() => {
       } else {
         updateChatsState((prevChats) =>
           prevChats.map((x) =>
-            x.id === selectedChat.id
-              ? { ...x, leafMessageId, updatedAt }
-              : x,
+            x.id === selectedChat.id ? { ...x, leafMessageId, updatedAt } : x,
           ),
         );
       }
@@ -1342,10 +1419,10 @@ const ChatView = memo(() => {
         prevChats.map((x) =>
           x.id === selectedChat.id
             ? {
-              ...x,
-              leafMessageId: leafId,
-              updatedAt,
-            }
+                ...x,
+                leafMessageId: leafId,
+                updatedAt,
+              }
             : x,
         ),
       );
@@ -1421,7 +1498,9 @@ const ChatView = memo(() => {
               if (c.i === content.i) return content;
               return c;
             }),
-            edited: step.contents.some((c) => c.i === content.i) ? true : step.edited,
+            edited: step.contents.some((c) => c.i === content.i)
+              ? true
+              : step.edited,
           }));
           return { ...x, steps: newSteps };
         }
@@ -1447,7 +1526,9 @@ const ChatView = memo(() => {
                 if (c.i === content.i) return content;
                 return c;
               }),
-              edited: step.contents.some((c) => c.i === content.i) ? true : step.edited,
+              edited: step.contents.some((c) => c.i === content.i)
+                ? true
+                : step.edited,
             }));
             m.steps = newSteps;
           }
@@ -1468,7 +1549,11 @@ const ChatView = memo(() => {
       const updatedAt = currentISODateString();
       // 更新chats中的leafMessageId
       if (selectedChat.isTemp && tempChat) {
-        setTempChat({ ...tempChat, leafMessageId: copyMsg!.id, updatedAt } as IChat);
+        setTempChat({
+          ...tempChat,
+          leafMessageId: copyMsg!.id,
+          updatedAt,
+        } as IChat);
       } else {
         updateChatsState((prevChats) =>
           prevChats.map((chat) =>
@@ -1495,10 +1580,16 @@ const ChatView = memo(() => {
     const updatedWithMetadata = existing
       ? { ...existing, ...updated, siblingIds: existing.siblingIds }
       : updated;
-    const msgs = messages.map((message) => message.id === messageId ? updatedWithMetadata : message);
-    const selectedMsgs = selectedMessages.map((group) => group.map((message) =>
-      message.id === messageId ? { ...updatedWithMetadata, siblingIds: message.siblingIds } : message,
-    ));
+    const msgs = messages.map((message) =>
+      message.id === messageId ? updatedWithMetadata : message,
+    );
+    const selectedMsgs = selectedMessages.map((group) =>
+      group.map((message) =>
+        message.id === messageId
+          ? { ...updatedWithMetadata, siblingIds: message.siblingIds }
+          : message,
+      ),
+    );
     messageDispatch(setMessages(msgs));
     messageDispatch(setSelectedMessages(selectedMsgs));
   };
@@ -1522,23 +1613,30 @@ const ChatView = memo(() => {
     // 删除逻辑按照新的要求
     if (deletedMessage.siblingIds.length > 1) {
       // 如果有同级消息，选择其他同级消息
-      const siblingIds = deletedMessage.siblingIds.filter((id) => id !== deletedMessage!.id);
+      const siblingIds = deletedMessage.siblingIds.filter(
+        (id) => id !== deletedMessage!.id,
+      );
       nextMsgId = siblingIds[siblingIds.length - 1];
     } else {
       // 如果是最后一个同级消息，需要找替代方案
       if (deletedMessage.role === ChatRole.Assistant) {
         // 删除的是助手消息
         // 1. 寻找其他助手响应消息（同一父级下的其他助手消息）
-        const otherAssistantMessages = msgs.filter(m =>
-          m.role === ChatRole.Assistant &&
-          m.parentId === deletedMessage!.parentId &&
-          m.id !== deletedMessage!.id
+        const otherAssistantMessages = msgs.filter(
+          (m) =>
+            m.role === ChatRole.Assistant &&
+            m.parentId === deletedMessage!.parentId &&
+            m.id !== deletedMessage!.id,
         );
 
         if (otherAssistantMessages.length > 0) {
           // 使用另一侧响应的当前显示的消息
-          const activeAssistant = otherAssistantMessages.find(m => m.isActive);
-          nextMsgId = activeAssistant ? activeAssistant.id : otherAssistantMessages[0].id;
+          const activeAssistant = otherAssistantMessages.find(
+            (m) => m.isActive,
+          );
+          nextMsgId = activeAssistant
+            ? activeAssistant.id
+            : otherAssistantMessages[0].id;
         } else {
           // 2. 没有任何响应消息了，则选择父级用户消息
           if (deletedMessage.parentId) {
@@ -1550,9 +1648,11 @@ const ChatView = memo(() => {
         }
       } else if (deletedMessage.role === ChatRole.User) {
         // 删除的是用户消息，同时删除所有子消息
-        const childMessages = messages.filter(m => m.parentId === deletedMessage!.id);
-        childMessages.forEach(child => {
-          msgs = msgs.filter(x => x.id !== child.id);
+        const childMessages = messages.filter(
+          (m) => m.parentId === deletedMessage!.id,
+        );
+        childMessages.forEach((child) => {
+          msgs = msgs.filter((x) => x.id !== child.id);
         });
 
         // 选择父级消息
@@ -1595,7 +1695,11 @@ const ChatView = memo(() => {
     if (selectedChat) {
       const updatedAt = currentISODateString();
       if (selectedChat.isTemp && tempChat) {
-        setTempChat({ ...tempChat, leafMessageId: leafId ?? undefined, updatedAt } as IChat);
+        setTempChat({
+          ...tempChat,
+          leafMessageId: leafId ?? undefined,
+          updatedAt,
+        } as IChat);
       } else {
         updateChatsState((prevChats) =>
           prevChats.map((x) =>
@@ -1610,7 +1714,6 @@ const ChatView = memo(() => {
     messageDispatch(setSelectedMessages(selectedMsgs));
     messageDispatch(setMessages(msgs));
   };
-
 
   const handleChangeDisplayType = (
     messageId: string,
@@ -1659,7 +1762,10 @@ const ChatView = memo(() => {
       let selectedMessageList = [...selectedMessages];
       const userMessage = generateUserMessage(message.content, messageId);
       selectedMessageList.push([userMessage]);
-      const responseMessages = generateResponseMessages(selectedChat, messageId);
+      const responseMessages = generateResponseMessages(
+        selectedChat,
+        messageId,
+      );
       selectedMessageList.push(responseMessages);
       pendingScrollToUserMessageIdRef.current = userMessage.id;
       pendingScrollBehaviorRef.current = 'smooth';
@@ -1701,10 +1807,10 @@ const ChatView = memo(() => {
   if (!selectedChat) {
     return (
       <div className="relative flex-1">
-        <div className="flex flex-col">
-          <div className="relative h-16"></div>
+        <div className="flex h-full flex-col">
+          <ChatHeader />
           <div
-            className="relative h-[calc(100vh-64px)] overflow-x-hidden scroll-container w-0 min-w-full"
+            className="relative min-h-0 flex-1 w-0 min-w-full overflow-x-hidden scroll-container"
             ref={chatContainerRef}
           >
             {hasModel() ? <NoChat /> : <NoModel />}
@@ -1715,9 +1821,13 @@ const ChatView = memo(() => {
   }
 
   return (
-    <div className={`relative flex-1 min-w-0${selectedChat.isTemp ? ' bg-amber-50/40 dark:bg-amber-950/15' : ''}`}>
+    <div
+      className={`relative flex-1 min-w-0${
+        selectedChat.isTemp ? ' bg-amber-50/40 dark:bg-amber-950/15' : ''
+      }`}
+    >
       <div className="flex flex-col h-full">
-        <div className="sticky top-0 z-10"><ChatHeader /></div>
+        <ChatHeader />
         <div className="relative flex-1 min-h-0">
           <div
             className="h-full overflow-x-hidden scroll-container"
@@ -1734,7 +1844,9 @@ const ChatView = memo(() => {
                   models={models}
                   enableGroupImagePreview={true}
                   responseMessageMinHeight={responseMessageMinHeight}
-                  responseMessageMinHeightGroupIndex={responseMessageMinHeightGroupIndex}
+                  responseMessageMinHeightGroupIndex={
+                    responseMessageMinHeightGroupIndex
+                  }
                   onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
                   onEditAndSendMessage={handleEditAndSendMessage}
                   onRegenerate={handleRegenerate}
@@ -1746,12 +1858,21 @@ const ChatView = memo(() => {
                   onRegenerateAllAssistant={handleRegenerateAllAssistant}
                 />
 
-                <div style={{ height: chatInputInsetPx ? `${chatInputInsetPx}px` : undefined }} />
+                <div
+                  style={{
+                    height: chatInputInsetPx
+                      ? `${chatInputInsetPx}px`
+                      : undefined,
+                  }}
+                />
                 <div ref={messagesEndRef} />
               </>
             )}
           </div>
-          <ChatMiniMap messages={selectedMessages} containerRef={chatContainerRef} />
+          <ChatMiniMap
+            messages={selectedMessages}
+            containerRef={chatContainerRef}
+          />
         </div>
 
         {hasModel() && (

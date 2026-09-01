@@ -15,8 +15,6 @@ import { currentISODateString } from '@/utils/date';
 import { CHATS_SELECT_TYPE, ChatStatus, IChat } from '@/types/chat';
 
 import SidebarActionButton from '@/components/Button/SidebarActionButton';
-import ModelProviderIcon from '@/components/common/ModelProviderIcon';
-import Tips from '@/components/Tips/Tips';
 import {
   IconArchive,
   IconBolt,
@@ -31,6 +29,8 @@ import {
   IconTrash,
   IconX,
 } from '@/components/Icons/index';
+import Tips from '@/components/Tips/Tips';
+import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import { Checkbox } from '@/components/ui/checkbox';
 import {
   DropdownMenu,
@@ -44,12 +44,17 @@ import {
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
 
-import { setChats } from '@/actions/chat.actions';
-import HomeContext from '@/contexts/home.context';
 import SharedMessageModal from '../Chat/SharedMessageModal';
 import ChatbarContext from '../Chatbar/Chatbar.context';
 
-import { deleteChats, deleteTempChats, putChats, summarizeChatTitle } from '@/apis/clientApis';
+import { setChats } from '@/actions/chat.actions';
+import {
+  deleteChats,
+  deleteTempChats,
+  putChats,
+  summarizeChatTitle,
+} from '@/apis/clientApis';
+import HomeContext from '@/contexts/home.context';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -60,11 +65,7 @@ interface Props {
 const ChatListItem = ({ chat, onDragItemStart }: Props) => {
   const { t } = useTranslation();
   const {
-    state: {
-      chats,
-      chatsSelectType,
-      selectedChatId,
-    },
+    state: { chats, chatsSelectType, selectedChatId },
     selectedChat,
     chatDispatch,
     handleSelectChat,
@@ -231,14 +232,20 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
             </span>
           )}
           <div className="flex shrink-0 text-muted-foreground">
-            <SidebarActionButton handleClick={handleConfirm} disabled={isConfirming}>
+            <SidebarActionButton
+              handleClick={handleConfirm}
+              disabled={isConfirming}
+            >
               {isConfirming ? (
                 <IconLoader size={18} />
               ) : (
                 <IconCheck size={18} />
               )}
             </SidebarActionButton>
-            <SidebarActionButton handleClick={handleCancel} disabled={isConfirming}>
+            <SidebarActionButton
+              handleClick={handleCancel}
+              disabled={isConfirming}
+            >
               <IconX size={18} />
             </SidebarActionButton>
           </div>
@@ -248,9 +255,9 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
           asChild
           isActive={selectChatId === chat.id}
           className={cn(
-            'h-auto min-h-9 py-2 px-3 rounded-lg transition-all duration-200',
+            'h-auto min-h-9 rounded-lg px-2.5 py-2 transition-colors duration-150',
             chatting && 'pointer-events-none opacity-60',
-            selectChatId === chat.id && 'bg-sidebar-accent shadow-sm',
+            selectChatId === chat.id && 'bg-sidebar-accent font-medium',
           )}
         >
           <a
@@ -291,7 +298,8 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
                       key={'chat-icon-wrapper-' + span.spanId}
                       className={cn(
                         'flex-shrink-0 relative transition-all duration-200',
-                        index > 0 && '-ml-2.5 group-hover/icon:ml-[2px] opacity-0 group-hover/icon:opacity-100',
+                        index > 0 &&
+                          '-ml-2.5 group-hover/icon:ml-[2px] opacity-0 group-hover/icon:opacity-100',
                       )}
                       style={{ zIndex: chat.spans.length - index }}
                     >
@@ -332,14 +340,16 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
 
       {isArchive && selectChatId === chat.id && (
         <div className="absolute right-1 z-10 flex text-muted-foreground">
-          <SidebarActionButton handleClick={handleConfirm} disabled={isConfirming}>
-            {isConfirming ? (
-              <IconLoader size={18} />
-            ) : (
-              <IconCheck size={18} />
-            )}
+          <SidebarActionButton
+            handleClick={handleConfirm}
+            disabled={isConfirming}
+          >
+            {isConfirming ? <IconLoader size={18} /> : <IconCheck size={18} />}
           </SidebarActionButton>
-          <SidebarActionButton handleClick={handleCancel} disabled={isConfirming}>
+          <SidebarActionButton
+            handleClick={handleCancel}
+            disabled={isConfirming}
+          >
             <IconX size={18} />
           </SidebarActionButton>
         </div>
@@ -352,11 +362,7 @@ const ChatListItem = ({ chat, onDragItemStart }: Props) => {
               <IconDots size={16} />
             </SidebarMenuAction>
           </DropdownMenuTrigger>
-          <DropdownMenuContent
-            className="w-48"
-            side="right"
-            align="start"
-          >
+          <DropdownMenuContent className="w-48" side="right" align="start">
             {chat.isTopMost ? (
               <DropdownMenuItem
                 className="flex justify-start gap-3"

@@ -14,9 +14,9 @@ import {
   SidebarMenu,
 } from '@/components/ui/sidebar';
 
-import HomeContext from '@/contexts/home.context';
 import ChatListItem from './ChatListItem';
 
+import HomeContext from '@/contexts/home.context';
 import { cn } from '@/lib/utils';
 
 interface Props {
@@ -51,12 +51,12 @@ const ChatList = ({
     <>
       {chatGroups.size > 0 &&
         [...chatGroups.entries()].map(([group, items]) => (
-          <SidebarGroup key={group} className="py-1.5">
-            <SidebarGroupLabel className="text-xs text-sidebar-foreground/60 font-medium px-3 py-1.5">
+          <SidebarGroup key={group} className="py-2">
+            <SidebarGroupLabel className="px-2 py-1.5 text-[11px] font-medium uppercase tracking-[0.08em] text-sidebar-foreground/45">
               {t(group)}
             </SidebarGroupLabel>
             <SidebarGroupContent>
-              <SidebarMenu className="gap-0.5">
+              <SidebarMenu className="gap-1">
                 {items.map((chat, index) => (
                   <div
                     className={cn(!isUnGroupChat(groupId) && 'ml-1')}
@@ -73,7 +73,11 @@ const ChatList = ({
           </SidebarGroup>
         ))}
       {hasMore && (
-        <Button onClick={handleShowMore} className="text-xs mx-3 my-1" variant="link">
+        <Button
+          onClick={handleShowMore}
+          className="text-xs mx-3 my-1"
+          variant="link"
+        >
           {t('Show more')}
         </Button>
       )}

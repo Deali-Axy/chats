@@ -1,8 +1,14 @@
 import { useState } from 'react';
 
 import { IconUser } from '@/components/Icons/index';
-import UserMenuPopover, { PageType } from '@/components/UserMenuPopover/UserMenuPopover';
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from '@/components/ui/sidebar';
+import UserMenuPopover, {
+  PageType,
+} from '@/components/UserMenuPopover/UserMenuPopover';
+import {
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+} from '@/components/ui/sidebar';
 
 import { getUserBalanceOnly } from '@/apis/clientApis';
 import { useUserInfo } from '@/providers/UserProvider';
@@ -26,8 +32,8 @@ const ChatBarSettings = () => {
           <UserMenuPopover
             pageType={PageType.Chat}
             trigger={
-              <SidebarMenuButton className="capitalize rounded-lg px-3 py-2 h-9 transition-colors hover:bg-sidebar-accent">
-                <div className="flex items-center justify-center w-7 h-7 rounded-full bg-sidebar-accent">
+              <SidebarMenuButton className="h-11 rounded-xl px-2.5 py-2 capitalize transition-colors hover:bg-sidebar-accent">
+                <div className="flex h-7 w-7 items-center justify-center rounded-full bg-sidebar-accent">
                   <IconUser size={16} />
                 </div>
                 <span className="flex-1 truncate">{user?.username}</span>

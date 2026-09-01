@@ -1,4 +1,4 @@
-@import "react-day-picker/style.css";
+@import 'react-day-picker/style.css';
 
 @tailwind base;
 @tailwind components;
@@ -6,83 +6,83 @@
 
 @layer base {
   :root {
-    --sidebar: #fff;
-    --button : #fff;
+    --sidebar: #f7f7f5;
+    --button: #fff;
 
-    --background     : #f8f9fa;
-    --foreground     : #000;
-    --card           : #fff;
+    --background: #ffffff;
+    --foreground: #000;
+    --card: #ffffff;
     --card-foreground: #000;
 
-    --popover               : 0 0% 100%;
-    --popover-foreground    : 240 10% 3.9%;
-    --primary               : 240 5.9% 10%;
-    --primary-foreground    : 0 0% 98%;
-    --secondary             : 240 4.8% 95.9%;
-    --secondary-foreground  : 240 5.9% 10%;
-    --muted                 : 240 4.8% 95.9%;
-    --muted-foreground      : 240 3.8% 46.1%;
-    --accent                : 240 4.8% 95.9%;
-    --accent-foreground     : 240 5.9% 10%;
-    --destructive           : 0 84.2% 60.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    --primary: 240 5.9% 10%;
+    --primary-foreground: 0 0% 98%;
+    --secondary: 240 4.8% 95.9%;
+    --secondary-foreground: 240 5.9% 10%;
+    --muted: 240 4.8% 95.9%;
+    --muted-foreground: 240 3.8% 46.1%;
+    --accent: 240 4.8% 95.9%;
+    --accent-foreground: 240 5.9% 10%;
+    --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 0 0% 98%;
-    --border                : 240 5.9% 90%;
-    --input                 : 240 5.9% 90%;
-    --ring                  : 240 5.9% 10%;
-    --radius                : 1rem;
-    --chat-font-size        : 14px;
+    --border: 240 5.9% 90%;
+    --input: 240 5.9% 90%;
+    --ring: 240 5.9% 10%;
+    --radius: 1rem;
+    --chat-font-size: 14px;
     --chart-1: 221.2 83.2% 53.3%;
     --chart-2: 212 95% 68%;
     --chart-3: 216 92% 60%;
     --chart-4: 210 98% 78%;
     --chart-5: 212 97% 87%;
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 60 8% 97%;
     --sidebar-foreground: 240 5.3% 26.1%;
     --sidebar-primary: 240 5.9% 10%;
     --sidebar-primary-foreground: 0 0% 98%;
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 48 8% 92%;
     --sidebar-accent-foreground: 240 5.9% 10%;
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 45 8% 88%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     --scrollbar: rgba(15, 23, 42, 0.2);
   }
 
   .dark {
-    --background: #202021;
+    --background: #202020;
     --foreground: #fffc;
 
-    --sidebar: #000;
-    --button : #000;
+    --sidebar: #272725;
+    --button: #000;
 
-    --card                  : #000;
-    --card-foreground       : #fff;
-    --popover               : 240 10% 3.9%;
-    --popover-foreground    : 0 0% 98%;
-    --primary               : 0 0% 98%;
-    --primary-foreground    : 240 5.9% 10%;
-    --secondary             : 240 3.7% 15.9%;
-    --secondary-foreground  : 0 0% 98%;
-    --muted                 : 240 3.7% 15.9%;
-    --muted-foreground      : 240 5% 64.9%;
-    --accent                : 240 3.7% 15.9%;
-    --accent-foreground     : 0 0% 98%;
-    --destructive           : 0 62.8% 30.6%;
+    --card: #202020;
+    --card-foreground: #fff;
+    --popover: 240 10% 3.9%;
+    --popover-foreground: 0 0% 98%;
+    --primary: 0 0% 98%;
+    --primary-foreground: 240 5.9% 10%;
+    --secondary: 240 3.7% 15.9%;
+    --secondary-foreground: 0 0% 98%;
+    --muted: 240 3.7% 15.9%;
+    --muted-foreground: 240 5% 64.9%;
+    --accent: 240 3.7% 15.9%;
+    --accent-foreground: 0 0% 98%;
+    --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 0 0% 98%;
-    --border                : 240 3.7% 15.9%;
-    --input                 : 240 3.7% 15.9%;
-    --ring                  : 240 4.9% 83.9%;
+    --border: 240 3.7% 15.9%;
+    --input: 240 3.7% 15.9%;
+    --ring: 240 4.9% 83.9%;
     --chart-1: 221.2 83.2% 53.3%;
     --chart-2: 212 95% 68%;
     --chart-3: 216 92% 60%;
     --chart-4: 210 98% 78%;
     --chart-5: 212 97% 87%;
-    --sidebar-background: 240 5.9% 10%;
+    --sidebar-background: 60 3% 15%;
     --sidebar-foreground: 240 4.8% 95.9%;
     --sidebar-primary: 224.3 76.3% 48%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
+    --sidebar-accent: 60 3% 20%;
     --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
+    --sidebar-border: 60 3% 23%;
     --sidebar-ring: 217.2 91.2% 59.8%;
     --scrollbar: rgba(226, 232, 240, 0.2);
   }
@@ -106,19 +106,19 @@ html {
 
 ::-webkit-scrollbar {
   background-color: var(--scrollbar);
-  border-radius   : 10px;
-  width           : .5px;
-  height          : .5px;
+  border-radius: 10px;
+  width: 0.5px;
+  height: 0.5px;
 }
 
 ::-webkit-scrollbar-thumb {
   border-radius: 10px;
-  background   : var(--scrollbar);
+  background: var(--scrollbar);
 }
 
 ::-webkit-scrollbar-track {
   border-radius: 10px;
-  background   : var(--scrollbar);
+  background: var(--scrollbar);
 }
 
 .scroll-container::-webkit-scrollbar {
@@ -132,14 +132,14 @@ html {
 
 .scroller::-webkit-scrollbar {
   background-color: var(--scrollbar);
-  border-radius   : 10px;
-  width           : 8px;
-  height          : 8px;
+  border-radius: 10px;
+  width: 8px;
+  height: 8px;
 }
 
 .scroller::-webkit-scrollbar-track {
   border-radius: 10px;
-  background   : transparent;
+  background: transparent;
 }
 
 .scroller::-webkit-scrollbar-thumb {
@@ -194,9 +194,9 @@ html {
 }
 
 .truncate {
-  overflow     : hidden;
+  overflow: hidden;
   text-overflow: ellipsis;
-  white-space  : nowrap;
+  white-space: nowrap;
 }
 
 select:focus {
@@ -214,29 +214,29 @@ select:focus {
   white-space: normal;
   /* 仍然保证长词/URL 在移动端可断行 */
   overflow-wrap: anywhere;
-  margin     : .2em 0 !important;
+  margin: 0.2em 0 !important;
 }
 
 .prose > .md-p + h1,
 .prose > .md-p + h2 {
-  margin-top: .8em !important;
+  margin-top: 0.8em !important;
 }
 
 .prose img {
-  margin: .2em 0 !important;
+  margin: 0.2em 0 !important;
 }
 
 /* hidden input type is number spin button */
 .no-spin-button {
-  -moz-appearance   : textfield;
+  -moz-appearance: textfield;
   -webkit-appearance: none;
-  appearance        : none;
+  appearance: none;
 }
 
 .no-spin-button::-webkit-inner-spin-button,
 .no-spin-button::-webkit-outer-spin-button {
   -webkit-appearance: none;
-  margin            : 0;
+  margin: 0;
 }
 
 /* chat-container */
@@ -264,7 +264,9 @@ div {
 }
 
 /* When no date is selected, make "today" visually obvious */
-.rdp-root.rdp-highlight-today .rdp-today:not(.rdp-outside):not(.rdp-selected) .rdp-day_button {
+.rdp-root.rdp-highlight-today
+  .rdp-today:not(.rdp-outside):not(.rdp-selected)
+  .rdp-day_button {
   border: 2px solid hsl(var(--primary));
 }
 
@@ -292,7 +294,8 @@ div {
 
 .card-hover-effect:hover {
   transform: translateY(-1px);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
 /* Smooth focus transitions */

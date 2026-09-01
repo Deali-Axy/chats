@@ -1,6 +1,6 @@
 import {
-  PointerEvent as ReactPointerEvent,
   ReactNode,
+  PointerEvent as ReactPointerEvent,
   useCallback,
   useEffect,
   useMemo,
@@ -12,17 +12,16 @@ import { useIsMobile } from '@/hooks/useMobile';
 import useTranslation from '@/hooks/useTranslation';
 
 import {
+  IconBolt,
   IconLayoutSidebar,
   IconLayoutSidebarRight,
   IconLoader,
   IconSearch,
   IconSquarePlus,
-  IconBolt,
 } from '@/components/Icons/index';
 import Search from '@/components/Search/Search';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   SidebarContent,
   SidebarContext,
@@ -33,6 +32,7 @@ import {
   SidebarMenuItem,
   SidebarSeparator,
 } from '@/components/ui/sidebar';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { cn } from '@/lib/utils';
 
@@ -167,9 +167,8 @@ const Sidebar = <T,>({
       document.body.style.userSelect = 'none';
 
       const onMove = (event: PointerEvent) => {
-        const delta = side === 'left'
-          ? event.clientX - startX
-          : startX - event.clientX;
+        const delta =
+          side === 'left' ? event.clientX - startX : startX - event.clientX;
         const nextWidth = clampDesktopWidth(startWidth + delta);
         latestWidthRef.current = nextWidth;
         onDesktopWidthChange(nextWidth);
@@ -202,7 +201,9 @@ const Sidebar = <T,>({
     ],
   );
 
-  const desktopSidebarWidth = clampDesktopWidth(desktopWidth ?? desktopMinWidth);
+  const desktopSidebarWidth = clampDesktopWidth(
+    desktopWidth ?? desktopMinWidth,
+  );
   const showResizeRail = resizable && isOpen && !isMobile;
 
   const sidebarContextValue = useMemo(
@@ -220,12 +221,15 @@ const Sidebar = <T,>({
 
   // 折叠状态下的图标按钮组
   const collapsedIconButtons = (
-    <div className="flex flex-col items-center gap-1 py-2">
+    <div className="flex h-full flex-col items-center gap-2 py-3">
+      <div className="mb-1 flex h-9 w-9 items-center justify-center rounded-xl bg-foreground text-background shadow-sm">
+        <span className="text-sm font-semibold">A</span>
+      </div>
       <Tips
         trigger={
           <Button
             variant="ghost"
-            className="h-9 w-9 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+            className="h-9 w-9 rounded-lg p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
             onClick={toggleOpen}
           >
             {side === 'right' ? (
@@ -244,7 +248,7 @@ const Sidebar = <T,>({
                 onClick={() => handleCreate()}
                 disabled={messageIsStreaming || isCreating}
                 variant="ghost"
-                className="h-9 w-9 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                className="h-9 w-9 rounded-lg p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
               >
                 {isCreating ? (
                   <IconLoader size={18} />
@@ -262,7 +266,7 @@ const Sidebar = <T,>({
                   onClick={() => handleCreateTemp()}
                   disabled={messageIsStreaming || isCreatingTemp}
                   variant="ghost"
-                  className="h-9 w-9 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                  className="h-9 w-9 rounded-lg p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                 >
                   {isCreatingTemp ? (
                     <IconLoader size={18} />
@@ -285,10 +289,10 @@ const Sidebar = <T,>({
       {!isOpen && showOpenButton && (
         <div
           className={cn(
-            'flex flex-col items-center bg-sidebar text-sidebar-foreground border-r shadow-sm z-20',
+            'flex flex-col items-center border-r border-sidebar-border/70 bg-sidebar text-sidebar-foreground shadow-[1px_0_0_rgba(0,0,0,0.02)] z-20',
             'transition-all duration-200 ease-in-out',
           )}
-          style={{ width: '48px' }}
+          style={{ width: '64px' }}
         >
           {collapsedIconButtons}
         </div>
@@ -298,26 +302,32 @@ const Sidebar = <T,>({
       {isOpen && (
         <div
           className={cn(
-            'fixed top-0 z-40 flex h-full w-full flex-none flex-col bg-sidebar text-sidebar-foreground border-r shadow-md sm:relative sm:top-0 sm:w-auto',
+            'fixed top-0 z-40 flex h-full w-[min(18rem,calc(100vw-3.5rem))] flex-none flex-col border-r border-sidebar-border/70 bg-sidebar text-sidebar-foreground shadow-xl sm:relative sm:top-0 sm:w-auto sm:shadow-[1px_0_0_rgba(0,0,0,0.02)]',
             side === 'right' ? 'right-0 border-r-0 border-l' : 'left-0',
             'transition-all duration-200 ease-in-out',
           )}
           style={!isMobile ? { width: `${desktopSidebarWidth}px` } : undefined}
         >
           {/* Header */}
-          <SidebarHeader className="px-3 py-2">
+          <SidebarHeader className="px-3 pb-3 pt-3">
             <div
               className={cn(
-                'flex items-center justify-between',
+                'mb-3 flex items-center justify-between',
                 side === 'right' && 'flex-row-reverse',
               )}
             >
-              <div className="flex items-center gap-1">
+              <div className="flex min-w-0 items-center gap-2">
+                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background shadow-sm">
+                  <span className="text-xs font-semibold">A</span>
+                </div>
+                <span className="truncate text-sm font-semibold tracking-tight">
+                  Ayaka Chats
+                </span>
                 <Tips
                   trigger={
                     <Button
                       variant="ghost"
-                      className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                      className="ml-0.5 h-8 w-8 rounded-lg p-0 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       onClick={toggleOpen}
                     >
                       {side === 'right' ? (
@@ -337,7 +347,7 @@ const Sidebar = <T,>({
                         onClick={() => handleCreateTemp()}
                         disabled={messageIsStreaming || isCreatingTemp}
                         variant="ghost"
-                        className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
+                        className="h-8 w-8 rounded-lg p-0 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                       >
                         {isCreatingTemp ? (
                           <IconLoader size={18} className="animate-spin" />
@@ -370,6 +380,21 @@ const Sidebar = <T,>({
                 )}
               </div>
             </div>
+            {hasModel() && (
+              <Button
+                onClick={() => handleCreate()}
+                disabled={messageIsStreaming || isCreating}
+                variant="outline"
+                className="mb-2 h-10 w-full justify-start gap-2 rounded-xl border-sidebar-border bg-sidebar px-3 font-medium shadow-sm hover:bg-sidebar-accent"
+              >
+                {isCreating ? (
+                  <IconLoader size={17} className="animate-spin" />
+                ) : (
+                  <IconSquarePlus size={17} />
+                )}
+                <span>{addItemButtonTitle}</span>
+              </Button>
+            )}
             <div className="flex items-center gap-1.5">
               <Search
                 containerClassName="flex-1 min-w-0"
@@ -378,20 +403,18 @@ const Sidebar = <T,>({
                 onSearch={handleSearchTerm}
               />
               {!searchTerm && actionComponent && (
-                <div className="flex-shrink-0">
-                  {actionComponent}
-                </div>
+                <div className="flex-shrink-0">{actionComponent}</div>
               )}
             </div>
             {actionConfirmComponent}
           </SidebarHeader>
 
-          <SidebarSeparator className="mx-3" />
+          <SidebarSeparator className="mx-3 opacity-60" />
 
           {/* Content */}
-          <SidebarContent className="px-3 py-2">
+          <SidebarContent className="px-2 py-3">
             {isLoading && (
-              <SidebarGroup>
+              <SidebarGroup className="px-1">
                 <div className="flex flex-col gap-1.5">
                   <Skeleton className="h-8 w-full rounded-md" />
                   <Skeleton className="h-8 w-full rounded-md" />
@@ -414,8 +437,10 @@ const Sidebar = <T,>({
           {/* Footer */}
           {footerComponent && (
             <>
-              <SidebarSeparator className="mx-3" />
-              <SidebarFooter className="px-3 py-2">{footerComponent}</SidebarFooter>
+              <SidebarSeparator className="mx-3 opacity-60" />
+              <SidebarFooter className="px-2 py-3">
+                {footerComponent}
+              </SidebarFooter>
             </>
           )}
 

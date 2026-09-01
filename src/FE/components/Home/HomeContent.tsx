@@ -1,4 +1,4 @@
-import { useEffect, useReducer, useRef, useState, useMemo } from 'react';
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react';
 
 import { useRouter } from 'next/router';
 
@@ -8,6 +8,11 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { currentISODateString } from '@/utils/date';
 import { findSelectedMessageByLeafId } from '@/utils/message';
+import {
+  getDesktopChatbarMaxWidth,
+  getEffectiveChatbarWidth,
+  getSettings,
+} from '@/utils/settings';
 import { getUserSession, redirectToLoginPage } from '@/utils/user';
 
 import {
@@ -17,8 +22,16 @@ import {
   IChatPaging,
 } from '@/types/chat';
 import { IChatMessage } from '@/types/chatMessage';
-import { ChatMessageViewResult, ChatResult, GetChatsParams } from '@/types/clientApis';
+import {
+  ChatMessageViewResult,
+  ChatResult,
+  GetChatsParams,
+} from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
+
+import Chat from '../Chat/ChatView';
+import Chatbar from '../Chatbar/Chatbar';
+import ReleaseAnnouncementDialog from '../Poster/ReleaseAnnouncementDialog';
 
 import {
   setChatGroup,
@@ -29,16 +42,22 @@ import {
   setSelectedChatId,
   setStopIds,
 } from '@/actions/chat.actions';
-import {
-  setMessages,
-  setSelectedMessages,
-} from '@/actions/message.actions';
+import { setMessages, setSelectedMessages } from '@/actions/message.actions';
 import { setModelMap, setModels } from '@/actions/model.actions';
 import { setDefaultPrompt, setPrompts } from '@/actions/prompt.actions';
+import { setChatBarWidth, setShowChatBar } from '@/actions/setting.actions';
 import {
-  setChatBarWidth,
-  setShowChatBar,
-} from '@/actions/setting.actions';
+  deleteChats,
+  deleteTempChats,
+  getChatMessages,
+  getChatsByPaging,
+  getDefaultPrompt,
+  getUserChatGroupWithMessages,
+  getUserModels,
+  getUserPromptBrief,
+  postChats,
+  stopChat,
+} from '@/apis/clientApis';
 import HomeContext, {
   HandleUpdateChatParams,
   HomeInitialState,
@@ -49,33 +68,10 @@ import messageReducer, {
   messageInitialState,
 } from '@/reducers/message.reducer';
 import modelReducer, { modelInitialState } from '@/reducers/model.reducer';
-import promptReducer, {
-  promptInitialState,
-} from '@/reducers/prompt.reducer';
+import promptReducer, { promptInitialState } from '@/reducers/prompt.reducer';
 import settingReducer, {
   settingInitialState,
 } from '@/reducers/setting.reducer';
-import Chat from '../Chat/ChatView';
-import Chatbar from '../Chatbar/Chatbar';
-import ReleaseAnnouncementDialog from '../Poster/ReleaseAnnouncementDialog';
-
-import {
-  deleteChats,
-  deleteTempChats,
-  getChatsByPaging,
-  getDefaultPrompt,
-  getUserChatGroupWithMessages,
-  getChatMessages,
-  getUserModels,
-  getUserPromptBrief,
-  postChats,
-  stopChat,
-} from '@/apis/clientApis';
-import {
-  getDesktopChatbarMaxWidth,
-  getEffectiveChatbarWidth,
-  getSettings,
-} from '@/utils/settings';
 
 const HomeContent = () => {
   const router = useRouter();
@@ -170,7 +166,8 @@ const HomeContent = () => {
 
     getChatMessages(chatId)
       .then((data) => {
-        const isLatestRequest = requestVersion === messageLoadRequestRef.current;
+        const isLatestRequest =
+          requestVersion === messageLoadRequestRef.current;
         const isStillSelected = selectedChatIdRef.current === chatId;
         if (!isLatestRequest || !isStillSelected) return;
 
@@ -183,7 +180,8 @@ const HomeContent = () => {
         chatDispatch(setIsMessagesLoading(false));
       })
       .catch(() => {
-        const isLatestRequest = requestVersion === messageLoadRequestRef.current;
+        const isLatestRequest =
+          requestVersion === messageLoadRequestRef.current;
         const isStillSelected = selectedChatIdRef.current === chatId;
         if (!isLatestRequest || !isStillSelected) return;
         chatDispatch(setIsMessagesLoading(false));
@@ -210,7 +208,8 @@ const HomeContent = () => {
   useEffect(() => {
     if (!chats.length) return;
     if (!selectedChatId) return;
-    if (tempChatIdRef.current && selectedChatId === tempChatIdRef.current) return;
+    if (tempChatIdRef.current && selectedChatId === tempChatIdRef.current)
+      return;
     const exists = chats.some((c) => c.id === selectedChatId);
     if (exists) return;
 
@@ -311,7 +310,9 @@ const HomeContent = () => {
       router.push('#/');
     }
 
-    const tempId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
+    const tempId =
+      tempChatIdRef.current ||
+      (selectedChat?.isTemp ? selectedChat.id : undefined);
     if (tempId) {
       tempChatIdRef.current = null;
       setTempChat(null);
@@ -338,46 +339,53 @@ const HomeContent = () => {
     creatingTempChatRef.current = true;
 
     // 如果已有临时聊天，先删除（兼容 ref 丢失的情况）
-    const prevId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
+    const prevId =
+      tempChatIdRef.current ||
+      (selectedChat?.isTemp ? selectedChat.id : undefined);
     const deletePrev = prevId
       ? deleteTempChats(prevId).catch(() => {})
       : Promise.resolve();
 
-    return deletePrev.then(() => {
-      // 从 chats 数组中清理旧的临时聊天
-      if (prevId) {
-        const cleaned = chatsRef.current.filter((c) => c.id !== prevId);
-        if (cleaned.length !== chatsRef.current.length) {
-          chatsRef.current = cleaned;
-          chatDispatch(setChats(cleaned));
+    return deletePrev
+      .then(() => {
+        // 从 chats 数组中清理旧的临时聊天
+        if (prevId) {
+          const cleaned = chatsRef.current.filter((c) => c.id !== prevId);
+          if (cleaned.length !== chatsRef.current.length) {
+            chatsRef.current = cleaned;
+            chatDispatch(setChats(cleaned));
+          }
         }
-      }
 
-      return postChats({
-        title: t('Temporary Chat'),
-        groupId: null,
-        isTemp: true,
-      }).then((data) => {
-        const chat = supplyChatProperty(data);
-        chat.isTemp = true;
-        tempChatIdRef.current = chat.id;
-        setTempChat(chat);
+        return postChats({
+          title: t('Temporary Chat'),
+          groupId: null,
+          isTemp: true,
+        }).then((data) => {
+          const chat = supplyChatProperty(data);
+          chat.isTemp = true;
+          tempChatIdRef.current = chat.id;
+          setTempChat(chat);
 
-        // 临时聊天加入列表，使其立即显示在侧边栏
-        const nextChats = [chat, ...chatsRef.current.filter((c) => c.id !== chat.id)];
-        chatsRef.current = nextChats;
-        chatDispatch(setChats(nextChats));
-        selectedChatIdRef.current = chat.id;
-        chatDispatch(setSelectedChatId(chat.id));
-        invalidatePendingMessageLoad();
-        messageDispatch(setMessages([]));
-        messageDispatch(setSelectedMessages([]));
+          // 临时聊天加入列表，使其立即显示在侧边栏
+          const nextChats = [
+            chat,
+            ...chatsRef.current.filter((c) => c.id !== chat.id),
+          ];
+          chatsRef.current = nextChats;
+          chatDispatch(setChats(nextChats));
+          selectedChatIdRef.current = chat.id;
+          chatDispatch(setSelectedChatId(chat.id));
+          invalidatePendingMessageLoad();
+          messageDispatch(setMessages([]));
+          messageDispatch(setSelectedMessages([]));
 
-        router.push('#/' + chat.id);
+          router.push('#/' + chat.id);
+        });
+      })
+      .finally(() => {
+        creatingTempChatRef.current = false;
       });
-    }).finally(() => {
-      creatingTempChatRef.current = false;
-    });
   };
 
   const hasModel = () => {
@@ -400,7 +408,9 @@ const HomeContent = () => {
   /** 结束临时对话：删除临时聊天并回到欢迎页面 */
   const handleEndTempChat = () => {
     // 兼容 tempChatIdRef 为空的情况（如页面刷新后 ref 丢失）
-    const tempId = tempChatIdRef.current || (selectedChat?.isTemp ? selectedChat.id : undefined);
+    const tempId =
+      tempChatIdRef.current ||
+      (selectedChat?.isTemp ? selectedChat.id : undefined);
     if (!tempId) return;
 
     tempChatIdRef.current = null;
@@ -450,10 +460,12 @@ const HomeContent = () => {
       if (deletedChats.length > 0) {
         const deletedChat = deletedChats[0]; // 使用第一个被删除的聊天作为参考
         const deletedChatGroupId = deletedChat.groupId;
-        
+
         // 获取被删除聊天在原始列表中的索引
-        const originalIndex = chats.findIndex((chat) => chat.id === deletedChat.id);
-        
+        const originalIndex = chats.findIndex(
+          (chat) => chat.id === deletedChat.id,
+        );
+
         // 在同一分组中寻找下一个聊天（原始索引之后的聊天）
         for (let i = originalIndex + 1; i < chats.length; i++) {
           const chat = chats[i];
@@ -462,7 +474,7 @@ const HomeContent = () => {
             break;
           }
         }
-        
+
         // 如果没有找到下一个，寻找上一个聊天（原始索引之前的聊天）
         if (!chatIdToSelect) {
           for (let i = originalIndex - 1; i >= 0; i--) {
@@ -520,7 +532,7 @@ const HomeContent = () => {
         chatGroupList.push({ ...d, isExpanded: query ? true : d.isExpanded });
         chatList.push(...d.chats.rows);
       });
-      
+
       const mergedChats = tempChat
         ? [tempChat, ...chatList.filter((c) => c.id !== tempChat.id)]
         : chatList;
@@ -591,7 +603,7 @@ const HomeContent = () => {
 
     // 所有请求并行发起，不互相依赖
     chatDispatch(setIsChatsLoading(true));
-    
+
     // 1. 加载模型列表
     getUserModels().then((modelList) => {
       modelDispatch(setModels(modelList));
@@ -667,8 +679,8 @@ const HomeContent = () => {
         getChatsByGroup,
       }}
     >
-      <div className="flex h-screen w-screen flex-col overflow-hidden text-sm">
-        <div className="flex h-full w-full bg-background chat-background">
+      <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-sm">
+        <div className="flex h-full w-full bg-background">
           <Chatbar />
           <Chat />
         </div>
