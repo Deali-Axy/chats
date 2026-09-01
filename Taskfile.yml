@@ -15,6 +15,24 @@ tasks:
     cmds:
       - task --list
 
+  install:
+    desc: 安装前端 pnpm 依赖并还原后端 NuGet 包
+    cmds:
+      - task: install:fe
+      - task: install:be
+
+  install:fe:
+    desc: 安装前端依赖（pnpm，src/FE/package.json）
+    dir: '{{.FE_DIR}}'
+    cmds:
+      - pnpm install
+
+  install:be:
+    desc: 还原后端 NuGet 包（src/BE/web）
+    dir: '{{.BE_DIR}}'
+    cmds:
+      - dotnet restore {{.BE_PROJECT}}
+
   dev:
     desc: 同时启动前端和后端开发服务器 (使用 goreman)
     cmds:
