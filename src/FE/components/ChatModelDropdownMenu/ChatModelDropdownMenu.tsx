@@ -169,7 +169,7 @@ const ChatModelDropdownMenu = forwardRef<HTMLButtonElement, {
         <>
           <span
             className={cn(
-              'flex font-medium px-1 items-center md:w-full text-nowrap overflow-hidden text-ellipsis whitespace-nowrap w-auto',
+              'flex items-center gap-1.5 px-1 font-medium md:w-full text-nowrap overflow-hidden text-ellipsis whitespace-nowrap w-auto',
               className,
             )}
           >
