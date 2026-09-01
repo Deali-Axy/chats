@@ -108,13 +108,13 @@ const McpShortcutControl: React.FC<McpShortcutControlProps> = ({
     const enable = !isMcpEnabled(mcpId);
 
     try {
-      const updatedSpans = enable
+      const updatedConfig = enable
         ? await putChatMcp(chatId, mcpId)
         : await deleteChatMcp(chatId, mcpId);
 
       const updatedChat = {
         ...selectedChat,
-        spans: updatedSpans,
+        spans: [updatedConfig],
       };
 
       const updatedChats = chats.map((chat) =>

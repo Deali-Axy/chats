@@ -18,7 +18,6 @@ import {
   DialogFooter,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
 
 import { setChats } from '@/actions/chat.actions';
 import HomeContext from '@/contexts/home.context';
@@ -26,17 +25,14 @@ import ChatModelInfo from './ChatModelInfo';
 import ChatResponsePresetConfig from './ChatResponsePresetConfig';
 import ImageGenerationPresetConfig from './ImageGenerationPresetConfig';
 
-import { putChatSpan } from '@/apis/clientApis';
+import { putChatConfig } from '@/apis/clientApis';
 
 interface Props {
-  spanId: number;
-  notSetSpanDisabled: boolean;
   isOpen: boolean;
   onClose: () => void;
-  onRemove: (spanId: number) => void;
 }
 const ChatModelSettingModal = (props: Props) => {
-  const { spanId, notSetSpanDisabled, isOpen, onRemove, onClose } = props;
+  const { isOpen, onClose } = props;
   const {
     state: { modelMap, prompts, models, chats },
     selectedChat,
@@ -75,7 +71,7 @@ const ChatModelSettingModal = (props: Props) => {
   useEffect(() => {
     if (!selectedChat || !isOpen) return;
     
-    const originalSpan = selectedChat.spans.find((x) => x.spanId === spanId);
+    const originalSpan = selectedChat.spans[0];
     if (!originalSpan) {
       return;
     }
@@ -96,7 +92,7 @@ const ChatModelSettingModal = (props: Props) => {
     if (shouldLoadMcpOnInit(normalizedSpan)) {
       loadMcpServers();
     }
-  }, [isOpen, loadMcpServers, modelMap, selectedChat, spanId]);
+  }, [isOpen, loadMcpServers, modelMap, selectedChat]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -131,6 +127,14 @@ const ChatModelSettingModal = (props: Props) => {
       span?.format && model.supportedFormats.includes(span.format)
         ? span.format
         : null;
+    const nextTemperature =
+      span?.temperature == null
+        ? null
+        : Math.min(Math.max(span.temperature, model.minTemperature), model.maxTemperature);
+    const nextBackground =
+      nextFormat && (span?.background !== 'transparent' || nextFormat === 'png' || nextFormat === 'webp')
+        ? span?.background ?? null
+        : null;
     setSpan({
       ...span!,
       modelId: model.modelId,
@@ -140,8 +144,15 @@ const ChatModelSettingModal = (props: Props) => {
       imageSize: nextImageSize,
       format: nextFormat,
       compression: nextFormat ? span?.compression ?? null : null,
-      background: span?.background ?? null,
+      background: nextBackground,
       thinkingBudget: nextThinkingBudget,
+      temperature: nextTemperature,
+      maxOutputTokens: span?.maxOutputTokens == null
+        ? null
+        : Math.min(span.maxOutputTokens, model.maxResponseTokens),
+      webSearchEnabled: model.allowSearch && !!span?.webSearchEnabled,
+      codeExecutionEnabled: model.allowCodeExecution && !!span?.codeExecutionEnabled,
+      mcps: model.allowToolCall ? span?.mcps ?? [] : [],
     });
   };
 
@@ -222,13 +233,6 @@ const ChatModelSettingModal = (props: Props) => {
     setSpan({ ...span!, maxOutputTokens: value });
   };
 
-  const onChangeSpanEnable = (value: boolean) => {
-    if (notSetSpanDisabled && value === false) {
-      return;
-    }
-    setSpan({ ...span!, enabled: value });
-  };
-
   const handleSave = async () => {
     if (!span || !selectedChat) return;
 
@@ -256,8 +260,7 @@ const ChatModelSettingModal = (props: Props) => {
 
     setIsLoading(true);
     try {
-      await putChatSpan(span.spanId, selectedChat.id, {
-        enabled: span.enabled,
+      await putChatConfig(selectedChat.id, {
         modelId: span.modelId,
         systemPrompt: span.systemPrompt,
         maxOutputTokens: span?.maxOutputTokens ?? null,
@@ -273,9 +276,7 @@ const ChatModelSettingModal = (props: Props) => {
         mcps: span.mcps,
       });
       
-      const updatedSpans = selectedChat.spans.map((s) =>
-        s.spanId === spanId ? { ...span } : s,
-      );
+      const updatedSpans = [{ ...span, enabled: true }];
       const updatedChat = { ...selectedChat, spans: updatedSpans };
       const updatedChats = chats.map((chat) =>
         chat.id === selectedChat.id ? updatedChat : chat
@@ -392,21 +393,7 @@ const ChatModelSettingModal = (props: Props) => {
         )}
         <DialogFooter className="shrink-0 border-t border-border/70 bg-muted/30 px-5 py-3 sm:px-6">
           <div className="flex w-full flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <label className="flex items-center justify-between gap-3 rounded-xl border border-border/70 bg-background px-3 py-2 text-sm font-medium sm:justify-start">
-              <span>{span?.enabled ? t('Enabled') : t('Disabled')}</span>
-              <Switch onCheckedChange={onChangeSpanEnable} checked={span?.enabled} />
-            </label>
             <div className="flex items-center justify-end gap-2">
-            <Button
-              variant="outline"
-              onClick={() => {
-                onRemove(spanId);
-                onClose();
-              }}
-              className="border-destructive/30 text-destructive hover:border-destructive/50 hover:bg-destructive/10 hover:text-destructive"
-            >
-              {t('Remove')}
-            </Button>
             <Button
               variant="default"
               disabled={isLoading}

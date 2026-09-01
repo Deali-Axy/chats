@@ -63,7 +63,6 @@ import {
 import HomeContext from '@/contexts/home.context';
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
-import ChatPresetList from './ChatPresetList';
 import ChatMiniMap from './ChatMiniMap';
 import { ChatMessage } from '@/components/ChatMessage';
 import ChatMessagesSkeleton from './ChatMessagesSkeleton';
@@ -1729,10 +1728,6 @@ const ChatView = memo(() => {
               <ChatMessagesSkeleton selectedChat={selectedChat} />
             ) : (
               <>
-                <div className="sm:w-full chat-container w-full">
-                  {selectedMessages.length === 0 && <ChatPresetList />}
-                </div>
-
                 <ChatMessage
                   selectedChat={selectedChat}
                   selectedMessages={selectedMessages}

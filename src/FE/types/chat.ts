@@ -191,9 +191,6 @@ export enum CHATS_SELECT_TYPE {
   ARCHIVE = 3,
 }
 
-export const MAX_SELECT_MODEL_COUNT = 10;
-export const MAX_CREATE_PRESET_CHAT_COUNT = 24;
-
 export enum MessageContentType {
   error = 0,
   text = 1,

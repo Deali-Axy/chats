@@ -171,40 +171,6 @@ export interface GetUserApiKeyResult {
   modelCount: number;
 }
 
-export interface PostUserChatSpanParams {
-  modelId?: number;
-  setTemperature?: boolean;
-  temperature?: number | null;
-  webSearchEnabled?: boolean;
-  codeExecutionEnabled?: boolean;
-  reasoningEffort?: string | null;
-  maxOutputTokens?: number | null;
-  imageSize?: string | null;
-  format?: string | null;
-  compression?: number | null;
-  background?: string | null;
-  thinkingBudget?: number | null;
-}
-
-export interface PostUserChatSpanResult {
-  enabled: boolean;
-  spanId: number;
-  modelId: number;
-  modelName: string;
-  modelProviderId: number;
-  temperature: number | null;
-  webSearchEnabled: boolean;
-  codeExecutionEnabled: boolean;
-  reasoningEffort: string | null;
-  maxOutputTokens: number | null;
-  imageSize: string | null;
-  format: string | null;
-  compression: number | null;
-  background: string | null;
-  thinkingBudget: number | null;
-  mcps: ChatSpanMcp[];
-}
-
 interface GetUserChatResult {
   id: string;
   title: string;
@@ -305,9 +271,8 @@ export interface EditUserMessageParams {
   contents: RequestContent[];
 }
 
-export interface PutChatSpanParams {
+export interface PutChatConfigParams {
   modelId: number;
-  enabled: boolean;
   systemPrompt: string;
   temperature?: number | null;
   webSearchEnabled?: boolean;
@@ -320,42 +285,6 @@ export interface PutChatSpanParams {
   background?: string | null;
   thinkingBudget?: number | null;
   mcps?: ChatSpanMcp[];
-}
-
-export interface GetChatPresetResult {
-  id: string;
-  name: string;
-  updatedAt: string;
-  spans: ChatSpanDto[];
-  isSystem: boolean;
-}
-
-export interface PutChatPresetParams {
-  name: string;
-  isSystem?: boolean;
-  spans: PutChatPresetSpanParams[];
-}
-
-export interface PutChatPresetSpanParams {
-  modelId: number;
-  enabled: boolean;
-  systemPrompt: string;
-  temperature?: number | null;
-  webSearchEnabled?: boolean;
-  codeExecutionEnabled?: boolean;
-  maxOutputTokens: number | null;
-  reasoningEffort?: string | null;
-  imageSize?: string | null;
-  format?: string | null;
-  compression?: number | null;
-  thinkingBudget?: number | null;
-  mcps?: ChatSpanMcp[];
-}
-
-export interface ChatPresetReorderRequest {
-  sourceId: string;
-  previousId: string | null; // 新位置的前一个元素
-  nextId: string | null; // 新位置的后一个元素
 }
 
 export interface GetUsageParams {

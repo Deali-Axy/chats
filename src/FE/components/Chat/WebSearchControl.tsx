@@ -9,7 +9,7 @@ import Tips from '@/components/Tips/Tips';
 
 import HomeContext from '@/contexts/home.context';
 import { setChats } from '@/actions/chat.actions';
-import { putChatSpan } from '@/apis/clientApis';
+import { putChatConfig } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 interface WebSearchControlProps {
@@ -60,9 +60,8 @@ const WebSearchControl: React.FC<WebSearchControlProps> = ({
     try {
       await Promise.all(
         webSearchCapableSpans.map((span) =>
-          putChatSpan(span.spanId, chatId, {
+          putChatConfig(chatId, {
             modelId: span.modelId,
-            enabled: span.enabled,
             systemPrompt: span.systemPrompt,
             temperature: span.temperature,
             webSearchEnabled: newValue,

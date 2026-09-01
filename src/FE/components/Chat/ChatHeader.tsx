@@ -1,404 +1,91 @@
 import { useContext, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
-
 import { isMobile } from '@/utils/common';
-
-import { ChatStatus, IChat, MAX_SELECT_MODEL_COUNT } from '@/types/chat';
+import { ChatStatus, IChat } from '@/types/chat';
 
 import ModelProviderIcon from '@/components/common/ModelProviderIcon';
 import ChatModelDropdownMenu from '@/components/ChatModelDropdownMenu/ChatModelDropdownMenu';
-import { IconBolt, IconDots, IconPlus, IconSettingsCog, IconX } from '@/components/Icons';
+import { IconBolt, IconDots, IconX } from '@/components/Icons';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
 
 import { setChats } from '@/actions/chat.actions';
+import { switchChatModel } from '@/apis/clientApis';
 import HomeContext from '@/contexts/home.context';
-import ChatModelSettingModal from './ChatModelSettingsModal';
-import ChatPresetResetDialog from './ChatPresetResetDialog';
-
-import {
-  deleteUserChatSpan,
-  postChatDisableSpan,
-  postChatEnableSpan,
-  postUserChatSpan,
-  switchUserChatSpanModel,
-} from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
+import ChatModelSettingModal from './ChatModelSettingsModal';
 
 const ChatHeader = () => {
   const { t } = useTranslation();
   const {
-    state: { models, defaultPrompt, showChatBar, chats },
+    state: { models, showChatBar, chats },
     selectedChat,
     chatDispatch,
     handleEndTempChat,
     tempChat,
     setTempChat,
   } = useContext(HomeContext);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
 
-  const [selectedSpanId, setSelectedSpanId] = useState<number | null>(null);
-  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
-  
-  // 如果没有选中的聊天，返回空
-  if (!selectedChat) {
-    return null;
-  }
-  
-  const notSetSpanDisabled =
-    selectedChat.spans.filter((x) => x.enabled).length === 1;
+  if (!selectedChat) return null;
+  const config = selectedChat.spans[0];
+  if (!config) return null;
 
-  // 直接修改chats数组中的chat数据的辅助函数
-  // 临时聊天不在 chats 数组中，需要更新 tempChat 状态
-  const updateChatInChats = (updatedChat: typeof selectedChat) => {
+  const updateChat = (updatedChat: typeof selectedChat) => {
     if (selectedChat.isTemp && tempChat) {
       setTempChat(updatedChat as IChat);
       return;
     }
-    const updatedChats = chats.map((chat) =>
-      chat.id === selectedChat.id ? updatedChat : chat
-    );
-    chatDispatch(setChats(updatedChats));
+    chatDispatch(setChats(chats.map((chat) => chat.id === selectedChat.id ? updatedChat : chat)));
   };
 
-  // 检查模型是否可用
-  const isModelAvailable = (modelId: number) => {
-    return models.some((model) => model.modelId === modelId);
+  const handleSwitchModel = async (modelId: number) => {
+    const data = await switchChatModel(selectedChat.id, modelId);
+    updateChat({ ...selectedChat, spans: [{ ...config, ...data }] });
   };
 
-  const handleAddChatModel = async (modelId: number) => {
-    await postUserChatSpan(selectedChat.id, { modelId }).then((spans) => {
-      const updatedChat = {
-        ...selectedChat,
-        spans: spans.map(span => ({
-          maxOutputTokens: span.maxOutputTokens,
-          spanId: span.spanId,
-          enabled: span.enabled,
-          modelId: span.modelId,
-          modelName: span.modelName,
-          modelProviderId: span.modelProviderId,
-          temperature: span.temperature,
-          webSearchEnabled: span.webSearchEnabled,
-          codeExecutionEnabled: span.codeExecutionEnabled,
-          reasoningEffort: span?.reasoningEffort,
-          systemPrompt: defaultPrompt?.content!,
-          imageSize: span?.imageSize || null,
-          format: span?.format || null,
-          compression: span?.compression ?? null,
-          background: span?.background ?? null,
-          mcps: span?.mcps || [],
-          thinkingBudget: span?.thinkingBudget ?? null,
-        }))
-      };
-      updateChatInChats(updatedChat);
-    });
-  };
-
-  const handleRemoveChatModel = async (spanId: number) => {
-    await deleteUserChatSpan(selectedChat.id, spanId).then(() => {
-      const updatedChat = {
-        ...selectedChat,
-        spans: selectedChat.spans.filter((s) => s.spanId !== spanId)
-      };
-      updateChatInChats(updatedChat);
-    });
-  };
-
-  const handleUpdateChatModel = async (spanId: number, modelId: number) => {
-    await switchUserChatSpanModel(selectedChat.id, spanId, modelId).then(
-      (data) => {
-        const updatedChat = {
-          ...selectedChat,
-          spans: selectedChat.spans.map((s) => {
-            if (s.spanId === spanId) {
-              return {
-                ...s,
-                enabled: data.enabled,
-                modelId: data.modelId,
-                modelName: data.modelName,
-                modelProviderId: data.modelProviderId,
-                temperature: data.temperature,
-                webSearchEnabled: data.webSearchEnabled,
-                codeExecutionEnabled: data.codeExecutionEnabled,
-                reasoningEffort: data.reasoningEffort,
-                maxOutputTokens: data.maxOutputTokens,
-                imageSize: data.imageSize,
-                format: data.format,
-                compression: data.compression,
-                background: data.background,
-                thinkingBudget: data.thinkingBudget,
-                mcps: data.mcps,
-              };
-            }
-            return s;
-          })
-        };
-        updateChatInChats(updatedChat);
-      },
-    );
-  };
-
-  const handleChangeChatSpan = (spanId: number, enable: boolean) => {
-    if (notSetSpanDisabled && enable === false) {
-      return;
-    }
-    if (enable) {
-      postChatEnableSpan(spanId, selectedChat.id);
-    } else {
-      postChatDisableSpan(spanId, selectedChat.id);
-    }
-    const updatedChat = {
-      ...selectedChat,
-      spans: selectedChat.spans.map((s) => {
-        if (s.spanId === spanId) {
-          return {
-            ...s,
-            enabled: enable,
-          };
-        }
-        return s;
-      })
-    };
-    updateChatInChats(updatedChat);
-  };
-
-  const renderAddButton = () => {
-    if (selectedChat.spans.length >= MAX_SELECT_MODEL_COUNT) {
-      return null;
-    }
-
-    return (
-      <div className="flex items-center">
-        <TooltipProvider delayDuration={0}>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div>
-                <ChatModelDropdownMenu
-                  className="p-0"
-                  triggerClassName={'hover:bg-transparent p-2 bg-button hover:bg-accent'}
-                  models={models}
-                  content={<IconPlus strokeWidth={1.8} size={20} />}
-                  hideIcon={true}
-                  onChangeModel={(model) => {
-                    handleAddChatModel(model.modelId);
-                  }}
-                />
-              </div>
-            </TooltipTrigger>
-            <TooltipContent>
-              {t('Add Model')}
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      </div>
-    );
-  };
-
-  const renderResetButton = () => {
-    // 只在有消息时显示重设按钮
-    const hasMessages = selectedChat.leafMessageId && selectedChat.leafMessageId.trim() !== '';
-    
-    if (!hasMessages) {
-      return null;
-    }
-
-    return (
-      <div className="flex items-center">
-        <Tips
-          trigger={
-            <Button
-              variant="ghost"
-              className="p-2 h-auto hover:bg-accent"
-              onClick={() => setIsResetDialogOpen(true)}
-            >
-              <IconSettingsCog strokeWidth={1.8} size={20} />
-            </Button>
-          }
-          content={t('Reset Models')}
-        />
-      </div>
-    );
-  };
+  const modelAvailable = models.some((model) => model.modelId === config.modelId);
 
   return (
     <>
-      <div className="sticky top-0 left-0 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 z-10">
-        <div
-          className={cn(
-            'stretch flex flex-row mx-4 rounded-lg',
-            !showChatBar && 'mx-2',
-          )}
-        >
-          <div className="relative flex w-full flex-grow flex-col rounded-lg bg-card shadow-sm overflow-hidden">
-            <div
-              className={cn(
-                'flex justify-between select-none items-center scroller overflow-x-auto px-3',
-              )}
-            >
-              <div
-                className={cn(
-                  'flex justify-start h-12 items-center',
-                  !showChatBar && 'pl-16',
-                )}
-              >
-                {/* 临时聊天标识 */}
+      <div className="sticky top-0 left-0 z-10 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <div className={cn('stretch mx-4 flex flex-row rounded-lg', !showChatBar && 'mx-2')}>
+          <div className="relative flex w-full flex-grow flex-col overflow-hidden rounded-lg bg-card shadow-sm">
+            <div className="flex select-none items-center justify-between overflow-x-auto px-3">
+              <div className={cn('flex h-12 items-center', !showChatBar && 'pl-16')}>
                 {selectedChat.isTemp && (
                   <>
                     <Tips
-                      trigger={
-                        <div className="flex items-center gap-1 mr-1 px-2 py-1 rounded-md bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
-                          <IconBolt size={16} />
-                          <span className="text-xs font-medium">{t('Temporary')}</span>
-                        </div>
-                      }
+                      trigger={<div className="mr-1 flex items-center gap-1 rounded-md bg-yellow-500/10 px-2 py-1 text-yellow-600 dark:text-yellow-400"><IconBolt size={16} /><span className="text-xs font-medium">{t('Temporary')}</span></div>}
                       content={t('This chat will not be saved')}
                     />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 px-2 text-xs text-yellow-600 dark:text-yellow-400 hover:text-yellow-700 dark:hover:text-yellow-300 hover:bg-yellow-500/10"
-                      onClick={handleEndTempChat}
-                    >
-                      <IconX size={14} className="mr-1" />
-                      {t('End Temporary Chat')}
+                    <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-yellow-600 dark:text-yellow-400" onClick={handleEndTempChat}>
+                      <IconX size={14} className="mr-1" />{t('End Temporary Chat')}
                     </Button>
                   </>
                 )}
-                <div
-                  className={cn(
-                    'flex gap-1 items-center',
-                    selectedChat.status === ChatStatus.Chatting &&
-                      'pointer-events-none',
-                  )}
-                >
-                  {selectedChat.spans.map((span) => {
-                    const modelAvailable = isModelAvailable(span.modelId);
-                    return (
-                    <div
-                      className="flex bg-card rounded-md h-10 flex-shrink-0"
-                      key={'chat-header-' + span.spanId}
-                    >
-                      {isMobile() ? (
-                        <Button
-                          variant="ghost"
-                          className={cn(
-                            'h-auto p-1 m-0 gap-1',
-                            (!span.enabled || !modelAvailable) && 'opacity-50',
-                          )}
-                          onClick={() => {
-                            setSelectedSpanId(span.spanId);
-                          }}
-                        >
-                          <ModelProviderIcon providerId={span.modelProviderId} />
-                          <span>{span?.modelName}</span>
-                        </Button>
-                      ) : (
-                        <div 
-                          className="flex items-center bg-card rounded-md hover:bg-muted overflow-hidden transition-all duration-300 ease-in-out group"
-                          onMouseEnter={(e) => {
-                            const target = e.currentTarget;
-                            target.style.width = 'auto';
-                          }}
-                          onMouseLeave={(e) => {
-                            const target = e.currentTarget;
-                            target.style.width = '';
-                          }}
-                        >
-                          <ChatModelDropdownMenu
-                            key={'change-model-' + span.modelId}
-                            models={models}
-                            modelName={span.modelName}
-                            className="text-sm"
-                            triggerClassName="flex items-center pl-2 hover:bg-transparent"
-                            content={
-                              <div
-                                className={cn(
-                                  'flex items-center gap-1',
-                                  (!span.enabled || !modelAvailable) && 'opacity-50',
-                                )}
-                              >
-                                <ModelProviderIcon providerId={span.modelProviderId} />
-                                <span>{span?.modelName}</span>
-                              </div>
-                            }
-                            hideIcon={true}
-                            onChangeModel={(model) => {
-                              handleUpdateChatModel(
-                                span.spanId,
-                                model.modelId,
-                              );
-                            }}
-                          />
-                          <div className="flex items-center">
-                            <Button
-                              variant="ghost"
-                              className={cn(
-                                'h-auto p-1 m-0 gap-2 hidden sm:flex',
-                                !span.enabled && 'opacity-50',
-                              )}
-                              onClick={() => {
-                                setSelectedSpanId(span.spanId);
-                              }}
-                            >
-                              <div className="w-6 h-6 p-0 m-0 flex items-center justify-center cursor-pointer hover:bg-accent rounded-sm -ml-1">
-                                <IconDots className="rotate-90" size={16} />
-                              </div>
-                            </Button>
-                            <div className="flex items-center gap-2 max-w-0 group-hover:max-w-[200px] overflow-hidden transition-all duration-300 ease-in-out opacity-0 group-hover:opacity-100">
-                              <Switch
-                                onCheckedChange={(checked) => {
-                                  handleChangeChatSpan(span.spanId, checked);
-                                }}
-                                checked={span.enabled}
-                                className=""
-                              ></Switch>
-                              <Button
-                                disabled={selectedChat.spans.length === 1}
-                                onClick={() => {
-                                  handleRemoveChatModel(span.spanId);
-                                }}
-                                variant="ghost"
-                                className="h-6 w-6 m-0 p-0 hover:bg-accent"
-                              >
-                                <IconX strokeWidth={1.8} size={20} />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    );
-                  })}
-                  {renderAddButton()}
-                  {renderResetButton()}
+                <div className={cn('flex items-center rounded-md', selectedChat.status === ChatStatus.Chatting && 'pointer-events-none')}>
+                  <ChatModelDropdownMenu
+                    key={`chat-model-${config.modelId}`}
+                    models={models}
+                    modelName={config.modelName}
+                    className="text-sm"
+                    triggerClassName="flex items-center gap-1.5 px-2 hover:bg-accent"
+                    content={<><ModelProviderIcon providerId={config.modelProviderId} /><span className={cn(!modelAvailable && 'opacity-50')}>{config.modelName || t('Model not available')}</span></>}
+                    hideIcon={isMobile()}
+                    onChangeModel={(model) => { void handleSwitchModel(model.modelId); }}
+                  />
+                  <Button variant="ghost" className="h-auto p-1" onClick={() => setIsSettingsOpen(true)}>
+                    <IconDots className="rotate-90" size={16} />
+                  </Button>
                 </div>
               </div>
             </div>
           </div>
         </div>
       </div>
-
-      <div className="z-10 text-sm bg-background"></div>
-      <ChatModelSettingModal
-        spanId={selectedSpanId!}
-        isOpen={selectedSpanId !== null}
-        onRemove={handleRemoveChatModel}
-        notSetSpanDisabled={notSetSpanDisabled}
-        onClose={() => {
-          setSelectedSpanId(null);
-        }}
-      />
-      <ChatPresetResetDialog
-        isOpen={isResetDialogOpen}
-        onClose={() => setIsResetDialogOpen(false)}
-      />
+      <ChatModelSettingModal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} />
     </>
   );
 };

@@ -14,14 +14,12 @@ import {
   AssignUsersToMcpRequest,
   AssignedUserDetailsDto,
   AssignedUserNameDto,
-  ChatPresetReorderRequest,
   ChatMessageViewResult,
   ChatResult,
   ChatSpanDto,
   FetchToolsRequest,
   FetchToolsResponse,
   GetBalance7DaysUsageResult,
-  GetChatPresetResult,
   GetChatShareResult,
   GetChatsParams,
   GetLoginProvidersResult,
@@ -42,13 +40,10 @@ import {
   PostChatGroupParams,
   PostChatParams,
   PostUserChatShareResult,
-  PostUserChatSpanParams,
-  PostUserChatSpanResult,
   PostUserPassword,
   PutChatGroupParams,
   PutChatParams,
-  PutChatPresetParams,
-  PutChatSpanParams,
+  PutChatConfigParams,
   PutMoveChatGroupParams,
   PutResponseMessageEditAndSaveNewParams,
   PutResponseMessageEditInPlaceParams,
@@ -365,48 +360,12 @@ export const getModelUsage = (modelId: number) => {
   return fetchServer.get<ModelUsageDto>('/api/models/' + modelId + '/usage');
 };
 
-export const postUserChatSpan = (
-  chatId: string,
-  params?: PostUserChatSpanParams,
-) => {
+export const switchChatModel = (chatId: string, modelId: number) => {
   const fetchServer = createFetchClient();
-  return fetchServer.post<PostUserChatSpanResult[]>(
-    `/api/chat/${chatId}/span`,
-    {
-      body: params,
-    },
-  );
-};
-
-export const putUserChatSpan = (
-  chatId: string,
-  spanId: number,
-  params?: PostUserChatSpanParams,
-) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.put<PostUserChatSpanResult>(
-    `/api/chat/${chatId}/span/${spanId}`,
-    {
-      body: params,
-    },
-  );
-};
-
-export const switchUserChatSpanModel = (
-  chatId: string,
-  spanId: number,
-  modelId: number,
-) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.post<PostUserChatSpanResult>(
-    `/api/chat/${chatId}/span/${spanId}/switch-model/${modelId}`,
+  return fetchServer.post<ChatSpanDto>(
+    `/api/chat/${chatId}/config/switch-model/${modelId}`,
     {},
   );
-};
-
-export const deleteUserChatSpan = (chatId: string, spanId: number) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.delete(`/api/chat/${chatId}/span/${spanId}`);
 };
 
 export const getUserChatGroupWithMessages = (
@@ -561,28 +520,12 @@ export const deleteMessage = (messageId: string, leafId: string | null) => {
   );
 };
 
-export const postChatEnableSpan = (spanId: number, encryptedChatId: string) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.post(`/api/chat/${encryptedChatId}/span/${spanId}/enable`);
-};
-
-export const postChatDisableSpan = (
-  spanId: number,
+export const putChatConfig = (
   encryptedChatId: string,
+  params: PutChatConfigParams,
 ) => {
   const fetchServer = createFetchClient();
-  return fetchServer.post(
-    `/api/chat/${encryptedChatId}/span/${spanId}/disable`,
-  );
-};
-
-export const putChatSpan = (
-  spanId: number,
-  encryptedChatId: string,
-  params: PutChatSpanParams,
-) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.put(`/api/chat/${encryptedChatId}/span/${spanId}`, {
+  return fetchServer.put<ChatSpanDto>(`/api/chat/${encryptedChatId}/config`, {
     body: params,
   });
 };
@@ -590,7 +533,7 @@ export const putChatSpan = (
 export const putChatMcp = (
   encryptedChatId: string,
   mcpServerId: number,
-): Promise<ChatSpanDto[]> => {
+): Promise<ChatSpanDto> => {
   const fetchServer = createFetchClient();
   return fetchServer.put(
     `/api/chat/${encryptedChatId}/mcp/${mcpServerId}`,
@@ -600,52 +543,11 @@ export const putChatMcp = (
 export const deleteChatMcp = (
   encryptedChatId: string,
   mcpServerId: number,
-): Promise<ChatSpanDto[]> => {
+): Promise<ChatSpanDto> => {
   const fetchServer = createFetchClient();
   return fetchServer.delete(
     `/api/chat/${encryptedChatId}/mcp/${mcpServerId}`,
   );
-};
-
-export const getChatPreset = () => {
-  const fetchServer = createFetchClient();
-  return fetchServer.get<GetChatPresetResult[]>(`/api/chat-preset`);
-};
-
-export const postChatPreset = (params: PutChatPresetParams) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.post<GetChatPresetResult>(`/api/chat-preset`, {
-    body: params,
-  });
-};
-
-export const putChatPreset = (id: string, params: PutChatPresetParams) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.put<GetChatPresetResult>(`/api/chat-preset/${id}`, {
-    body: params,
-  });
-};
-
-export const deleteChatPreset = (id: string) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.delete<GetChatPresetResult>(`/api/chat-preset/${id}`);
-};
-
-export const postCloneChatPreset = (id: string) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.post(`/api/chat-preset/${id}/clone`);
-};
-
-export const postApplyChatPreset = (chatId: string, presetId: string) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.post(`/api/chat/${chatId}/span/apply-preset/${presetId}`);
-};
-
-export const reorderChatPresets = (params: ChatPresetReorderRequest) => {
-  const fetchServer = createFetchClient();
-  return fetchServer.put('/api/chat-preset/reorder', {
-    body: params,
-  });
 };
 
 export const responseContentToRequest = (

@@ -13,7 +13,7 @@ import Tips from '@/components/Tips/Tips';
 
 import HomeContext from '@/contexts/home.context';
 import { setChats } from '@/actions/chat.actions';
-import { putChatSpan } from '@/apis/clientApis';
+import { putChatConfig } from '@/apis/clientApis';
 import { cn } from '@/lib/utils';
 
 const ChatSessionManagerWindow = dynamic(
@@ -85,9 +85,8 @@ const CodeExecutionControl: React.FC<CodeExecutionControlProps> = ({
       // 批量更新所有支持代码执行的 spans
       await Promise.all(
         codeExecutionCapableSpans.map((span) =>
-          putChatSpan(span.spanId, chatId, {
+          putChatConfig(chatId, {
             modelId: span.modelId,
-            enabled: span.enabled,
             systemPrompt: span.systemPrompt,
             temperature: span.temperature,
             webSearchEnabled: span.webSearchEnabled,
