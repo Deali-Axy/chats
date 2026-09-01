@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+import { toFixed } from '@/utils/common';
 
 import { IconUser } from '@/components/Icons/index';
 import UserMenuPopover, {
@@ -15,11 +17,24 @@ import { useUserInfo } from '@/providers/UserProvider';
 
 const ChatBarSettings = () => {
   const user = useUserInfo();
-  const [userBalance, setUserBalance] = useState<number>(0);
+  const [userBalance, setUserBalance] = useState<number | null>(null);
 
-  const getUserBalance = () => {
-    getUserBalanceOnly().then((data) => setUserBalance(data));
-  };
+  const getUserBalance = useCallback(
+    () =>
+      getUserBalanceOnly()
+        .then((data) => setUserBalance(data))
+        .catch(() => {}),
+    [],
+  );
+
+  useEffect(() => {
+    void getUserBalance();
+    const refreshTimer = window.setInterval(() => {
+      void getUserBalance();
+    }, 30_000);
+
+    return () => window.clearInterval(refreshTimer);
+  }, [getUserBalance]);
 
   const handleClickUserMore = () => {
     getUserBalance();
@@ -37,6 +52,12 @@ const ChatBarSettings = () => {
                   <IconUser size={16} />
                 </div>
                 <span className="flex-1 truncate">{user?.username}</span>
+                <span
+                  className="shrink-0 rounded-md bg-sidebar-accent px-1.5 py-0.5 text-xs font-medium tabular-nums text-sidebar-foreground/75"
+                  title="Account balance"
+                >
+                  {userBalance === null ? '--' : toFixed(userBalance)}
+                </span>
               </SidebarMenuButton>
             }
             onOpen={handleClickUserMore}
