@@ -136,6 +136,7 @@ export interface ChatTitleSummaryResult {
 export interface PostChatParams {
   title: string;
   groupId: string | null;
+  modelId?: number;
   /** 是否为临时聊天 */
   isTemp?: boolean;
 }

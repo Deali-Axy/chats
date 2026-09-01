@@ -277,10 +277,14 @@ const HomeContent = () => {
     return chat;
   }
 
-  const handleCreateChat = (groupId: string | null = null) => {
+  const handleCreateChat = (
+    groupId: string | null = null,
+    modelId?: number,
+  ) => {
     return postChats({
       title: t('New Conversation'),
       groupId,
+      modelId,
     }).then((data) => {
       const chat = supplyChatProperty(data);
       chat.groupId = groupId;

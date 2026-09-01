@@ -215,6 +215,17 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
             return BadRequest("No model available.");
         }
 
+        short? requestedModelKey = null;
+        if (request.ModelId is int requestedModelId)
+        {
+            if (!short.TryParse(requestedModelId.ToString(), out short parsedModelId) ||
+                !validModels.ContainsKey(parsedModelId))
+            {
+                return BadRequest("Model not available.");
+            }
+            requestedModelKey = parsedModelId;
+        }
+
         if (request.GroupId != null)
         {
             // ensure group exists
@@ -252,7 +263,15 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                 ChatConfig = lastSpan.ChatConfig.Clone(),
             };
             newSpan.ChatConfig.Id = 0;
-            newSpan.ChatConfig.Model = model.Model;
+            if (requestedModelKey is short newChatModelId)
+            {
+                newSpan.ChatConfig.ModelId = newChatModelId;
+                newSpan.ChatConfig.Model = validModels[newChatModelId].Model;
+            }
+            else
+            {
+                newSpan.ChatConfig.Model = model.Model;
+            }
             chat.ChatSpans = [newSpan];
         }
         else
@@ -266,8 +285,11 @@ public class UserChatsController(ChatsDB db, CurrentUser currentUser, IUrlEncryp
                     Enabled = true,
                     ChatConfig = new ChatConfig
                     {
-                        ModelId = validModels.First().Key,
-                        Model = validModels.First().Value.Model,
+                        ModelId = requestedModelKey
+                            ?? validModels.First().Key,
+                        Model = requestedModelKey is short initialModelId
+                            ? validModels[initialModelId].Model
+                            : validModels.First().Value.Model,
                         Temperature = null,
                         WebSearchEnabled = false,
                         CodeExecutionEnabled = false,

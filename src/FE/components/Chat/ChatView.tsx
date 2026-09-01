@@ -101,6 +101,7 @@ const ChatView = memo(() => {
     messageDispatch,
     tempChat,
     setTempChat,
+    handleCreateChat,
   } = useContext(HomeContext);
   const chatsRef = useRef<IChat[]>(chats);
   const branchRequestIdRef = useRef(0);
@@ -127,6 +128,8 @@ const ChatView = memo(() => {
   const pendingScrollToUserMessageIdRef = useRef<string | null>(null);
   const pendingScrollBehaviorRef = useRef<ScrollBehavior>('smooth');
   const suppressAutoScrollRef = useRef<boolean>(false);
+  const [pendingInitialMessage, setPendingInitialMessage] =
+    useState<Message | null>(null);
   const [responseMessageMinHeight, setResponseMessageMinHeight] = useState<
     string | undefined
   >(undefined);
@@ -1803,6 +1806,26 @@ const ChatView = memo(() => {
     ],
   );
 
+  const handleStartConversation = useCallback(
+    async (message: Message, modelId: number) => {
+      setPendingInitialMessage(message);
+      try {
+        await handleCreateChat(null, modelId);
+      } catch (error) {
+        setPendingInitialMessage(null);
+        throw error;
+      }
+    },
+    [handleCreateChat],
+  );
+
+  useEffect(() => {
+    if (!selectedChat || !pendingInitialMessage) return;
+
+    setPendingInitialMessage(null);
+    void handleSend(pendingInitialMessage);
+  }, [handleSend, pendingInitialMessage, selectedChat]);
+
   // 如果没有选中的聊天，显示NoChat或NoModel组件
   if (!selectedChat) {
     return (
@@ -1813,7 +1836,11 @@ const ChatView = memo(() => {
             className="relative min-h-0 flex-1 w-0 min-w-full overflow-x-hidden scroll-container"
             ref={chatContainerRef}
           >
-            {hasModel() ? <NoChat /> : <NoModel />}
+            {hasModel() ? (
+              <NoChat onSend={handleStartConversation} />
+            ) : (
+              <NoModel />
+            )}
           </div>
         </div>
       </div>

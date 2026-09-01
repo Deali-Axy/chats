@@ -5,6 +5,7 @@ import { ActionType } from '@/hooks/useCreateReducer';
 import { CHATS_SELECT_TYPE, IChat, IChatPaging } from '@/types/chat';
 import { GetChatsParams } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
+import { Prompt, PromptSlim } from '@/types/prompt';
 import { getSettings } from '@/utils/settings';
 
 import {
@@ -20,9 +21,9 @@ import {
   PromptAction,
 } from '@/reducers/prompt.reducer';
 import { SettingsAction } from '@/reducers/setting.reducer';
+
 import { AdminModelDto } from '@/types/adminApis';
 import { IChatMessage } from '@/types/chatMessage';
-import { Prompt, PromptSlim } from '@/types/prompt';
 
 export interface HandleUpdateChatParams {
   isShared?: boolean;
@@ -97,7 +98,10 @@ export interface HomeContextProps {
   /** 显示新聊天欢迎页，不创建持久化聊天。 */
   handleNewChat: () => void;
   /** 创建持久化聊天，用于欢迎页和分组内的新建操作。 */
-  handleCreateChat: (groupId?: string | null) => Promise<void>;
+  handleCreateChat: (
+    groupId?: string | null,
+    modelId?: number,
+  ) => Promise<void>;
   /** 创建临时聊天 */
   handleNewTempChat: () => void;
   /** 结束临时对话 */

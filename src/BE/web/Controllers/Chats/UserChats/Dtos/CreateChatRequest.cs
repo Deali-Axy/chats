@@ -11,6 +11,9 @@ public record EncryptedCreateChatRequest
     [JsonPropertyName("groupId")]
     public required string? GroupId { get; init; }
 
+    [JsonPropertyName("modelId")]
+    public int? ModelId { get; init; }
+
     /// <summary>
     /// 是否为临时聊天
     /// </summary>
@@ -23,6 +26,7 @@ public record EncryptedCreateChatRequest
         {
             Title = Title,
             GroupId = urlEncryption.DecryptChatGroupIdOrNull(GroupId),
+            ModelId = ModelId,
             IsTemp = IsTemp
         };
     }
@@ -33,6 +37,8 @@ public record CreateChatRequest
     public required string Title { get; init; }
 
     public required int? GroupId { get; init; }
+
+    public int? ModelId { get; init; }
 
     /// <summary>
     /// 是否为临时聊天
