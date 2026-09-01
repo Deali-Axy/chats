@@ -1,6 +1,8 @@
-import { FC, useContext } from 'react';
+import { FC, FormEvent, useEffect, useRef, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
+
+import { highlightText } from '@/utils/highlight';
 
 import { ChatResult } from '@/types/clientApis';
 
@@ -10,14 +12,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-
-import HomeContext from '@/contexts/home.context';
-import { highlightText } from '@/utils/highlight';
+import { Input } from '@/components/ui/input';
 
 interface Props {
   isOpen: boolean;
   searchTerm: string;
   searchResults: ChatResult[];
+  onSearch: (query: string) => void | Promise<void>;
   onClose: () => void;
   onSelectChat: (chatId: string) => void;
 }
@@ -30,15 +31,37 @@ const SearchResultsModal: FC<Props> = ({
   isOpen,
   searchTerm,
   searchResults,
+  onSearch,
   onClose,
   onSelectChat,
 }) => {
   const { t } = useTranslation();
+  const [query, setQuery] = useState(searchTerm);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    setQuery(searchTerm);
+  }, [searchTerm]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const timer = window.setTimeout(() => inputRef.current?.focus(), 0);
+    return () => window.clearTimeout(timer);
+  }, [isOpen]);
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    void onSearch(query.trim());
+  };
 
   /**
    * 截取匹配内容的片段，显示关键词周围的文字
    */
-  const getContentSnippet = (content: string, keyword: string, contextLength: number = 100): string => {
+  const getContentSnippet = (
+    content: string,
+    keyword: string,
+    contextLength: number = 100,
+  ): string => {
     const lowerContent = content.toLowerCase();
     const lowerKeyword = keyword.toLowerCase();
     const index = lowerContent.indexOf(lowerKeyword);
@@ -48,7 +71,10 @@ const SearchResultsModal: FC<Props> = ({
     }
 
     const start = Math.max(0, index - contextLength);
-    const end = Math.min(content.length, index + keyword.length + contextLength);
+    const end = Math.min(
+      content.length,
+      index + keyword.length + contextLength,
+    );
     let snippet = content.substring(start, end);
 
     if (start > 0) {
@@ -63,15 +89,27 @@ const SearchResultsModal: FC<Props> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[80vh] max-w-2xl flex-col overflow-hidden p-5 sm:rounded-2xl">
         <DialogHeader>
-          <DialogTitle>
-            {t('Search Results')} - "{searchTerm}"
-          </DialogTitle>
+          <DialogTitle>{t('Search chats')}</DialogTitle>
         </DialogHeader>
 
+        <form onSubmit={handleSubmit}>
+          <Input
+            ref={inputRef}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            placeholder={t('Search conversations, messages, and tags')}
+            className="h-11 rounded-xl bg-muted/50 px-4"
+          />
+        </form>
+
         <div className="flex-1 overflow-y-auto py-4">
-          {searchResults.length === 0 ? (
+          {!searchTerm ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              {t('Enter a keyword to search your chats')}
+            </div>
+          ) : searchResults.length === 0 ? (
             <div className="text-center text-muted-foreground py-8">
               {t('No results found')}
             </div>
@@ -80,7 +118,7 @@ const SearchResultsModal: FC<Props> = ({
               {searchResults.map((chat) => (
                 <div
                   key={chat.id}
-                  className="p-3 rounded-lg border hover:bg-muted cursor-pointer transition-colors"
+                  className="cursor-pointer rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-muted"
                   onClick={() => {
                     onSelectChat(chat.id);
                     onClose();
@@ -96,7 +134,7 @@ const SearchResultsModal: FC<Props> = ({
                     <div className="text-xs text-muted-foreground line-clamp-2">
                       {highlightText(
                         getContentSnippet(chat.matchedContent, searchTerm),
-                        searchTerm
+                        searchTerm,
                       )}
                     </div>
                   )}

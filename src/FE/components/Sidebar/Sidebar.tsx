@@ -18,8 +18,8 @@ import {
   IconLoader,
   IconSearch,
   IconSquarePlus,
+  IconTools,
 } from '@/components/Icons/index';
-import Search from '@/components/Search/Search';
 import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import {
@@ -50,9 +50,8 @@ interface Props<T> {
   footerComponent?: ReactNode;
   actionComponent?: ReactNode;
   actionConfirmComponent?: ReactNode;
-  searchTerm: string;
   messageIsStreaming?: boolean;
-  handleSearchTerm: (searchTerm: string) => void;
+  onSearchClick: () => void;
   toggleOpen: () => void;
   handleCreateItem: () => void | Promise<void>;
   /** 创建临时聊天的处理函数 */
@@ -68,7 +67,7 @@ interface Props<T> {
   ) => void;
 }
 
-const Sidebar = <T,>({
+function Sidebar<T>({
   isLoading = false,
   showOpenButton = true,
   isOpen,
@@ -81,9 +80,8 @@ const Sidebar = <T,>({
   footerComponent,
   actionComponent,
   actionConfirmComponent,
-  searchTerm,
   messageIsStreaming,
-  handleSearchTerm,
+  onSearchClick,
   toggleOpen,
   handleCreateItem,
   handleCreateTempItem,
@@ -93,7 +91,7 @@ const Sidebar = <T,>({
   desktopMinWidth = 280,
   desktopMaxWidth = 520,
   onDesktopWidthChange,
-}: Props<T>) => {
+}: Props<T>) {
   const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [isCreating, setIsCreating] = useState(false);
@@ -278,6 +276,29 @@ const Sidebar = <T,>({
               content={addTempItemButtonTitle || t('Temporary Chat')}
             />
           )}
+          <Tips
+            trigger={
+              <a
+                href="/settings?t=mcp"
+                className="flex h-9 w-9 items-center justify-center rounded-lg text-sidebar-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              >
+                <IconTools size={18} />
+              </a>
+            }
+            content={t('MCP')}
+          />
+          <Tips
+            trigger={
+              <Button
+                onClick={onSearchClick}
+                variant="ghost"
+                className="h-9 w-9 rounded-lg p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+              >
+                <IconSearch size={18} />
+              </Button>
+            }
+            content={t('Search')}
+          />
         </>
       )}
     </div>
@@ -312,100 +333,67 @@ const Sidebar = <T,>({
           <SidebarHeader className="px-3 pb-3 pt-3">
             <div
               className={cn(
-                'mb-3 flex items-center justify-between',
+                'mb-4 flex items-center',
                 side === 'right' && 'flex-row-reverse',
               )}
             >
               <div className="flex min-w-0 items-center gap-2">
-                <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-foreground text-background shadow-sm">
-                  <span className="text-xs font-semibold">A</span>
-                </div>
-                <span className="truncate text-sm font-semibold tracking-tight">
+                <span className="truncate text-[21px] font-semibold tracking-[-0.04em] text-foreground">
                   Ayaka Chats
                 </span>
-                <Tips
-                  trigger={
-                    <Button
-                      variant="ghost"
-                      className="ml-0.5 h-8 w-8 rounded-lg p-0 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      onClick={toggleOpen}
-                    >
-                      {side === 'right' ? (
-                        <IconLayoutSidebarRight size={18} />
-                      ) : (
-                        <IconLayoutSidebar size={18} />
-                      )}
-                    </Button>
-                  }
-                />
-              </div>
-              <div className="flex items-center gap-0.5">
-                {hasModel() && handleCreateTempItem && (
-                  <Tips
-                    trigger={
-                      <Button
-                        onClick={() => handleCreateTemp()}
-                        disabled={messageIsStreaming || isCreatingTemp}
-                        variant="ghost"
-                        className="h-8 w-8 rounded-lg p-0 text-sidebar-foreground/65 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
-                      >
-                        {isCreatingTemp ? (
-                          <IconLoader size={18} className="animate-spin" />
-                        ) : (
-                          <IconBolt size={18} />
-                        )}
-                      </Button>
-                    }
-                    content={addTempItemButtonTitle || t('Temporary Chat')}
-                  />
-                )}
-                {hasModel() && (
-                  <Tips
-                    trigger={
-                      <Button
-                        onClick={() => handleCreate()}
-                        disabled={messageIsStreaming || isCreating}
-                        variant="ghost"
-                        className="h-8 w-8 p-0 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground rounded-md"
-                      >
-                        {isCreating ? (
-                          <IconLoader size={18} className="animate-spin" />
-                        ) : (
-                          <IconSquarePlus size={18} />
-                        )}
-                      </Button>
-                    }
-                    content={addItemButtonTitle}
-                  />
-                )}
               </div>
             </div>
             {hasModel() && (
-              <Button
-                onClick={() => handleCreate()}
-                disabled={messageIsStreaming || isCreating}
-                variant="outline"
-                className="mb-2 h-10 w-full justify-start gap-2 rounded-xl border-sidebar-border bg-sidebar px-3 font-medium shadow-sm hover:bg-sidebar-accent"
-              >
-                {isCreating ? (
-                  <IconLoader size={17} className="animate-spin" />
-                ) : (
-                  <IconSquarePlus size={17} />
+              <div className="space-y-1">
+                <Button
+                  onClick={() => handleCreate()}
+                  disabled={messageIsStreaming || isCreating}
+                  variant="ghost"
+                  className="h-10 w-full justify-start gap-3 rounded-lg px-3 text-[15px] font-medium hover:bg-sidebar-accent"
+                >
+                  {isCreating ? (
+                    <IconLoader size={18} className="animate-spin" />
+                  ) : (
+                    <IconSquarePlus size={18} />
+                  )}
+                  <span>{addItemButtonTitle}</span>
+                </Button>
+                {handleCreateTempItem && (
+                  <Button
+                    onClick={() => handleCreateTemp()}
+                    disabled={messageIsStreaming || isCreatingTemp}
+                    variant="ghost"
+                    className="h-10 w-full justify-start gap-3 rounded-lg px-3 text-[15px] font-medium hover:bg-sidebar-accent"
+                  >
+                    {isCreatingTemp ? (
+                      <IconLoader size={18} className="animate-spin" />
+                    ) : (
+                      <IconBolt size={18} />
+                    )}
+                    <span>{addTempItemButtonTitle || t('Temporary Chat')}</span>
+                  </Button>
                 )}
-                <span>{addItemButtonTitle}</span>
-              </Button>
+                <Button
+                  asChild
+                  variant="ghost"
+                  className="h-10 w-full justify-start gap-3 rounded-lg px-3 text-[15px] font-medium hover:bg-sidebar-accent"
+                >
+                  <a href="/settings?t=mcp">
+                    <IconTools size={18} />
+                    <span>{t('MCP')}</span>
+                  </a>
+                </Button>
+                <Button
+                  onClick={onSearchClick}
+                  variant="ghost"
+                  className="h-10 w-full justify-start gap-3 rounded-lg px-3 text-[15px] font-medium hover:bg-sidebar-accent"
+                >
+                  <IconSearch size={18} />
+                  <span>{t('Search')}</span>
+                </Button>
+                {actionComponent}
+              </div>
             )}
-            <div className="flex items-center gap-1.5">
-              <Search
-                containerClassName="flex-1 min-w-0"
-                placeholder={t('Search...') || ''}
-                searchTerm={searchTerm}
-                onSearch={handleSearchTerm}
-              />
-              {!searchTerm && actionComponent && (
-                <div className="flex-shrink-0">{actionComponent}</div>
-              )}
-            </div>
             {actionConfirmComponent}
           </SidebarHeader>
 
@@ -463,6 +451,6 @@ const Sidebar = <T,>({
       )}
     </SidebarContext.Provider>
   );
-};
+}
 
 export default Sidebar;

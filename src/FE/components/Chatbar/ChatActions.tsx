@@ -17,17 +17,26 @@ const ChatActions = ({
   onAddGroup,
   onBatchArchive,
   onBatchDelete,
+  sidebar = false,
 }: {
   onAddGroup: () => void;
   onBatchArchive: () => void;
   onBatchDelete: () => void;
+  sidebar?: boolean;
 }) => {
   const { t } = useTranslation();
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="focus:outline-none p-[6px]">
-        <IconDots className="w-6" size={16} />
+      <DropdownMenuTrigger
+        className={
+          sidebar
+            ? 'flex h-10 w-full items-center justify-start gap-2 rounded-lg px-3 text-[15px] font-medium transition-colors hover:bg-sidebar-accent focus:outline-none'
+            : 'p-[6px] focus:outline-none'
+        }
+      >
+        <IconDots size={18} />
+        {sidebar && <span>{t('More')}</span>}
       </DropdownMenuTrigger>
       <DropdownMenuContent className="w-42 border-none">
         <DropdownMenuItem

@@ -4,24 +4,13 @@ import { useCreateReducer } from '@/hooks/useCreateReducer';
 import useTranslation from '@/hooks/useTranslation';
 
 import { getNextName } from '@/utils/common';
+import { MIN_CHATBAR_WIDTH } from '@/utils/settings';
 
 import { CHATS_SELECT_TYPE, ChatStatus, DefaultChatPaging } from '@/types/chat';
 import { ChatResult } from '@/types/clientApis';
 
-import {
-  setChatGroup,
-  setChatPaging,
-  setChats,
-  setChatsSelectType,
-} from '@/actions/chat.actions';
-import {
-  setChatBarWidth,
-  setShowChatBar,
-} from '@/actions/setting.actions';
-import { MIN_CHATBAR_WIDTH } from '@/utils/settings';
-import HomeContext from '@/contexts/home.context';
-import Sidebar from '../Sidebar/Sidebar';
 import SearchResultsModal from '../Search/SearchResultsModal';
+import Sidebar from '../Sidebar/Sidebar';
 import ChatActionConfirm from './ChatActionConfirm';
 import ChatActions from './ChatActions';
 import ChatGroups from './ChatGroups';
@@ -29,7 +18,15 @@ import ChatbarContext from './Chatbar.context';
 import { ChatbarInitialState, initialState } from './Chatbar.context';
 import ChatBarSettings from './ChatbarSettings';
 
+import {
+  setChatGroup,
+  setChatPaging,
+  setChats,
+  setChatsSelectType,
+} from '@/actions/chat.actions';
+import { setChatBarWidth, setShowChatBar } from '@/actions/setting.actions';
 import { deleteChats, postChatGroup, putChats } from '@/apis/clientApis';
+import HomeContext from '@/contexts/home.context';
 
 const Chatbar = () => {
   const { t } = useTranslation();
@@ -148,12 +145,16 @@ const Chatbar = () => {
     setSearchTerm(value);
     if (value.trim()) {
       await getChats(value);
-      setSearchResults(chats);
-      setIsSearchResultsOpen(true);
     } else {
-      setIsSearchResultsOpen(false);
       setSearchResults([]);
       await getChats();
+    }
+  };
+
+  const handleCloseSearch = () => {
+    setIsSearchResultsOpen(false);
+    if (searchTerm) {
+      void handleSearch('');
     }
   };
 
@@ -164,6 +165,12 @@ const Chatbar = () => {
       value: chats,
     });
   }, [chats, dispatch]);
+
+  useEffect(() => {
+    if (searchTerm) {
+      setSearchResults(chats);
+    }
+  }, [chats, searchTerm]);
 
   return (
     <ChatbarContext.Provider
@@ -189,6 +196,7 @@ const Chatbar = () => {
         folderComponent={<ChatGroups onShowMore={handleShowMore} />}
         actionComponent={
           <ChatActions
+            sidebar
             onAddGroup={handleAddGroup}
             onBatchArchive={() => {
               handleChangeChatsSelectType(CHATS_SELECT_TYPE.ARCHIVE);
@@ -209,8 +217,7 @@ const Chatbar = () => {
           )
         }
         items={filteredChats}
-        searchTerm={searchTerm}
-        handleSearchTerm={handleSearch}
+        onSearchClick={() => setIsSearchResultsOpen(true)}
         toggleOpen={handleToggleChatbar}
         handleCreateItem={handleNewChat}
         handleCreateTempItem={handleNewTempChat}
@@ -221,7 +228,8 @@ const Chatbar = () => {
         isOpen={isSearchResultsOpen}
         searchTerm={searchTerm}
         searchResults={searchResults}
-        onClose={() => setIsSearchResultsOpen(false)}
+        onSearch={handleSearch}
+        onClose={handleCloseSearch}
         onSelectChat={handleSelectChatFromSearch}
       />
     </ChatbarContext.Provider>
