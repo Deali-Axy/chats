@@ -105,7 +105,7 @@ public class AzureResponseApiServiceTests
             Model = model,
             Temperature = 1,
             Effort = ReasoningEfforts.High,
-            SystemPrompt = "你是AI助手Sdcb Chats\n当前日期: 2026/01/07，当前模型：gpt-5.2",
+            SystemPrompt = "你是AI助手Ayaka Chats\n当前日期: 2026/01/07，当前模型：gpt-5.2",
         };
 
         return new ChatRequest
@@ -323,7 +323,7 @@ public class AzureResponseApiServiceTests
             .ToArray();
 
         Assert.Equal(["system", "user", "system", "user"], messages.Select(x => x.GetProperty("role").GetString()!).ToArray());
-        Assert.Equal("你是AI助手Sdcb Chats\n当前日期: 2026/01/07，当前模型：gpt-5.2", messages[0].GetProperty("content")[0].GetProperty("text").GetString());
+        Assert.Equal("你是AI助手Ayaka Chats\n当前日期: 2026/01/07，当前模型：gpt-5.2", messages[0].GetProperty("content")[0].GetProperty("text").GetString());
         Assert.Equal("first user", messages[1].GetProperty("content")[0].GetProperty("text").GetString());
         Assert.Equal("inner system", messages[2].GetProperty("content")[0].GetProperty("text").GetString());
         Assert.Equal("second user", messages[3].GetProperty("content")[0].GetProperty("text").GetString());
