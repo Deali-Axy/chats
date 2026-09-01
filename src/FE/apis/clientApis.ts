@@ -23,6 +23,9 @@ import {
   GetChatShareResult,
   GetChatsParams,
   GetLoginProvidersResult,
+  GetRechargeParams,
+  GetRechargeResult,
+  GetRechargeStatResult,
   GetUsageParams,
   GetUsageResult,
   GetUsageStatResult,
@@ -613,6 +616,31 @@ export const getUsageStat = (params: GetUsageParams) => {
   };
   return fetchServer.get<GetUsageStatResult>('/api/usage/stat', {
     params: queryParams,
+  });
+};
+
+const buildRechargeQueryParams = (params: GetRechargeParams) => ({
+  user: params.user,
+  'credit-user': params.creditUser,
+  type: params.type,
+  start: params.start,
+  end: params.end,
+  page: params.page,
+  pageSize: params.pageSize,
+  tz: params.tz,
+});
+
+export const getRecharge = (params: GetRechargeParams) => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<PageResult<GetRechargeResult[]>>('/api/recharge', {
+    params: buildRechargeQueryParams(params),
+  });
+};
+
+export const getRechargeStat = (params: GetRechargeParams) => {
+  const fetchServer = createFetchClient();
+  return fetchServer.get<GetRechargeStatResult>('/api/recharge/stat', {
+    params: buildRechargeQueryParams(params),
   });
 };
 

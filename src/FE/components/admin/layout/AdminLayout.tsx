@@ -12,6 +12,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { GetChatVersionResult } from '@/types/clientApis';
 
 import {
+  IconChartHistogram,
   IconChartPie,
   IconFiles,
   IconFileText,
@@ -187,6 +188,13 @@ const AdminLayout = ({
         <IconMoneybag strokeWidth={1.2} stroke={stroke} />
       ),
       title: t('Usage Records'),
+    },
+    {
+      url: '/admin/recharge',
+      icon: (stroke?: string) => (
+        <IconChartHistogram strokeWidth={1.2} stroke={stroke} />
+      ),
+      title: t('Recharge Records'),
     },
     {
       url: '/admin/security-logs',

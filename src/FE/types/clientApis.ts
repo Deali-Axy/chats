@@ -338,6 +338,40 @@ export interface GetUsageStatResult {
   avgTotalDurationMs: number;
 }
 
+export const RechargeTransactionType = {
+  AdminCharge: 1,
+  Initial: 3,
+} as const;
+
+export type RechargeTransactionTypeId =
+  (typeof RechargeTransactionType)[keyof typeof RechargeTransactionType];
+
+export interface GetRechargeParams {
+  user?: string;
+  creditUser?: string;
+  type?: RechargeTransactionTypeId;
+  start?: string;
+  end?: string;
+  page?: number;
+  pageSize?: number;
+  tz: number;
+}
+
+export interface GetRechargeResult {
+  id: number;
+  userName: string;
+  creditUserName: string;
+  transactionTypeId: RechargeTransactionTypeId;
+  transactionType: string;
+  amount: number;
+  createdAt: string;
+}
+
+export interface GetRechargeStatResult {
+  count: number;
+  sumAmount: number;
+}
+
 export interface GetUserFilesParams extends Paging {
   skip?: number;
   contentTypePrefix?: string;

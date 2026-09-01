@@ -8,6 +8,7 @@ import useTranslation from '@/hooks/useTranslation';
 import {
   IconArrowDown,
   IconBulb,
+  IconChartHistogram,
   IconMoneybag,
   IconNotes,
   IconSettings,
@@ -22,6 +23,7 @@ import PromptsTab from '@/components/settings/tabs/PromptsTab';
 import McpTab from '@/components/settings/tabs/McpTab';
 import TitleSummaryTab from '@/components/settings/tabs/TitleSummaryTab';
 import UsageRecordsTab from '@/components/settings/tabs/UsageRecordsTab';
+import RechargeRecordsTab from '@/components/settings/tabs/RechargeRecordsTab';
 
 const SettingsPage = () => {
   const { t } = useTranslation();
@@ -91,6 +93,13 @@ const SettingsPage = () => {
             {t('Usage Records')}
           </TabsTrigger>
           <TabsTrigger
+            value="recharge"
+            className="flex-1 items-center sm:flex-none gap-1"
+          >
+            <IconChartHistogram />
+            {t('Recharge Records')}
+          </TabsTrigger>
+          <TabsTrigger
             value="account"
             className="flex-1 items-center sm:flex-none gap-1"
           >
@@ -113,6 +122,9 @@ const SettingsPage = () => {
           </TabsContent>
           <TabsContent value="usage" className="m-0 h-full">
             <UsageRecordsTab />
+          </TabsContent>
+          <TabsContent value="recharge" className="m-0 h-full">
+            <RechargeRecordsTab />
           </TabsContent>
           <TabsContent value="account" className="m-0 h-full">
             <AccountTab />
