@@ -136,17 +136,21 @@ def ensure_clean_dir(path: Path) -> None:
 
 def build_backend(dist_dir: Path, version: str) -> None:
     csproj = Path(str(get_config("BACKEND_CSPROJ"))).resolve()
+    # Git tags use the conventional `v` prefix, but MSBuild/NuGet Version
+    # properties require a semantic version without that prefix.
+    dotnet_version = version.removeprefix("v")
     run_cmd(
         " ".join(
             [
                 "dotnet publish",
                 to_posix(csproj),
                 "-c Release",
+                "-p:RestoreBuildInParallel=false",
                 f"-o {to_posix(dist_dir.resolve())}",
-                f"/p:Version={version}",
-                f"/p:AssemblyVersion={version}",
-                f"/p:FileVersion={version}",
-                f"/p:InformationalVersion={version}",
+                f"/p:Version={dotnet_version}",
+                f"/p:AssemblyVersion={dotnet_version}",
+                f"/p:FileVersion={dotnet_version}",
+                f"/p:InformationalVersion={dotnet_version}",
             ]
         )
     )
