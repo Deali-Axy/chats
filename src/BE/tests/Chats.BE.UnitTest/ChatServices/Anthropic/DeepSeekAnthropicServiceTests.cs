@@ -93,6 +93,33 @@ public class DeepSeekAnthropicServiceTests
     }
 
     [Fact]
+    public void BuildRequestBody_WithoutMaxOutputTokens_OmitsMaxTokens()
+    {
+        DeepSeekAnthropicService service = new(CreateMockHttpClientFactory("{}"));
+        ChatRequest request = CreateRequest();
+
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("BuildRequestBody", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("BuildRequestBody method not found.");
+        JsonObject body = (JsonObject)method.Invoke(service, [request])!;
+
+        Assert.False(body.ContainsKey("max_tokens"));
+    }
+
+    [Fact]
+    public void BuildRequestBody_WithMaxOutputTokens_SendsMaxTokens()
+    {
+        DeepSeekAnthropicService service = new(CreateMockHttpClientFactory("{}"));
+        ChatRequest request = CreateRequest();
+        request.ChatConfig.MaxOutputTokens = 4096;
+
+        MethodInfo method = typeof(AnthropicChatService).GetMethod("BuildRequestBody", BindingFlags.Instance | BindingFlags.NonPublic)
+            ?? throw new InvalidOperationException("BuildRequestBody method not found.");
+        JsonObject body = (JsonObject)method.Invoke(service, [request])!;
+
+        Assert.Equal(4096, body["max_tokens"]!.GetValue<int>());
+    }
+
+    [Fact]
     public async Task ChatStreamed_MessageDeltaWithoutInputTokens_PreservesPreviousInputTokens()
     {
         IHttpClientFactory httpClientFactory = CreateMockHttpClientFactory(

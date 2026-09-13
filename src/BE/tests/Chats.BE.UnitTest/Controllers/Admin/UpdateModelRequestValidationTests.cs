@@ -112,7 +112,41 @@ public class UpdateModelRequestValidationTests
         // Assert
         Assert.Contains(results, r => 
             r.MemberNames.Contains(nameof(UpdateModelRequest.MaxResponseTokens)) &&
-            r.ErrorMessage!.Contains("Max response tokens is required"));
+            r.ErrorMessage!.Contains("greater than 0"));
+    }
+
+    [Theory]
+    [InlineData(DBApiType.OpenAIChatCompletion)]
+    [InlineData(DBApiType.OpenAIResponse)]
+    [InlineData(DBApiType.AnthropicMessages)]
+    public void ChatAPI_NullMaxResponseTokens_ShouldPass(DBApiType apiType)
+    {
+        UpdateModelRequest request = CreateValidChatRequest() with
+        {
+            ApiType = apiType,
+            MaxResponseTokens = null,
+        };
+
+        List<ValidationResult> results = ValidateModel(request);
+
+        Assert.DoesNotContain(results, r => r.MemberNames.Contains(nameof(UpdateModelRequest.MaxResponseTokens)));
+    }
+
+    [Fact]
+    public void ChatAPI_NullMaxResponseTokens_ThinkingBudgetMustBeLessThanContextWindow()
+    {
+        UpdateModelRequest request = CreateValidChatRequest() with
+        {
+            MaxResponseTokens = null,
+            ContextWindow = 100,
+            MaxThinkingBudget = 100,
+        };
+
+        List<ValidationResult> results = ValidateModel(request);
+
+        Assert.Contains(results, r =>
+            r.MemberNames.Contains(nameof(UpdateModelRequest.MaxThinkingBudget)) &&
+            r.ErrorMessage!.Contains("context window"));
     }
 
     [Theory]
