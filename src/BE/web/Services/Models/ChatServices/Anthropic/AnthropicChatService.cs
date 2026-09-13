@@ -396,11 +396,15 @@ public class AnthropicChatService(IHttpClientFactory httpClientFactory) : ChatSe
 
         JsonObject body = new()
         {
-            ["max_tokens"] = model.CurrentSnapshot.MaxResponseTokens,
             ["model"] = model.CurrentSnapshot.DeploymentName,
             ["messages"] = ConvertMessages(FilterUnsupportedThinkingBlocks(request.Messages), allowThinkingBlocks, request.Source, SupportsHostedWebSearch),
             ["stream"] = true,
         };
+
+        if (request.ChatConfig.MaxOutputTokens is int maxOutputTokens)
+        {
+            body["max_tokens"] = maxOutputTokens;
+        }
 
         // Handle system prompt with cache control support
         AddSystemPrompt(body, request);

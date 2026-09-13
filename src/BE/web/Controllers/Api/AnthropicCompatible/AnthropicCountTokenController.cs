@@ -86,9 +86,7 @@ public class AnthropicCountTokenRequestWrapper(JsonObject json)
 
     public ChatRequest ToChatRequest(string userId, Model model)
     {
-        // For count tokens, we reuse the AnthropicRequestWrapper logic
-        // but we need to ensure max_tokens has a default value
-        json["max_tokens"] ??= model.CurrentSnapshot.MaxResponseTokens;
+        // For count tokens, max_tokens is not needed by the upstream request.
         json["stream"] ??= false;
 
         AnthropicRequestWrapper wrapper = new(json);

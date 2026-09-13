@@ -85,7 +85,7 @@ public class ChatConfigController(ChatsDB db, IUrlEncryptionService idEncryption
         if (request.CodeExecutionEnabled && !model.AllowCodeExecution) return "This model does not support code execution";
         if (request.Mcps.Length > 0 && !model.AllowToolCall) return "This model does not support MCP tools";
         if (request.Temperature is float temperature && ((decimal)temperature < model.MinTemperature || (decimal)temperature > model.MaxTemperature)) return "Temperature is outside the model range";
-        if (request.MaxOutputTokens is int maxTokens && maxTokens > model.MaxResponseTokens) return "Max output tokens exceeds the model limit";
+        if (request.MaxOutputTokens is int maxTokens && model.MaxResponseTokens is int maxResponseTokens && maxTokens > maxResponseTokens) return "Max output tokens exceeds the model limit";
         if (request.ThinkingBudget is int budget && (!model.MaxThinkingBudget.HasValue || budget > model.MaxThinkingBudget)) return "Thinking budget is not supported by this model";
         if (request.ReasoningEffort is not null && !Supports(model.SupportedEfforts, request.ReasoningEffort)) return "Reasoning effort is not supported by this model";
         if (request.ImageSize is not null && !Supports(model.SupportedImageSizes, request.ImageSize)) return "Image size is not supported by this model";
@@ -100,7 +100,7 @@ public class ChatConfigController(ChatsDB db, IUrlEncryptionService idEncryption
         config.CodeExecutionEnabled &= model.AllowCodeExecution;
         if (!model.AllowToolCall) config.ChatConfigMcps.Clear();
         if (config.Temperature is float temperature) config.Temperature = (float)Math.Clamp((decimal)temperature, model.MinTemperature, model.MaxTemperature);
-        if (config.MaxOutputTokens is int maxTokens) config.MaxOutputTokens = Math.Min(maxTokens, model.MaxResponseTokens);
+        if (config.MaxOutputTokens is int maxTokens && model.MaxResponseTokens is int maxResponseTokens) config.MaxOutputTokens = Math.Min(maxTokens, maxResponseTokens);
         if (!model.MaxThinkingBudget.HasValue) config.ThinkingBudget = null;
         else if (config.ThinkingBudget is int budget) config.ThinkingBudget = Math.Min(budget, model.MaxThinkingBudget.Value);
         if (config.Effort is not null && !Supports(model.SupportedEfforts, config.Effort)) config.Effort = null;

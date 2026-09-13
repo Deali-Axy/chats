@@ -347,7 +347,7 @@ public class GoogleAI2ChatService(IHttpClientFactory httpClientFactory) : ChatCo
             config["topP"] = topP;
         }
 
-        int? maxTokens = request.ChatConfig.MaxOutputTokens ?? model.CurrentSnapshot.MaxResponseTokens;
+        int? maxTokens = request.ChatConfig.MaxOutputTokens;
         if (maxTokens.HasValue && maxTokens.Value > 0)
         {
             config["maxOutputTokens"] = maxTokens.Value;

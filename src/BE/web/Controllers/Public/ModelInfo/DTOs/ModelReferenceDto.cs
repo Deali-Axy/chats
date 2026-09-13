@@ -24,7 +24,7 @@ public record ModelReferenceDto : SimpleModelReferenceDto
     public required int ContextWindow { get; init; }
 
     [JsonPropertyName("maxResponseTokens")]
-    public required int MaxResponseTokens { get; init; }
+    public required int? MaxResponseTokens { get; init; }
 
     [JsonPropertyName("promptTokenPrice1M")]
     public required decimal PromptTokenPrice1M { get; init; }

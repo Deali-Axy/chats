@@ -58,7 +58,7 @@ public partial class ModelSnapshot
 
     public int ContextWindow { get; set; }
 
-    public int MaxResponseTokens { get; set; }
+    public int? MaxResponseTokens { get; set; }
 
     [StringLength(200)]
     [Unicode(false)]

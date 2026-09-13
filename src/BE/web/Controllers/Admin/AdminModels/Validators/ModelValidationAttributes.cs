@@ -50,15 +50,15 @@ public class ValidateChatResponseTokensAttribute : ValidationAttribute
                     new[] { nameof(UpdateModelRequest.ContextWindow) });
             }
 
-            if (request.MaxResponseTokens <= 0)
+            if (request.MaxResponseTokens is int maxResponseTokens && maxResponseTokens <= 0)
             {
-                return new ValidationResult("Max response tokens is required for ChatCompletion/Response API", 
+                return new ValidationResult("Max response tokens must be greater than 0",
                     new[] { nameof(UpdateModelRequest.MaxResponseTokens) });
             }
 
-            if (request.MaxResponseTokens >= request.ContextWindow)
+            if (request.MaxResponseTokens is int maxResponseTokensAtLimit && maxResponseTokensAtLimit >= request.ContextWindow)
             {
-                return new ValidationResult("Max response tokens must be less than context window", 
+                return new ValidationResult("Max response tokens must be less than context window",
                     new[] { nameof(UpdateModelRequest.MaxResponseTokens) });
             }
         }
@@ -120,7 +120,7 @@ public class ValidateImageBatchCountAttribute : ValidationAttribute
         // 只对 ImageGeneration API 进行验证
         if (request.ApiType == DBApiType.OpenAIImageGeneration)
         {
-            if (request.MaxResponseTokens <= 0 || request.MaxResponseTokens > 128)
+            if (request.MaxResponseTokens is not int maxResponseTokens || maxResponseTokens <= 0 || maxResponseTokens > 128)
             {
                 return new ValidationResult("Max batch count must be between 1 and 128 for ImageGeneration API", 
                     new[] { nameof(UpdateModelRequest.MaxResponseTokens) });
@@ -132,7 +132,7 @@ public class ValidateImageBatchCountAttribute : ValidationAttribute
 }
 
 /// <summary>
-/// 验证 MaxThinkingBudget：如果有值，必须小于 MaxResponseTokens
+/// 验证 MaxThinkingBudget：如果有值，必须小于最大输出或上下文窗口
 /// </summary>
 public class ValidateMaxThinkingBudgetAttribute : ValidationAttribute
 {
@@ -154,9 +154,12 @@ public class ValidateMaxThinkingBudgetAttribute : ValidationAttribute
                         new[] { nameof(UpdateModelRequest.MaxThinkingBudget) });
                 }
 
-                if (request.MaxThinkingBudget.Value >= request.MaxResponseTokens)
+                int limit = request.MaxResponseTokens ?? request.ContextWindow;
+                if (request.MaxThinkingBudget.Value >= limit)
                 {
-                    return new ValidationResult("Max thinking budget must be less than max response tokens", 
+                    return new ValidationResult(request.MaxResponseTokens.HasValue
+                            ? "Max thinking budget must be less than max response tokens"
+                            : "Max thinking budget must be less than context window",
                         new[] { nameof(UpdateModelRequest.MaxThinkingBudget) });
                 }
             }

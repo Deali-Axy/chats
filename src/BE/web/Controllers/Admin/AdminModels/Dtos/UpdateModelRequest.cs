@@ -89,7 +89,7 @@ public record UpdateModelRequest
 
     [JsonPropertyName("maxResponseTokens")]
     [Range(0, int.MaxValue, ErrorMessage = "Max response tokens must be non-negative")]
-    public required int MaxResponseTokens { get; init; }
+    public int? MaxResponseTokens { get; init; }
 
     [JsonPropertyName("allowToolCall")]
     public required bool AllowToolCall { get; init; }
