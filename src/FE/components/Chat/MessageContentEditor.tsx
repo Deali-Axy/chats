@@ -2,6 +2,7 @@ import { KeyboardEvent, useContext, useEffect, useRef, useState } from 'react';
 import toast from 'react-hot-toast';
 
 import useTranslation from '@/hooks/useTranslation';
+import { useSendMode } from '@/hooks/useSendMode';
 import { isMobile } from '@/utils/common';
 import HomeContext from '@/contexts/home.context';
 import { defaultFileConfig } from '@/apis/adminApis';
@@ -33,6 +34,7 @@ interface Props {
 
 const MessageContentEditor = ({ selectedChat, initialContent, onSave, onSend, onCancel }: Props) => {
   const { t } = useTranslation();
+  const { sendMode } = useSendMode();
   const { state: { modelMap } } = useContext(HomeContext);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
@@ -93,9 +95,14 @@ const MessageContentEditor = ({ selectedChat, initialContent, onSave, onSend, on
 
   const handleKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (isMobile() && event.key === 'Enter' && !event.shiftKey) return;
-    if (event.key === 'Enter' && !event.shiftKey && !event.ctrlKey && !isTyping) {
-      event.preventDefault();
-      void submit(true);
+    if (event.key === 'Enter' && !isTyping) {
+      if (sendMode === 'enter' && !event.shiftKey && !event.ctrlKey) {
+        event.preventDefault();
+        void submit(true);
+      } else if (sendMode === 'ctrl-enter' && event.ctrlKey && !event.shiftKey) {
+        event.preventDefault();
+        void submit(true);
+      }
     }
   };
 
