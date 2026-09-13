@@ -65,7 +65,7 @@ export interface AdminModelDto {
   maxTemperature: number;
 
   contextWindow: number;
-  maxResponseTokens: number;
+  maxResponseTokens: number | null;
   maxThinkingBudget: number | null;
 
   supportedEfforts: string[];
@@ -103,7 +103,7 @@ export interface UpdateModelDto {
   maxTemperature: number;
 
   contextWindow: number;
-  maxResponseTokens: number;
+  maxResponseTokens: number | null;
   maxThinkingBudget: number | null;
 
   supportedEfforts: string[];
@@ -657,7 +657,7 @@ export interface ModelReferenceDto extends SimpleModelReferenceDto {
   allowVision: boolean;
   allowSearch: boolean;
   contextWindow: number;
-  maxResponseTokens: number;
+  maxResponseTokens: number | null;
   promptTokenPrice1M: number;
   responseTokenPrice1M: number;
   rawPromptTokenPrice1M: number;

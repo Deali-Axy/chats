@@ -147,8 +147,8 @@ const ChatModelSettingModal = (props: Props) => {
       background: nextBackground,
       thinkingBudget: nextThinkingBudget,
       temperature: nextTemperature,
-      maxOutputTokens: span?.maxOutputTokens == null
-        ? null
+      maxOutputTokens: span?.maxOutputTokens == null || model.maxResponseTokens == null
+        ? span?.maxOutputTokens ?? null
         : Math.min(span.maxOutputTokens, model.maxResponseTokens),
       webSearchEnabled: model.allowSearch && !!span?.webSearchEnabled,
       codeExecutionEnabled: model.allowCodeExecution && !!span?.codeExecutionEnabled,

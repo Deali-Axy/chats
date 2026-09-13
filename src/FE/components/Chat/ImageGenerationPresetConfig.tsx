@@ -209,7 +209,7 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
             size="sm"
             onClick={() => {
               if (maxOutputTokens === null) {
-                onChangeMaxOutputTokens(model.maxResponseTokens);
+                onChangeMaxOutputTokens(model.maxResponseTokens ?? 1);
               } else {
                 onChangeMaxOutputTokens(null);
               }
@@ -224,15 +224,15 @@ const ImageGenerationPresetConfig: React.FC<ImageGenerationPresetConfigProps> = 
             <Slider
               className="cursor-pointer"
               min={1}
-              max={Math.min(model.maxResponseTokens, 128)}
+              max={Math.min(model.maxResponseTokens ?? 1, 128)}
               step={1}
-              value={[maxOutputTokens || model.maxResponseTokens]}
+              value={[maxOutputTokens || model.maxResponseTokens || 1]}
               onValueChange={(values) => {
                 onChangeMaxOutputTokens(values[0]);
               }}
             />
             <div className="text-xs text-gray-500 mt-1">
-              {maxOutputTokens || model.maxResponseTokens}
+              {maxOutputTokens || model.maxResponseTokens || 1}
             </div>
           </div>
         )}

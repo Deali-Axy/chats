@@ -128,8 +128,8 @@ const ModelModal = (props: IProps) => {
     
     // === Token 配置 ===
     contextWindow: z.coerce.number().min(0),
-    maxResponseTokens: z.coerce.number().min(0),
-    maxThinkingBudget: z.number().min(0).nullable(),
+    maxResponseTokens: z.number().int().nonnegative().nullable(),
+    maxThinkingBudget: z.number().int().positive().nullable(),
     
     // === 数组字段（表单中用字符串） ===
     supportedEfforts: z.string(),
@@ -166,23 +166,14 @@ const ModelModal = (props: IProps) => {
     path: ['contextWindow'],
   })
   .refine((data) => {
-    // ChatCompletion/Response/AnthropicMessages: 最大响应token数必须有值
+    // ChatCompletion/Response/AnthropicMessages: 最大响应 token 如有设置必须有效
     if (data.apiType === 0 || data.apiType === 1 || data.apiType === 3) {
-      return data.maxResponseTokens > 0;
+      return data.maxResponseTokens === null
+        || (data.maxResponseTokens > 0 && data.maxResponseTokens < data.contextWindow);
     }
     return true;
   }, {
-    message: t('Max response tokens is required'),
-    path: ['maxResponseTokens'],
-  })
-  .refine((data) => {
-    // ChatCompletion/Response/AnthropicMessages: 最大响应token数要小于上下文窗口
-    if (data.apiType === 0 || data.apiType === 1 || data.apiType === 3) {
-      return data.maxResponseTokens < data.contextWindow;
-    }
-    return true;
-  }, {
-    message: t('Max response tokens must be less than context window'),
+    message: t('Max response tokens must be greater than 0 and less than context window'),
     path: ['maxResponseTokens'],
   })
   .refine((data) => {
@@ -210,7 +201,7 @@ const ModelModal = (props: IProps) => {
   .refine((data) => {
     // ImageGeneration: 最大批量生成图片数量必须有值且小于128
     if (data.apiType === 2) {
-      return data.maxResponseTokens > 0 && data.maxResponseTokens <= 128;
+      return data.maxResponseTokens !== null && data.maxResponseTokens > 0 && data.maxResponseTokens <= 128;
     }
     return true;
   }, {
@@ -218,13 +209,13 @@ const ModelModal = (props: IProps) => {
     path: ['maxResponseTokens'],
   })
   .refine((data) => {
-    // ChatCompletion/Response/AnthropicMessages: maxThinkingBudget 如果有值，必须小于 maxResponseTokens
+    // ChatCompletion/Response/AnthropicMessages: maxThinkingBudget 如果有值，必须小于最大输出或上下文窗口
     if ((data.apiType === 0 || data.apiType === 1 || data.apiType === 3) && data.maxThinkingBudget !== null && data.maxThinkingBudget !== undefined) {
-      return data.maxThinkingBudget < data.maxResponseTokens;
+      return data.maxThinkingBudget < (data.maxResponseTokens ?? data.contextWindow);
     }
     return true;
   }, {
-    message: t('Max thinking budget must be less than max response tokens'),
+    message: t('Max thinking budget must be less than max response tokens or context window'),
     path: ['maxThinkingBudget'],
   }), [t]);
 
@@ -251,7 +242,7 @@ const ModelModal = (props: IProps) => {
       minTemperature: 0,
       maxTemperature: 2,
       contextWindow: 0,
-      maxResponseTokens: 0,
+      maxResponseTokens: null,
       maxThinkingBudget: null,
       supportedEfforts: '',
       supportedImageSizes: '',

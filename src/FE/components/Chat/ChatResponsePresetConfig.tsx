@@ -177,7 +177,7 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
             size="sm"
             onClick={() => {
               if (maxOutputTokens === null) {
-                onChangeMaxOutputTokens(model.maxResponseTokens);
+                onChangeMaxOutputTokens(model.maxResponseTokens ?? Math.max(1, model.contextWindow - 1));
               } else {
                 onChangeMaxOutputTokens(null);
               }
@@ -192,15 +192,15 @@ const ChatResponsePresetConfig: React.FC<ChatResponsePresetConfigProps> = ({
             <Slider
               className="cursor-pointer"
               min={0}
-              max={model.maxResponseTokens}
+              max={model.maxResponseTokens ?? Math.max(1, model.contextWindow - 1)}
               step={1}
-              value={[maxOutputTokens || model.maxResponseTokens]}
+              value={[maxOutputTokens || model.maxResponseTokens || Math.max(1, model.contextWindow - 1)]}
               onValueChange={(values) => {
                 onChangeMaxOutputTokens(values[0]);
               }}
             />
             <div className="mt-2 text-xs font-medium text-muted-foreground">
-              {maxOutputTokens || model.maxResponseTokens}
+              {maxOutputTokens || model.maxResponseTokens || Math.max(1, model.contextWindow - 1)}
             </div>
           </div>
         )}

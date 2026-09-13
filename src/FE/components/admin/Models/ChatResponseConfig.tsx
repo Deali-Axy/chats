@@ -194,11 +194,22 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
             control={control}
             name="maxResponseTokens"
             render={({ field }) => (
-              <FormInput
-                type="number"
-                label={t('Max Response Tokens')!}
-                field={field}
-              />
+              <FormItem className="py-1">
+                <FormLabel>{t('Max Output Tokens (Optional)')}</FormLabel>
+                <FormControl>
+                  <Input
+                    type="number"
+                    min={1}
+                    value={field.value ?? ''}
+                    placeholder={t('Leave empty for no separate limit')!}
+                    onChange={(event) => {
+                      const raw = event.target.value;
+                      field.onChange(raw === '' ? null : Number(raw));
+                    }}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
             )}
           />
         </div>
@@ -238,7 +249,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                       setValue('maxTemperature', 1.0);
                     } else if (mode === 'budget') {
                       effortField.onChange('');
-                      const defaultBudget = Math.max(1, (maxResponseTokens || 8192) - 1);
+                      const defaultBudget = Math.max(1, (maxResponseTokens ?? watch('contextWindow') ?? 8192) - 1);
                       budgetField.onChange(defaultBudget);
                     }
                   };
@@ -305,7 +316,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                             <Input
                               type="number"
                               min={1}
-                              max={Math.max(1, (maxResponseTokens || 8192) - 1)}
+                              max={Math.max(1, (maxResponseTokens ?? watch('contextWindow') ?? 8192) - 1)}
                               value={budgetField.value ?? ''}
                               onChange={(event) => {
                                 const raw = event.target.value;
@@ -373,7 +384,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
               
               const handleToggleReasoning = (enabled: boolean) => {
                 if (enabled) {
-                  const defaultBudget = Math.max(1, (maxResponseTokens || 8192) - 1);
+                  const defaultBudget = Math.max(1, (maxResponseTokens ?? watch('contextWindow') ?? 8192) - 1);
                   field.onChange(defaultBudget);
                 } else {
                   field.onChange(null);
@@ -395,7 +406,7 @@ const ChatResponseConfig: React.FC<ChatResponseConfigProps> = ({ control, setVal
                         <Input
                           type="number"
                           min={1}
-                          max={Math.max(1, (maxResponseTokens || 8192) - 1)}
+                          max={Math.max(1, (maxResponseTokens ?? watch('contextWindow') ?? 8192) - 1)}
                           value={field.value ?? ''}
                           onChange={(event) => {
                             const raw = event.target.value;
