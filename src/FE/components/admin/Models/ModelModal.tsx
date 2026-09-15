@@ -47,6 +47,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Tips from '@/components/Tips/Tips';
 import { isValidJsonPatch } from '@/utils/jsonPatch';
+import JsonPatchBuilderDialog from './JsonPatchBuilderDialog';
 
 // 表单类型：基于 UpdateModelDto，但因 HTML 表单和自定义组件的限制，需要做以下调整：
 // 1. modelKeyId: number → string (FormSelect 组件要求 select value 必须是 string)
@@ -82,6 +83,7 @@ const ModelModal = (props: IProps) => {
   const { t } = useTranslation();
   const [validating, setValidating] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
+  const [isPatchBuilderOpen, setIsPatchBuilderOpen] = useState(false);
   const { 
     isOpen, 
     onClose, 
@@ -260,6 +262,8 @@ const ModelModal = (props: IProps) => {
       isLegacy: false,
     },
   });
+
+  const customBody = form.watch('customBody');
 
   const onSubmit = (values: ModelFormValues) => {
     const dto: UpdateModelDto = {
@@ -817,12 +821,24 @@ const ModelModal = (props: IProps) => {
                     control={form.control}
                     name="customBody"
                     render={({ field }) => (
-                      <FormTextarea
-                        rows={6}
-                        label={t('Optional custom body (RFC 6902 JSON Patch)')}
-                        options={{ placeholder: '[\n  { "op": "replace", "path": "/temperature", "value": 0.7 },\n  { "op": "add", "path": "/thinking", "value": { "type": "disabled" } }\n]' }}
-                        field={field}
-                      />
+                      <div className="space-y-2">
+                        <FormTextarea
+                          rows={6}
+                          label={t('Optional custom body (RFC 6902 JSON Patch)')}
+                          options={{ placeholder: '[\n  { "op": "replace", "path": "/temperature", "value": 0.7 },\n  { "op": "add", "path": "/thinking", "value": { "type": "disabled" } }\n]' }}
+                          field={field}
+                        />
+                        <div className="flex flex-wrap gap-2">
+                          <Button type="button" variant="outline" size="sm" onClick={() => setIsPatchBuilderOpen(true)}>
+                            {t('Visual generator')}
+                          </Button>
+                          <Button type="button" variant="link" size="sm" asChild>
+                            <a href="https://www.jsonpatchonline.com/" target="_blank" rel="noopener noreferrer">
+                              {t('Open external JSON Patch generator')}
+                            </a>
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   />
                 </div>
@@ -858,6 +874,15 @@ const ModelModal = (props: IProps) => {
           </form>
         </Form>
       </DialogContent>
+      <JsonPatchBuilderDialog
+        open={isPatchBuilderOpen}
+        customBody={customBody}
+        onClose={() => setIsPatchBuilderOpen(false)}
+        onApply={(patch) => {
+          form.setValue('customBody', patch, { shouldDirty: true, shouldValidate: true });
+          setIsPatchBuilderOpen(false);
+        }}
+      />
     </Dialog>
   );
 };
