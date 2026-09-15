@@ -46,6 +46,7 @@ import {
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Tips from '@/components/Tips/Tips';
+import { isValidJsonPatch } from '@/utils/jsonPatch';
 
 // 表单类型：基于 UpdateModelDto，但因 HTML 表单和自定义组件的限制，需要做以下调整：
 // 1. modelKeyId: number → string (FormSelect 组件要求 select value 必须是 string)
@@ -217,6 +218,10 @@ const ModelModal = (props: IProps) => {
   }, {
     message: t('Max thinking budget must be less than max response tokens or context window'),
     path: ['maxThinkingBudget'],
+  })
+  .refine((data) => isValidJsonPatch(data.customBody), {
+    message: t('Custom body must be a valid RFC 6902 JSON Patch array.'),
+    path: ['customBody'],
   }), [t]);
 
   const form = useForm<ModelFormValues>({
@@ -310,6 +315,10 @@ const ModelModal = (props: IProps) => {
   };
 
   const onValidate = async () => {
+    if (!await form.trigger()) {
+      return;
+    }
+
     const values = form.getValues();
     
     // 检查必要字段是否已填写
@@ -810,7 +819,7 @@ const ModelModal = (props: IProps) => {
                     render={({ field }) => (
                       <FormTextarea
                         rows={6}
-                        label={t('Custom Body')}
+                        label={t('Optional custom body (RFC 6902 JSON Patch)')}
                         options={{ placeholder: '[\n  { "op": "replace", "path": "/temperature", "value": 0.7 },\n  { "op": "add", "path": "/thinking", "value": { "type": "disabled" } }\n]' }}
                         field={field}
                       />

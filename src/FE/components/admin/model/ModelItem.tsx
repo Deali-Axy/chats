@@ -142,22 +142,16 @@ export default function ModelItem({ model, onEditClick, onDeleteClick, onGoToUsa
           onClick={(e) => e.stopPropagation()}
         >
           <div className="flex-shrink-0">
-            <button
-              type="button"
-              className="flex items-center justify-center"
-              onClick={handleBatchClick}
-              disabled={!model.enabled || batchPending}
-            >
-              {batchPending ? (
-                <IconLoader size={18} className="text-muted-foreground" />
-              ) : (
-                <TriStateCheckbox
-                  state={checkState as TriStateCheckboxState}
-                  size="lg"
-                  disabled={!model.enabled || batchPending}
-                />
-              )}
-            </button>
+            {batchPending ? (
+              <IconLoader size={18} className="text-muted-foreground" />
+            ) : (
+              <TriStateCheckbox
+                state={checkState as TriStateCheckboxState}
+                size="lg"
+                onClick={handleBatchClick}
+                disabled={!model.enabled || batchPending}
+              />
+            )}
           </div>
         </div>
 

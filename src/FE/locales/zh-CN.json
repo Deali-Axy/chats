@@ -737,6 +737,7 @@
   "Custom URL": "自定义 URL",
   "Custom Headers": "自定义请求头",
   "Custom Body": "自定义请求体",
+  "Custom body must be a valid RFC 6902 JSON Patch array.": "自定义请求体必须是有效的 RFC 6902 JSON Patch 数组。",
   "Optional custom headers (line format)": "可选的自定义请求头（每行一个 Header-Name: value）",
   "Optional custom body (RFC 6902 JSON Patch)": "可选的自定义请求体（RFC 6902 JSON Patch）",
   "Optional custom headers (JSON format)": "可选的自定义请求头（JSON格式）",

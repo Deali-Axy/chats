@@ -33,6 +33,7 @@ import {
 } from '@/apis/adminApis';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { isValidJsonPatch } from '@/utils/jsonPatch';
 
 interface IProps {
   selected: GetModelKeysResult | null;
@@ -70,7 +71,10 @@ const ModelKeysModal = (props: IProps) => {
     host: z.string().optional(),
     secret: z.string().optional(),
     customHeaders: z.string().optional(),
-    customBody: z.string().optional(),
+    customBody: z.string().optional().refine(
+      (value) => isValidJsonPatch(value ?? ''),
+      { message: t('Custom body must be a valid RFC 6902 JSON Patch array.') }
+    ),
   });
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -311,7 +315,7 @@ const ModelKeysModal = (props: IProps) => {
               render={({ field }) => (
                 <FormTextarea
                   rows={6}
-                  label={t('Custom Body')}
+                  label={t('Optional custom body (RFC 6902 JSON Patch)')}
                   options={{ placeholder: '[\n  { "op": "replace", "path": "/temperature", "value": 0.7 },\n  { "op": "add", "path": "/thinking", "value": { "type": "disabled" } }\n]' }}
                   field={field}
                 />
