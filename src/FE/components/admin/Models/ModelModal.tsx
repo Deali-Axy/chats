@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react';
+import React, { useEffect, useState, useMemo, useRef } from 'react';
 import { Control, useForm } from 'react-hook-form';
 import toast from 'react-hot-toast';
 
@@ -84,6 +84,7 @@ const ModelModal = (props: IProps) => {
   const [validating, setValidating] = useState(false);
   const [isInitialLoad, setIsInitialLoad] = useState(true);
   const [isPatchBuilderOpen, setIsPatchBuilderOpen] = useState(false);
+  const suppressOuterDialogCloseRef = useRef(false);
   const { 
     isOpen, 
     onClose, 
@@ -595,9 +596,38 @@ const ModelModal = (props: IProps) => {
     });
   }, [apiType, isOpen, isEditMode, selected, isInitialLoad, form]);
 
+  const closePatchBuilder = () => {
+    // Radix restores focus after a nested dialog closes. That restoration can
+    // arrive at the parent as a delayed outside interaction, so keep the
+    // parent protected until the restore cycle has completed.
+    suppressOuterDialogCloseRef.current = true;
+    setIsPatchBuilderOpen(false);
+    window.setTimeout(() => {
+      suppressOuterDialogCloseRef.current = false;
+    }, 100);
+  };
+
+  const handleDialogOpenChange = (nextOpen: boolean) => {
+    if (
+      !nextOpen &&
+      !isPatchBuilderOpen &&
+      !suppressOuterDialogCloseRef.current
+    ) {
+      onClose();
+    }
+  };
+
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+    <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
+      <DialogContent
+        className="w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto"
+        onInteractOutside={(event) => {
+          if (isPatchBuilderOpen) event.preventDefault();
+        }}
+        onEscapeKeyDown={(event) => {
+          if (isPatchBuilderOpen) event.preventDefault();
+        }}
+      >
         <DialogHeader>
           <DialogTitle>
             {isEditMode ? t('Edit Model') : t('Add Model')}
@@ -877,10 +907,10 @@ const ModelModal = (props: IProps) => {
       <JsonPatchBuilderDialog
         open={isPatchBuilderOpen}
         customBody={customBody}
-        onClose={() => setIsPatchBuilderOpen(false)}
+        onClose={closePatchBuilder}
         onApply={(patch) => {
           form.setValue('customBody', patch, { shouldDirty: true, shouldValidate: true });
-          setIsPatchBuilderOpen(false);
+          closePatchBuilder();
         }}
       />
     </Dialog>
