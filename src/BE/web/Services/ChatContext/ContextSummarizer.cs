@@ -12,7 +12,13 @@ namespace Chats.BE.Services.ChatContext;
 
 public interface IContextSummarizer
 {
-    Task<string> SummarizeAsync(UserModel userModel, string transcript, string? previousSummary, int maxOutputTokens, CancellationToken cancellationToken);
+    Task<string> SummarizeAsync(
+        UserModel userModel,
+        string transcript,
+        string? previousSummary,
+        int maxOutputTokens,
+        CancellationToken cancellationToken,
+        Func<string, bool, CancellationToken, Task>? onDelta = null);
 }
 
 public sealed class ContextSummarizer(ChatRunService chatRunService) : IContextSummarizer
@@ -29,7 +35,13 @@ public sealed class ContextSummarizer(ChatRunService chatRunService) : IContextS
         Return only a concise, structured summary within the requested output limit.
         """;
 
-    public async Task<string> SummarizeAsync(UserModel userModel, string transcript, string? previousSummary, int maxOutputTokens, CancellationToken cancellationToken)
+    public async Task<string> SummarizeAsync(
+        UserModel userModel,
+        string transcript,
+        string? previousSummary,
+        int maxOutputTokens,
+        CancellationToken cancellationToken,
+        Func<string, bool, CancellationToken, Task>? onDelta = null)
     {
         // Rolling, token-bounded summaries also handle chats which are already over the model limit.
         int window = userModel.Model.CurrentSnapshot.ContextWindow;
@@ -45,6 +57,7 @@ public sealed class ContextSummarizer(ChatRunService chatRunService) : IContextS
             int length = FindChunkLength(transcript.AsSpan(offset), available);
             string chunk = transcript.Substring(offset, length);
             StringBuilder response = new();
+            bool replace = true;
             ChatRunResult result = await chatRunService.RunAsync(new ChatRunRequest
             {
                 UserModel = userModel,
@@ -59,13 +72,20 @@ public sealed class ContextSummarizer(ChatRunService chatRunService) : IContextS
                         MaxOutputTokens = maxOutputTokens,
                         Effort = userModel.Model.ClampEffort(ReasoningEfforts.Minimal),
                     },
-                    Streamed = false,
+                    // Streaming keeps the provider connection alive. Non-streaming summaries
+                    // hit reverse-proxy idle timeouts (nginx 504) on long conversations.
+                    Streamed = true,
                     Source = UsageSource.Summary,
                 },
-            }, (context, _) =>
+            }, async (context, ct) =>
             {
-                if (context.Segment is TextChatSegment text) response.Append(text.Text);
-                return Task.CompletedTask;
+                if (context.Segment is not TextChatSegment text) return;
+                response.Append(text.Text);
+                if (onDelta != null)
+                {
+                    await onDelta(text.Text, replace, ct);
+                    replace = false;
+                }
             }, cancellationToken);
             if (result.Exception != null) throw result.Exception;
             if (result.FinishReason == DBFinishReason.Length)

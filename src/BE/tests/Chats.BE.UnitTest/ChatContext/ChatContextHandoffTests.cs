@@ -63,7 +63,9 @@ public sealed class ChatContextHandoffTests : IDisposable
     {
         var session = Session();
         var original = session.Request.Messages.ToArray();
-        var preview = await service.PreviewAsync(session, User(session), true, default);
+        List<(string Text, bool Replace)> deltas = [];
+        var preview = await service.PreviewAsync(session, User(session), true, default,
+            (text, replace, _) => { deltas.Add((text, replace)); return Task.CompletedTask; });
         Assert.Equal("Fresh decisions and next actions", preview.Summary);
         Assert.True(preview.IncludesRecentMessages);
         Assert.Equal("Older decisions", summarizer.PreviousSummary);
@@ -72,6 +74,7 @@ public sealed class ChatContextHandoffTests : IDisposable
         Assert.Equal("Older decisions", session.State.ContextSummary);
         Assert.Equal(0, session.State.ContextRevision);
         Assert.Equal(original, session.Request.Messages);
+        Assert.Equal([("Fresh decisions", true), (" and next actions", false)], deltas);
     }
 
     [Fact]
@@ -180,12 +183,17 @@ public sealed class ChatContextHandoffTests : IDisposable
         public int Calls { get; private set; }
         public string? PreviousSummary { get; private set; }
         public string? Transcript { get; private set; }
-        public Task<string> SummarizeAsync(UserModel userModel, string transcript, string? previousSummary, int maxOutputTokens, CancellationToken cancellationToken)
+        public async Task<string> SummarizeAsync(UserModel userModel, string transcript, string? previousSummary, int maxOutputTokens, CancellationToken cancellationToken, Func<string, bool, CancellationToken, Task>? onDelta = null)
         {
             Calls++;
             Transcript = transcript;
             PreviousSummary = previousSummary;
-            return Task.FromResult("Fresh decisions and next actions");
+            if (onDelta != null)
+            {
+                await onDelta("Fresh decisions", true, cancellationToken);
+                await onDelta(" and next actions", false, cancellationToken);
+            }
+            return "Fresh decisions and next actions";
         }
     }
 }

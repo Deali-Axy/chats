@@ -84,6 +84,18 @@ public sealed class ChatContextServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task FailedSummary_SanitizesGatewayHtmlForTheUser()
+    {
+        summarizer.Error = new InvalidOperationException("<html><head><title>504 Gateway Time-out</title></head></html>");
+        var session = await Session(window: 128000);
+        string? reported = null;
+        CustomChatServiceException ex = await Assert.ThrowsAsync<CustomChatServiceException>(() =>
+            service.PrepareAsync(session, User(session), true, (_, _, error) => reported = error, default));
+        Assert.Equal(ChatContextError.TimeoutMessage, reported);
+        Assert.Contains(ChatContextError.TimeoutMessage, ex.Message);
+    }
+
+    [Fact]
     public async Task AutomaticFailure_BelowBudgetContinuesWithOriginalAndNotice()
     {
         summarizer.Error = new InvalidOperationException("provider failed");
@@ -165,7 +177,7 @@ public sealed class ChatContextServiceTests : IDisposable
         public int Calls { get; private set; }
         public Exception? Error { get; set; }
         public string? PreviousSummary { get; private set; }
-        public Task<string> SummarizeAsync(UserModel userModel, string transcript, string? previousSummary, int maxOutputTokens, CancellationToken cancellationToken)
+        public Task<string> SummarizeAsync(UserModel userModel, string transcript, string? previousSummary, int maxOutputTokens, CancellationToken cancellationToken, Func<string, bool, CancellationToken, Task>? onDelta = null)
         {
             Calls++;
             PreviousSummary = previousSummary;

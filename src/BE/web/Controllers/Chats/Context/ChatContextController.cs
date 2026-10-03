@@ -8,9 +8,13 @@ using Chats.BE.Services.Models;
 using Chats.BE.Services.UrlEncryption;
 using Chats.DB;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Encodings.Web;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Context;
 
@@ -30,18 +34,24 @@ public sealed class ChatContextController(ChatsDB db, CurrentUser currentUser, I
         [RegularExpression("^(zh-CN|en)$")] string Language = "zh-CN");
 
     [HttpPost("handoff/preview")]
-    public async Task<ActionResult<ContextHandoffPreview>> HandoffPreview(string encryptedChatId, HandoffPreviewRequest request, CancellationToken cancellationToken)
+    public async Task<IActionResult> HandoffPreview(string encryptedChatId, HandoffPreviewRequest request, CancellationToken cancellationToken)
     {
-        var loaded = await LoadAsync(encryptedChatId, request.SpanId, request.LeafMessageId, cancellationToken);
-        if (loaded.Error != null) return loaded.Error;
-        try
+        if (!request.GenerateSummary)
         {
-            return Ok(await handoffService.PreviewAsync(loaded.Session!, loaded.UserModel!, request.GenerateSummary, cancellationToken));
+            var loaded = await LoadAsync(encryptedChatId, request.SpanId, request.LeafMessageId, cancellationToken);
+            if (loaded.Error != null) return loaded.Error;
+            try
+            {
+                return Ok(await handoffService.PreviewAsync(loaded.Session!, loaded.UserModel!, false, cancellationToken));
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or ChatServiceException)
+            {
+                return BadRequest(new { message = ChatContextError.ToUserMessage(ex) });
+            }
         }
-        catch (Exception ex) when (ex is InvalidOperationException or ChatServiceException)
-        {
-            return BadRequest(new { message = ex.Message });
-        }
+
+        await StreamHandoffPreview(encryptedChatId, request, cancellationToken);
+        return new EmptyResult();
     }
 
     [HttpPost("handoff")]
@@ -64,7 +74,7 @@ public sealed class ChatContextController(ChatsDB db, CurrentUser currentUser, I
         }
         catch (InvalidOperationException ex)
         {
-            return BadRequest(new { message = ex.Message });
+            return BadRequest(new { message = ChatContextError.ToUserMessage(ex) });
         }
     }
 
@@ -87,18 +97,26 @@ public sealed class ChatContextController(ChatsDB db, CurrentUser currentUser, I
     }
 
     [HttpPost("compact")]
-    public async Task<ActionResult<ChatContextStatus>> Compact(string encryptedChatId, ContextRequest request, CancellationToken cancellationToken)
+    public async Task Compact(string encryptedChatId, ContextRequest request, CancellationToken cancellationToken)
     {
-        var loaded = await LoadAsync(encryptedChatId, request.SpanId, request.LeafMessageId, cancellationToken);
-        if (loaded.Error != null) return loaded.Error;
+        await using ContextSseWriter sse = await ContextSseWriter.Start(Response, cancellationToken);
         try
         {
+            var loaded = await LoadAsync(encryptedChatId, request.SpanId, request.LeafMessageId, cancellationToken);
+            if (loaded.Error != null)
+            {
+                await sse.WriteError(LoadErrorMessage(loaded.Error), cancellationToken);
+                return;
+            }
             await contextService.PrepareAsync(loaded.Session!, loaded.UserModel!, true, null, cancellationToken);
-            return Ok(ChatContextService.GetStatus(loaded.Session!));
+            await sse.Write(new ContextStreamEvent { K = "done", Status = ChatContextService.GetStatus(loaded.Session!) }, cancellationToken);
         }
-        catch (Exception ex) when (ex is InvalidOperationException or CustomChatServiceException)
+        catch (OperationCanceledException)
         {
-            return BadRequest(new { message = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            await sse.WriteError(ChatContextError.ToUserMessage(ex), cancellationToken);
         }
     }
 
@@ -132,6 +150,46 @@ public sealed class ChatContextController(ChatsDB db, CurrentUser currentUser, I
             .SetProperty(x => x.ContextRevision, x => x.ContextRevision + 1), cancellationToken);
         return updated == 1 ? NoContent() : NotFound();
     }
+
+    private async Task StreamHandoffPreview(string encryptedChatId, HandoffPreviewRequest request, CancellationToken cancellationToken)
+    {
+        await using ContextSseWriter sse = await ContextSseWriter.Start(Response, cancellationToken);
+        try
+        {
+            var loaded = await LoadAsync(encryptedChatId, request.SpanId, request.LeafMessageId, cancellationToken);
+            if (loaded.Error != null)
+            {
+                await sse.WriteError(LoadErrorMessage(loaded.Error), cancellationToken);
+                return;
+            }
+            ContextHandoffPreview preview = await handoffService.PreviewAsync(
+                loaded.Session!, loaded.UserModel!, true, cancellationToken,
+                async (text, replace, ct) => await sse.Write(new ContextStreamEvent { K = "delta", R = text, Replace = replace }, ct));
+            await sse.Write(new ContextStreamEvent
+            {
+                K = "done",
+                Summary = preview.Summary,
+                SourceHash = preview.SourceHash,
+                IncludesRecentMessages = preview.IncludesRecentMessages,
+            }, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        catch (Exception ex)
+        {
+            await sse.WriteError(ChatContextError.ToUserMessage(ex), cancellationToken);
+        }
+    }
+
+    private static string LoadErrorMessage(ActionResult error) => error switch
+    {
+        NotFoundResult or NotFoundObjectResult => "Chat not found",
+        ForbidResult => "Access denied",
+        BadRequestObjectResult { Value: string text } => ChatContextError.Sanitize(text),
+        BadRequestObjectResult bad => ChatContextError.Sanitize(bad.Value?.ToString() ?? "Invalid request"),
+        _ => "Unable to load context usage",
+    };
 
     private IQueryable<ChatSpan> OwnedSpan(int chatId, byte spanId) =>
         db.ChatSpans.Where(x => x.ChatId == chatId && x.SpanId == spanId && x.Chat.UserId == currentUser.Id);
@@ -176,5 +234,106 @@ public sealed class ChatContextController(ChatsDB db, CurrentUser currentUser, I
         var history = ChatContextRequestBuilder.BuildHistory(branch, modelId, spanId);
         ChatRequest chatRequest = ChatContextRequestBuilder.BuildRequest(span, history, codeInterpreter);
         return (await contextService.CreateSessionAsync(span, history, chatRequest, cancellationToken), userModel, null);
+    }
+}
+
+internal sealed class ContextStreamEvent
+{
+    [JsonPropertyName("k")] public required string K { get; init; }
+    [JsonPropertyName("r")] public string? R { get; init; }
+    [JsonPropertyName("replace")] public bool? Replace { get; init; }
+    [JsonPropertyName("message")] public string? Message { get; init; }
+    [JsonPropertyName("summary")] public string? Summary { get; init; }
+    [JsonPropertyName("sourceHash")] public string? SourceHash { get; init; }
+    [JsonPropertyName("includesRecentMessages")] public bool? IncludesRecentMessages { get; init; }
+    [JsonPropertyName("status")] public ChatContextStatus? Status { get; init; }
+}
+
+internal sealed class ContextSseWriter : IAsyncDisposable
+{
+    private static readonly JsonSerializerOptions Json = new()
+    {
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping,
+    };
+    private static readonly ReadOnlyMemory<byte> DataPrefix = "data: "u8.ToArray();
+    private static readonly ReadOnlyMemory<byte> EventSuffix = "\n\n"u8.ToArray();
+    private static readonly ReadOnlyMemory<byte> KeepAlive = ": keepalive\n\n"u8.ToArray();
+
+    private readonly HttpResponse response;
+    private readonly SemaphoreSlim gate = new(1, 1);
+    private readonly CancellationTokenSource heartbeatCts = new();
+    private readonly Task heartbeat;
+
+    private ContextSseWriter(HttpResponse response)
+    {
+        this.response = response;
+        heartbeat = RunHeartbeat();
+    }
+
+    public static async Task<ContextSseWriter> Start(HttpResponse response, CancellationToken cancellationToken)
+    {
+        response.Headers.ContentType = "text/event-stream; charset=utf-8";
+        response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
+        response.Headers.Connection = "keep-alive";
+        response.Headers["X-Accel-Buffering"] = "no";
+        response.HttpContext.Features.Get<IHttpResponseBodyFeature>()?.DisableBuffering();
+        ContextSseWriter writer = new(response);
+        await writer.Write(new ContextStreamEvent { K = "started" }, cancellationToken);
+        return writer;
+    }
+
+    public Task WriteError(string message, CancellationToken cancellationToken) =>
+        Write(new ContextStreamEvent { K = "error", Message = message }, cancellationToken);
+
+    public async Task Write(ContextStreamEvent payload, CancellationToken cancellationToken)
+    {
+        byte[] bytes = JsonSerializer.SerializeToUtf8Bytes(payload, Json);
+        await gate.WaitAsync(cancellationToken);
+        try
+        {
+            await response.Body.WriteAsync(DataPrefix, cancellationToken);
+            await response.Body.WriteAsync(bytes, cancellationToken);
+            await response.Body.WriteAsync(EventSuffix, cancellationToken);
+            await response.Body.FlushAsync(cancellationToken);
+        }
+        finally
+        {
+            gate.Release();
+        }
+    }
+
+    private async Task RunHeartbeat()
+    {
+        try
+        {
+            using PeriodicTimer timer = new(TimeSpan.FromSeconds(10));
+            while (await timer.WaitForNextTickAsync(heartbeatCts.Token))
+            {
+                await gate.WaitAsync(heartbeatCts.Token);
+                try
+                {
+                    await response.Body.WriteAsync(KeepAlive, heartbeatCts.Token);
+                    await response.Body.FlushAsync(heartbeatCts.Token);
+                }
+                finally
+                {
+                    gate.Release();
+                }
+            }
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        await heartbeatCts.CancelAsync();
+        try { await heartbeat; }
+        catch (OperationCanceledException) { }
+        heartbeatCts.Dispose();
+        gate.Dispose();
     }
 }

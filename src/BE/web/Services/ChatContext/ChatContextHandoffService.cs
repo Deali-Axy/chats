@@ -12,7 +12,8 @@ public sealed record ContextHandoffPreview(string? Summary, string SourceHash, b
 public sealed class ChatContextHandoffService(ChatsDB db, IContextSummarizer summarizer)
 {
     public async Task<ContextHandoffPreview> PreviewAsync(ChatContextSession session, UserModel userModel,
-        bool generateSummary, CancellationToken cancellationToken)
+        bool generateSummary, CancellationToken cancellationToken,
+        Func<string, bool, CancellationToken, Task>? onDelta = null)
     {
         if (!ChatContextService.IsSupported(session.Request))
             throw new InvalidOperationException("Context handoff is unavailable for image generation models.");
@@ -34,7 +35,7 @@ public sealed class ChatContextHandoffService(ChatsDB db, IContextSummarizer sum
             int limit = Math.Max(64, Math.Min(2048, ContextWindowPlanner.GetBudget(session.Request).Budget / 8));
             if (userModel.Model.CurrentSnapshot.MaxResponseTokens is int maximum) limit = Math.Min(limit, maximum);
             summary = await summarizer.SummarizeAsync(userModel,
-                ContextWindowPlanner.Transcript(session.History.Skip(session.CoveredTurns)), summary, limit, cancellationToken);
+                ContextWindowPlanner.Transcript(session.History.Skip(session.CoveredTurns)), summary, limit, cancellationToken, onDelta);
             if (string.IsNullOrWhiteSpace(summary)) throw new InvalidOperationException("The model returned an empty handoff summary.");
         }
         return new(summary, ContextWindowPlanner.SourceHash(session.History), generateSummary || session.CoveredTurns == session.History.Count);

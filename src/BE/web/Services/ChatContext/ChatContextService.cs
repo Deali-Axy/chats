@@ -96,9 +96,11 @@ public sealed class ChatContextService(IServiceScopeFactory scopeFactory, IConte
             catch (Exception ex) when (ex is not OperationCanceledException)
             {
                 logger.LogWarning(ex, "Context compaction failed for chat {ChatId}, span {SpanId}", session.State.ChatId, session.State.SpanId);
-                notify?.Invoke("failed", GetStatus(session), ex.Message);
+                string message = ChatContextError.ToUserMessage(ex);
+                notify?.Invoke("failed", GetStatus(session), message);
                 if (force || before.EstimatedTokens > before.InputBudget)
-                    throw new CustomChatServiceException(DBFinishReason.BadParameter, "Context compaction failed: " + ex.Message);
+                    throw new CustomChatServiceException(DBFinishReason.BadParameter,
+                        message == ChatContextError.TimeoutMessage ? message : "Context compaction failed: " + message);
             }
         }
         ChatContextStatus current = GetStatus(session);
