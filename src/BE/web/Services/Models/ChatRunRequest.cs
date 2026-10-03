@@ -7,4 +7,6 @@ public sealed record ChatRunRequest
     public required UserModel UserModel { get; init; }
 
     public required ChatRequest ChatRequest { get; init; }
+
+    public Func<CancellationToken, Task>? PrepareRequest { get; init; }
 }

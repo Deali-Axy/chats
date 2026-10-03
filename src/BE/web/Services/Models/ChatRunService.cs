@@ -47,6 +47,8 @@ public class ChatRunService(
         Exception? exception = null;
         try
         {
+            if (request.PrepareRequest != null)
+                await request.PrepareRequest(cancellationToken);
             await runtime.ExecuteAsync(
                 balance,
                 chatService,
@@ -95,13 +97,22 @@ public class ChatRunService(
         };
     }
 
-    private sealed class ChatRunRuntime(long firstTick, UserModel userModel)
+    private sealed class ChatRunRuntime
     {
+        private readonly long firstTick;
+        private readonly UserModel userModel;
         private long _preprocessTick;
         private long _firstReasoningTick;
         private long _firstResponseTick;
         private long _endResponseTick;
         private long _finishTick;
+
+        public ChatRunRuntime(long firstTick, UserModel userModel)
+        {
+            this.firstTick = firstTick;
+            this.userModel = userModel;
+            _preprocessTick = _firstReasoningTick = _firstResponseTick = _endResponseTick = _finishTick = firstTick;
+        }
         private short _segmentCount;
         private bool _shouldFinalizeUsage;
         private readonly List<ChatSegment> _segments = [];

@@ -20,4 +20,5 @@ public enum SseResponseKind
     CallingTool = 13,
     ToolProgress = 14,
     ToolCompleted = 15,
+    Context = 16,
 }

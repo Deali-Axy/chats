@@ -4,6 +4,7 @@ using Chats.BE.Services.FileServices;
 using Chats.BE.Services.Models.ChatServices;
 using Chats.BE.Services.UrlEncryption;
 using Chats.BE.Infrastructure.Functional;
+using Chats.BE.Services.ChatContext;
 using System.Text.Json.Serialization;
 
 namespace Chats.BE.Controllers.Chats.Chats.Dtos;
@@ -30,6 +31,7 @@ namespace Chats.BE.Controllers.Chats.Chats.Dtos;
 [JsonDerivedType(typeof(ToolCompletedLine    ), (int)SseResponseKind.ToolCompleted    )]
 [JsonDerivedType(typeof(EndStep              ), (int)SseResponseKind.EndStep          )]
 [JsonDerivedType(typeof(EndTurn              ), (int)SseResponseKind.EndTurn          )]
+[JsonDerivedType(typeof(ContextLine          ), (int)SseResponseKind.Context          )]
 public abstract record SseResponseLine
 {
     public static ResponseTurnLine ResponseMessage(
@@ -62,6 +64,13 @@ public abstract record SseResponseLine
 }
 
 #region 派生 record
+
+public sealed record ContextLine(
+    [property: JsonPropertyName("i")] byte SpanId,
+    [property: JsonPropertyName("r")] ChatContextStatus Status,
+    [property: JsonPropertyName("stage")] string Stage,
+    [property: JsonPropertyName("error")] string? Error = null
+) : SseResponseLine;
 
 public sealed record SegmentLine(
     [property: JsonPropertyName("i")] byte SpanId,

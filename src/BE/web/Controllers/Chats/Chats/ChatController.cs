@@ -34,6 +34,7 @@ using Chats.BE.Services.Options;
 using Chats.BE.Services.RequestTracing;
 using Chats.BE.Services.TitleSummary;
 using Chats.BE.Services.UserContext;
+using Chats.BE.Services.ChatContext;
 using Microsoft.Extensions.Options;
 
 namespace Chats.BE.Controllers.Chats.Chats;
@@ -45,7 +46,8 @@ public class ChatController(
     IHttpClientFactory httpClientFactory,
     ILoggerFactory loggerFactory,
     McpToolExecutionPlanner mcpToolExecutionPlanner,
-    McpToolExecutionService mcpToolExecutionService) : ControllerBase
+    McpToolExecutionService mcpToolExecutionService,
+    ChatContextService chatContextService) : ControllerBase
 {
     private sealed record ResolvedToolCall(
         int Index,
@@ -677,6 +679,7 @@ public class ChatController(
         }
 
         writer.TryWrite(new TempStartTurn(chatSpan.SpanId, turn));
+        ChatContextSession? contextSession = null;
         while (!cancellationToken.IsCancellationRequested)
         {
             Step step = await RunOne(csr, cancellationToken);
@@ -935,6 +938,13 @@ public class ChatController(
                 {
                     UserModel = userModel,
                     ChatRequest = request,
+                    PrepareRequest = async ct =>
+                    {
+                        contextSession ??= await chatContextService.CreateSessionAsync(chatSpan,
+                            ChatContextRequestBuilder.BuildHistory(messageTurns.ToArray(), userModel.ModelId, chatSpan.SpanId), request, ct);
+                        await chatContextService.PrepareAsync(contextSession, userModel, false,
+                            (stage, status, error) => writer.TryWrite(new ContextLine(chatSpan.SpanId, status, stage, error)), ct);
+                    },
                 },
                 async (segmentContext, ct) =>
                 {

@@ -74,7 +74,11 @@ public record ChatRequest
         }
 
         int messagesTokens = Messages.Select(m => EstimateMessageTokens(m, tokenizer) + TokenPerMessage).Sum();
-        int totalTokens = TokenPerConversation + systemTokens + messagesTokens;
+        int toolsTokens = Tools.OfType<FunctionTool>().Sum(tool =>
+            16 + tokenizer.CountTokens(tool.FunctionName)
+            + tokenizer.CountTokens(tool.FunctionDescription ?? "")
+            + tokenizer.CountTokens(tool.FunctionParameters ?? ""));
+        int totalTokens = TokenPerConversation + systemTokens + messagesTokens + toolsTokens;
         return totalTokens;
     }
 
@@ -90,7 +94,7 @@ public record ChatRequest
             {
                 NeutralTextContent text => tokenizer.CountTokens(text.Content),
                 NeutralErrorContent error => tokenizer.CountTokens(error.Content),
-                NeutralThinkContent think => tokenizer.CountTokens(think.Content),
+                NeutralThinkContent think => tokenizer.CountTokens(think.Content) + tokenizer.CountTokens(think.Signature ?? ""),
                 NeutralFileUrlContent or NeutralFileBlobContent or NeutralFileContent => TokensPerImage,
                 NeutralToolCallContent toolCall => tokenizer.CountTokens(toolCall.Id) + tokenizer.CountTokens(toolCall.Name) + tokenizer.CountTokens(toolCall.Parameters) + TokenPerToolCall,
                 NeutralToolCallResponseContent toolResp => tokenizer.CountTokens(toolResp.Response),

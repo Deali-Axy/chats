@@ -217,6 +217,9 @@ public partial class ChatsDB : DbContext
 
         modelBuilder.Entity<ChatSpan>(entity =>
         {
+            entity.Property(x => x.AutoCompactEnabled).HasDefaultValue(true);
+            entity.Property(x => x.ContextKeepRecentTurns).HasDefaultValue(6);
+
             entity.HasOne(d => d.ChatConfig).WithMany(p => p.ChatSpans)
                 .OnDelete(DeleteBehavior.ClientSetNull)
                 .HasConstraintName("FK_ChatSpan_ChatConfig");
