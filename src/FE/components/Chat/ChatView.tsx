@@ -56,6 +56,7 @@ import { ChatMessage } from '@/components/ChatMessage';
 
 import ChatHeader from './ChatHeader';
 import ChatInput from './ChatInput';
+import { ChatContextEvent } from '@/types/chatContext';
 import ChatMessagesSkeleton from './ChatMessagesSkeleton';
 import ChatMiniMap from './ChatMiniMap';
 import NoChat from './NoChat';
@@ -134,6 +135,7 @@ const ChatView = memo(() => {
     string | undefined
   >(undefined);
   const [chatInputInsetPx, setChatInputInsetPx] = useState<number>(0);
+  const [contextEvents, setContextEvents] = useState<Partial<Record<number, ChatContextEvent>>>({});
   const responseMessageSpacerPx = useMemo(() => {
     if (!responseMessageMinHeight) return 0;
     const parsed = Number.parseInt(responseMessageMinHeight, 10);
@@ -1187,6 +1189,7 @@ const ChatView = memo(() => {
       let messageList = [...messages];
       // 用于跟踪每个 span 最近一次非空的工具调用 ID，便于将 u 为 null 的参数片段归并
       const currentToolCallIdBySpan = new Map<number, string>();
+      const compactingSpans = new Set<number>();
       const finishReasoningForAllSpans = () => {
         const lastMessageGroupIndex = selectedMessageList.length - 1;
         const lastMessageGroup =
@@ -1203,7 +1206,7 @@ const ChatView = memo(() => {
 
       try {
         for await (const value of stream) {
-          if (value.k !== SseResponseKind.ReasoningSegment && 'i' in value) {
+          if (value.k !== SseResponseKind.ReasoningSegment && value.k !== SseResponseKind.Context && 'i' in value) {
             const msgId = `${ResponseMessageTempId}-${value.i}`;
             selectedMessageList = changeSelectedResponseReasoningFinish(
               selectedMessageList,
@@ -1211,7 +1214,14 @@ const ChatView = memo(() => {
             );
           }
 
-          if (value.k === SseResponseKind.StopId) {
+          if (value.k === SseResponseKind.Context) {
+            setContextEvents((previous) => ({ ...previous, [value.i]: { chatId: selectedChat.id, spanId: value.i, status: value.r, stage: value.stage, error: value.error } }));
+            if (value.stage === 'started') compactingSpans.add(value.i);
+            if (value.stage === 'completed' || value.stage === 'failed') compactingSpans.delete(value.i);
+            if (value.stage === 'started') toast.loading(t('Compacting earlier conversation…'), { id: `context-${selectedChat.id}-${value.i}` });
+            if (value.stage === 'completed') toast.success(t('Context compacted. Original messages are still available.'), { id: `context-${selectedChat.id}-${value.i}` });
+            if (value.stage === 'failed') toast.error(t('Context compaction failed') + (value.error ? `: ${value.error}` : ''), { id: `context-${selectedChat.id}-${value.i}` });
+          } else if (value.k === SseResponseKind.StopId) {
             chatDispatch(setStopIds([value.r]));
           } else if (value.k === SseResponseKind.ReasoningSegment) {
             const { r: msg, i: spanId } = value;
@@ -1345,6 +1355,7 @@ const ChatView = memo(() => {
         }
       } finally {
         finishReasoningForAllSpans();
+        compactingSpans.forEach((spanId) => toast.dismiss(`context-${selectedChat.id}-${spanId}`));
       }
 
       const leafMessageId = messageList[messageList.length - 1].id;
@@ -1904,6 +1915,7 @@ const ChatView = memo(() => {
 
         {hasModel() && (
           <ChatInput
+            contextEvents={contextEvents}
             onSend={(message) => {
               const lastMessage = getSelectedMessagesLastActiveMessage();
               handleSend(message, lastMessage?.id);

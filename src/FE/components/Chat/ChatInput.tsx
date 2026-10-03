@@ -49,6 +49,8 @@ import DragUpload from '../DragUpload/DragUpload';
 import PasteUpload from '../PasteUpload/PasteUpload';
 import FilesPopover from '../Popover/FilesPopover';
 import CodeExecutionControl from './CodeExecutionControl';
+import ChatContextControl from './ChatContextControl';
+import { ChatContextEvent } from '@/types/chatContext';
 import McpShortcutControl from './McpShortcutControl';
 import PromptList from './PromptList';
 import WebSearchControl from './WebSearchControl';
@@ -76,9 +78,10 @@ interface Props {
   onSend: (message: Message) => void;
   onChangePrompt: (prompt: Prompt) => void;
   onHeightChange?: (height: number) => void;
+  contextEvents?: Partial<Record<number, ChatContextEvent>>;
 }
 
-const ChatInput = ({ onSend, onChangePrompt, onHeightChange }: Props) => {
+const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Props) => {
   const { t } = useTranslation();
 
   const {
@@ -96,6 +99,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange }: Props) => {
     selectedChat?.status || ChatStatus.None,
   );
   const [contentText, setContentText] = useState('');
+  const [contextBusy, setContextBusy] = useState(false);
   const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
 
   useEffect(() => {
@@ -312,7 +316,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange }: Props) => {
   };
 
   const handleSend = () => {
-    if (selectedChat.status === ChatStatus.Chatting) {
+    if (selectedChat.status === ChatStatus.Chatting || contextBusy) {
       return;
     }
 
@@ -691,6 +695,12 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange }: Props) => {
               </div>
 
               {/* 底部工具行 - 智能搜索/Agent控制 + 发送按钮 */}
+              <ChatContextControl
+                draftText={contentText}
+                draftFileCount={contentFiles.length}
+                events={contextEvents}
+                onBusyChange={setContextBusy}
+              />
               <div className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2 py-2 border-t border-border/40">
                 {/* 左侧: 智能搜索 + Agent 代码执行控制 */}
                 <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 sm:gap-2 overflow-hidden">
@@ -852,7 +862,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange }: Props) => {
                       content={t('Stop Generating')}
                     />
                   ) : (
-                    <SendButton onSend={handleSend} size="sm" />
+                    <SendButton onSend={handleSend} size="sm" disabled={contextBusy} />
                   )}
                 </div>
               </div>

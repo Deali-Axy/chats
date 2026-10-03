@@ -6,6 +6,7 @@ import {
   ToolProgressDelta,
   Role,
 } from './chat';
+import { ChatContextStatus } from './chatContext';
 
 // Enum equivalent to SseResponseKind
 export enum SseResponseKind {
@@ -27,6 +28,7 @@ export enum SseResponseKind {
   CallingTool = 13,
   ToolProgress = 14,
   ToolCompleted = 15,
+  Context = 16,
 }
 
 // Discriminated unions for SseResponseLine
@@ -135,6 +137,7 @@ interface SseResponseLineEndTurn {
 
 // Combined type for SseResponseLine
 export type SseResponseLine =
+  | { k: SseResponseKind.Context; i: number; r: ChatContextStatus; stage: 'ready' | 'started' | 'completed' | 'failed'; error?: string | null }
   | SseResponseLineStopId
   | SseResponseLineSegment
   | SseResponseLineError
