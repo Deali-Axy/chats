@@ -390,7 +390,7 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
                 else if (eventType is "response.completed" or "response.incomplete" or "response.failed")
                 {
                     terminalEventSeen = true;
-                    JsonElement? responseEl = json.TryGetProperty("response", out JsonElement respEl) ? respEl : null;
+                    JsonElement? responseEl = json.TryGetProperty("response", out JsonElement respEl) && respEl.ValueKind == JsonValueKind.Object ? respEl : null;
                     JsonElement? usageEl = responseEl?.TryGetProperty("usage", out JsonElement responseUsageEl) == true
                         ? responseUsageEl
                         : null;
@@ -1006,12 +1006,13 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
     {
         if (usageEl == null || usageEl.Value.ValueKind != JsonValueKind.Object) return null;
         JsonElement usage = usageEl.Value;
-        int inputTokens = usage.TryGetProperty("input_tokens", out JsonElement inputEl) ? inputEl.GetInt32() : 0;
-        int outputTokens = usage.TryGetProperty("output_tokens", out JsonElement outputEl) ? outputEl.GetInt32() : 0;
+        int inputTokens = usage.TryGetProperty("input_tokens", out JsonElement inputEl) && inputEl.ValueKind == JsonValueKind.Number && inputEl.TryGetInt32(out int input) ? input : 0;
+        int outputTokens = usage.TryGetProperty("output_tokens", out JsonElement outputEl) && outputEl.ValueKind == JsonValueKind.Number && outputEl.TryGetInt32(out int output) ? output : 0;
         int reasoningTokens = 0;
-        if (usage.TryGetProperty("output_tokens_details", out JsonElement detailsEl) && detailsEl.TryGetProperty("reasoning_tokens", out JsonElement reasoningEl))
+        if (usage.TryGetProperty("output_tokens_details", out JsonElement detailsEl) && detailsEl.ValueKind == JsonValueKind.Object
+            && detailsEl.TryGetProperty("reasoning_tokens", out JsonElement reasoningEl) && reasoningEl.ValueKind == JsonValueKind.Number && reasoningEl.TryGetInt32(out int reasoning))
         {
-            reasoningTokens = reasoningEl.GetInt32();
+            reasoningTokens = reasoning;
         }
         return new ChatTokenUsage
         {
@@ -1039,10 +1040,10 @@ public class ResponseApiService(IHttpClientFactory httpClientFactory, ILogger<Re
 
     private static int GetCachedTokens(JsonElement usage)
     {
-        if (usage.TryGetProperty("input_tokens_details", out JsonElement inputDetails) &&
-            inputDetails.TryGetProperty("cached_tokens", out JsonElement cachedInput))
+        if (usage.TryGetProperty("input_tokens_details", out JsonElement inputDetails) && inputDetails.ValueKind == JsonValueKind.Object &&
+            inputDetails.TryGetProperty("cached_tokens", out JsonElement cachedInput) && cachedInput.ValueKind == JsonValueKind.Number && cachedInput.TryGetInt32(out int cached))
         {
-            return cachedInput.GetInt32();
+            return cached;
         }
         return 0;
     }

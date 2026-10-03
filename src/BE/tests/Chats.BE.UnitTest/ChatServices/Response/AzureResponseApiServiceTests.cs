@@ -941,4 +941,38 @@ public class AzureResponseApiServiceTests
         Assert.Equal("signature", think.Signature);
     }
 
+    [Theory]
+    [InlineData("output_tokens_details", "null")]
+    [InlineData("input_tokens_details", "null")]
+    [InlineData("output_tokens_details", "{\"reasoning_tokens\":null}")]
+    [InlineData("input_tokens_details", "{\"cached_tokens\":null}")]
+    public async Task Responses_NullUsageDetails_DoNotInterruptCompletion(string field, string value)
+    {
+        string sse = $"data: {{\"type\":\"response.completed\",\"response\":{{\"status\":\"completed\",\"usage\":{{\"input_tokens\":12,\"output_tokens\":3,\"{field}\":{value}}}}}}}\n\n";
+        ResponseApiService service = new(new CapturingHttpClientFactory(HttpStatusCode.OK, sse, _ => { }), NullLogger<ResponseApiService>.Instance);
+        List<ChatSegment> segments = [];
+        await foreach (var segment in service.ChatStreamed(CreateBaseChatRequest(), default)) segments.Add(segment);
+        var usage = Assert.Single(segments.OfType<UsageChatSegment>()).Usage;
+        Assert.Equal(12, usage.InputTokens);
+        Assert.Equal(3, usage.OutputTokens);
+        Assert.Equal(0, usage.ReasoningTokens);
+        Assert.Equal(0, usage.CacheTokens);
+    }
+
+    [Fact]
+    public async Task Responses_ContextErrorWithNullUsage_PreservesUpstreamMessage()
+    {
+        string sse = """
+            data: {"type":"response.failed","response":{"status":"failed","usage":null,"error":{"code":"context_length_exceeded","message":"Your input exceeds the context window of this model."}}}
+
+
+            """;
+        ResponseApiService service = new(new CapturingHttpClientFactory(HttpStatusCode.OK, sse, _ => { }), NullLogger<ResponseApiService>.Instance);
+        var error = await Assert.ThrowsAsync<CustomChatServiceException>(async () =>
+        {
+            await foreach (var segment in service.ChatStreamed(CreateBaseChatRequest(), default)) { }
+        });
+        Assert.Contains("context window", error.Message);
+    }
+
 }
