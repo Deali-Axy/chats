@@ -69,18 +69,29 @@ export default function ContextHandoffDialog({
           leafMessageId,
           generate,
           controller.signal,
+          (text, replace) => {
+            if (generation !== generationRef.current) return;
+            setSummary((current) => (replace ? text : current + text));
+          },
         );
         if (controller.signal.aborted || generation !== generationRef.current)
           return;
         setPreview(value);
         setSummary(value.summary ?? '');
       } catch (reason) {
-        if (!controller.signal.aborted && generation === generationRef.current)
-          setError(
+        if (
+          controller.signal.aborted ||
+          generation !== generationRef.current ||
+          (reason instanceof Error && reason.name === 'AbortError')
+        )
+          return;
+        setError(
+          t(
             reason instanceof Error
               ? reason.message
-              : t('Context operation failed'),
-          );
+              : 'Context operation failed',
+          ),
+        );
       } finally {
         if (generation === generationRef.current) {
           setPhase(null);
@@ -125,9 +136,9 @@ export default function ContextHandoffDialog({
       toast.success(t('New conversation created with the context summary'));
     } catch (reason) {
       setError(
-        reason instanceof Error
-          ? reason.message
-          : t('Context operation failed'),
+        t(
+          reason instanceof Error ? reason.message : 'Context operation failed',
+        ),
       );
     } finally {
       setPhase(null);
@@ -195,7 +206,10 @@ export default function ContextHandoffDialog({
           )}
         </p>
         {error && (
-          <p role="alert" className="text-sm text-destructive">
+          <p
+            role="alert"
+            className="max-h-24 overflow-y-auto whitespace-pre-wrap break-words text-sm text-destructive"
+          >
             {error}
           </p>
         )}

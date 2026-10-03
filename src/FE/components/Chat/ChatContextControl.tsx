@@ -158,7 +158,7 @@ export default function ChatContextControl({
     setStatus(event.status);
     setNotice(event.stage);
     if (event.stage === 'failed')
-      setError(event.error || t('Context compaction failed'));
+      setError(t(event.error || 'Context compaction failed'));
   }, [event, chatId, spanId, t]);
 
   const runAction = useCallback(
@@ -207,10 +207,11 @@ export default function ChatContextControl({
           setNotice('ready');
           toast(t('Context compaction cancelled'));
         } else {
-          const message =
+          const message = t(
             reason instanceof Error
               ? reason.message
-              : t('Context operation failed');
+              : 'Context operation failed',
+          );
           setError(message);
           if (action === 'compact') setNotice('failed');
           toast.error(message);

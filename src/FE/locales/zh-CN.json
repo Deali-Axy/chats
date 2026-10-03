@@ -1124,6 +1124,8 @@
   "Context compaction failed": "上下文压缩失败",
   "Context compaction cancelled": "已取消上下文压缩",
   "Context operation failed": "上下文操作失败",
+  "The model request timed out. Try again, or compact older turns first.": "模型请求超时或网关关闭了连接。请稍后重试，也可以先压缩较早对话后再生成摘要。",
+  "The request was cancelled.": "请求已取消。",
   "Unable to load context usage": "无法加载上下文用量",
   "Context for model": "查看模型上下文",
   "Context compaction is unavailable for image generation models.": "图像生成模型不支持上下文压缩。",
