@@ -180,6 +180,7 @@ git merge upstream/main
 - 模型定价本地页。
 - changelog + 海报。
 - 登录页 Ayaka 图和邀请/联系 UI。
+- 上下文管理：`ChatSpan.Context` 设置与摘要检查点、`Services/ChatContext` 请求前压缩、Context SSE 通知及输入区用量/手动控制；保留近期完整工具链，原始历史不删除。
 
 ## 不要改 / 不要提交
 

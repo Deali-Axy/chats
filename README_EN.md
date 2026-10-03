@@ -20,6 +20,7 @@ Current EF history:
 - `Upgrade_to_1_15`: schema changes and required data backfills for 1.13–1.15
 - `Upgrade_to_1_16`: support physical Model deletion (`ChatConfig.ModelId` becomes nullable and related foreign-key policies)
 - `Upgrade_to_1_17`: image-generation background mode (`Background` on `ChatConfig` and its snapshots)
+- `AddChatContextManagement`: per-model context settings, summaries and compaction checkpoints
 
 Upgrade notes:
 
@@ -35,6 +36,7 @@ Upgrade notes:
 - **Model pricing**: local full-width page with search / free-only / sort
 - **Login**: Ayaka branding, carousel, invite-only copy and contact entry
 - **Empty state**: prompts for a new chat or a temporary chat
+- **Context management**: usage and remaining space in the composer, automatic summaries of older history, manual compaction, retention settings, summary inspection and full-context restoration. See the [usage guide (Chinese)](./doc/zh-CN/context-management.md).
 
 ### 🛠️ Developer Toolchain
 

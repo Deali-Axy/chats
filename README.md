@@ -20,6 +20,7 @@ Ayaka Chats 仅支持 SQLite。空库与已使用本项目 migration 的数据�
 - `Upgrade_to_1_15`：1.13–1.15 的 schema 变更与必要的数据回填
 - `Upgrade_to_1_16`：Model 物理删除支持（`ChatConfig.ModelId` 可空及相关外键删除策略）
 - `Upgrade_to_1_17`：图像生成背景模式（`ChatConfig` 及其快照的 `Background` 字段）
+- `AddChatContextManagement`：各聊天模型的上下文策略、摘要及压缩检查点
 
 升级注意：
 
@@ -35,6 +36,7 @@ Ayaka Chats 仅支持 SQLite。空库与已使用本项目 migration 的数据�
 - **模型定价页**：本地组件、全宽表格，支持搜索 / 免费过滤 / 排序
 - **登录页**：Ayaka 品牌轮播、邀请制提示与联系入口
 - **欢迎页**：未选会话时引导新建聊天 / 临时聊天
+- **上下文管理**：输入区显示用量与剩余空间；自动摘要较早对话，支持手动压缩、调整保留消息数、查看摘要和恢复完整上下文。详见[使用说明](./doc/zh-CN/context-management.md)。
 
 ### 🛠️ 开发工具链
 
