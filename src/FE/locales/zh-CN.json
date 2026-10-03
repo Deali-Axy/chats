@@ -1126,5 +1126,18 @@
   "Context operation failed": "上下文操作失败",
   "Unable to load context usage": "无法加载上下文用量",
   "Context for model": "查看模型上下文",
-  "Context compaction is unavailable for image generation models.": "图像生成模型不支持上下文压缩。"
+  "Context compaction is unavailable for image generation models.": "图像生成模型不支持上下文压缩。",
+  "Create conversation from summary": "从摘要创建新对话",
+  "Review or edit the context to carry forward. It becomes the first visible message in the new conversation; the model responds when you send your next request. Unsent drafts stay in the source conversation.": "查看、编辑要带入的上下文。摘要将作为新对话的第一条可见消息；发送下一条请求后模型才会回答。尚未发送的草稿不会带入。",
+  "New conversation title": "新对话标题",
+  "Continue · {{title}}": "继续 · {{title}}",
+  "Loading context summary…": "正在加载上下文摘要…",
+  "The existing summary only covers earlier messages. Generate a handoff summary to include recent progress, or review and complete the text yourself.": "现有压缩摘要仅包含较早消息。生成交接摘要可纳入最近进展，也可以自行检查、补充下方内容。",
+  "Context to carry forward": "带入新对话的上下文",
+  "Generate a handoff summary, or enter the context you want to carry forward.": "生成交接摘要，或填写要带入新对话的上下文。",
+  "The new conversation inherits this model, prompt, tool configuration and context settings. Files and running tool sessions remain in the source conversation. Generating a fresh summary uses the current model and incurs usage charges.": "新对话继承当前模型、提示词、工具配置和上下文设置。文件及运行中的工具会话保留在来源对话。生成新摘要会使用当前模型，并产生相应模型用量。",
+  "Generate handoff summary": "生成交接摘要",
+  "Generating handoff summary…": "正在生成交接摘要…",
+  "Create and continue": "创建并继续",
+  "New conversation created with the context summary": "已创建新对话，并带入上下文摘要"
 }

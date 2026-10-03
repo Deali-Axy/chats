@@ -3,7 +3,7 @@ import { Dispatch, SetStateAction, createContext } from 'react';
 import { ActionType } from '@/hooks/useCreateReducer';
 
 import { CHATS_SELECT_TYPE, IChat, IChatPaging } from '@/types/chat';
-import { GetChatsParams } from '@/types/clientApis';
+import { ChatResult, GetChatsParams } from '@/types/clientApis';
 import { IChatGroup } from '@/types/group';
 import { Prompt, PromptSlim } from '@/types/prompt';
 import { getSettings } from '@/utils/settings';
@@ -112,6 +112,7 @@ export interface HomeContextProps {
   setTempChat: Dispatch<SetStateAction<IChat | null>>;
   handleDeleteChat: (ids: string[]) => void;
   handleSelectChat: (chat: IChat) => void;
+  handleOpenCreatedChat: (chat: ChatResult) => void;
   handleUpdateChat: (
     chats: IChat[],
     id: string,

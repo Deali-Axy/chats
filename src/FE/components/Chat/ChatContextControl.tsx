@@ -2,6 +2,7 @@ import {
   AlertCircle,
   CheckCircle2,
   Loader2,
+  MessageSquarePlus,
   Minimize2,
   RotateCcw,
 } from 'lucide-react';
@@ -21,6 +22,8 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
+
+import ContextHandoffDialog from './ContextHandoffDialog';
 
 import {
   compactChatContext,
@@ -54,6 +57,15 @@ export default function ChatContextControl({
   const [busy, setBusy] = useState(false);
   const [refresh, setRefresh] = useState(0);
   const [notice, setNotice] = useState<ChatContextEvent['stage']>('ready');
+  const [popoverOpen, setPopoverOpen] = useState(false);
+  const [handoffOpen, setHandoffOpen] = useState(false);
+  const handleHandoffBusy = useCallback(
+    (value: boolean) => {
+      setBusy(value);
+      onBusyChange(value);
+    },
+    [onBusyChange],
+  );
   const [selection, setSelection] = useState<{
     chatId: string;
     spanId: number;
@@ -85,6 +97,7 @@ export default function ChatContextControl({
     setError(null);
     setNotice('ready');
     setBusy(false);
+    setHandoffOpen(false);
     return () => {
       operationRef.current?.abort();
       onBusyChange(false);
@@ -243,292 +256,324 @@ export default function ChatContextControl({
     : null;
 
   return (
-    <div className="border-t border-border/40 px-3 py-1.5 text-xs">
-      <div className="flex items-center justify-between gap-2">
-        <div
-          role="status"
-          aria-live="polite"
-          className={cn(
-            'flex min-w-0 items-center gap-1.5 text-muted-foreground',
-            error && 'text-destructive',
-            nearLimit && !error && 'text-amber-600 dark:text-amber-400',
-          )}
-        >
-          {compacting ? (
-            <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
-          ) : error || nearLimit ? (
-            <AlertCircle className="h-3.5 w-3.5 shrink-0" />
-          ) : status?.compactedTurns ? (
-            <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
-          ) : null}
-          <span className="truncate" title={noticeText ?? undefined}>
-            {noticeText ?? t('Context usage')}
-          </span>
-        </div>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="ghost"
-              size="xs"
-              className="shrink-0 gap-1.5 text-xs"
-              aria-label={t('View and manage context')}
-            >
-              <svg
-                viewBox="0 0 20 20"
-                className={cn(
-                  'h-4 w-4 -rotate-90 text-primary',
-                  nearLimit && 'text-amber-500',
-                  overBudget && 'text-destructive',
-                )}
-                aria-hidden="true"
-              >
-                <circle
-                  cx="10"
-                  cy="10"
-                  r="7"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  opacity="0.15"
-                />
-                <circle
-                  cx="10"
-                  cy="10"
-                  r="7"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2.5"
-                  strokeDasharray={`${percent * 0.44} 44`}
-                  strokeLinecap="round"
-                />
-              </svg>
-              {status
-                ? t('{{percent}}% context left', { percent: 100 - percent })
-                : t('Context')}
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent
-            side="top"
-            align="end"
-            className="w-[min(400px,calc(100vw-24px))] max-h-[70vh] overflow-y-auto p-4 space-y-4"
+    <>
+      <div className="border-t border-border/40 px-3 py-1.5 text-xs">
+        <div className="flex items-center justify-between gap-2">
+          <div
+            role="status"
+            aria-live="polite"
+            className={cn(
+              'flex min-w-0 items-center gap-1.5 text-muted-foreground',
+              error && 'text-destructive',
+              nearLimit && !error && 'text-amber-600 dark:text-amber-400',
+            )}
           >
-            {selectedChat.spans.length > 1 && (
-              <label className="flex items-center justify-between gap-3 text-sm">
-                <span>{t('Context for model')}</span>
-                <select
-                  aria-label={t('Context for model')}
-                  className="h-8 max-w-[65%] rounded-md border bg-background px-2"
-                  value={spanId}
-                  disabled={busy}
-                  onChange={(e) =>
-                    setSelection({
-                      chatId: selectedChat.id,
-                      spanId: Number(e.target.value),
-                    })
-                  }
-                >
-                  {selectedChat.spans.map((span) => (
-                    <option key={span.spanId} value={span.spanId}>
-                      {span.modelName} · {span.spanId + 1}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            )}
-            {status?.supported === false && (
-              <p className="text-xs text-muted-foreground">
-                {t(
-                  'Context compaction is unavailable for image generation models.',
-                )}
-              </p>
-            )}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm font-medium">
-                <span>{t('Context window')}</span>
-                <span>
-                  {percent}% {t('used')}
-                </span>
-              </div>
-              <div
-                role="progressbar"
-                aria-label={t('Context usage')}
-                aria-valuenow={percent}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                className="h-2 overflow-hidden rounded-full bg-muted"
+            {compacting ? (
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+            ) : error || nearLimit ? (
+              <AlertCircle className="h-3.5 w-3.5 shrink-0" />
+            ) : status?.compactedTurns ? (
+              <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
+            ) : null}
+            <span className="truncate" title={noticeText ?? undefined}>
+              {noticeText ?? t('Context usage')}
+            </span>
+          </div>
+          <Popover open={popoverOpen} onOpenChange={setPopoverOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="ghost"
+                size="xs"
+                className="shrink-0 gap-1.5 text-xs"
+                aria-label={t('View and manage context')}
               >
-                <div
+                <svg
+                  viewBox="0 0 20 20"
                   className={cn(
-                    'h-full rounded-full bg-primary transition-[width]',
-                    nearLimit && 'bg-amber-500',
-                    overBudget && 'bg-destructive',
+                    'h-4 w-4 -rotate-90 text-primary',
+                    nearLimit && 'text-amber-500',
+                    overBudget && 'text-destructive',
                   )}
-                  style={{ width: `${percent}%` }}
-                />
-              </div>
-              {status && (
+                  aria-hidden="true"
+                >
+                  <circle
+                    cx="10"
+                    cy="10"
+                    r="7"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    opacity="0.15"
+                  />
+                  <circle
+                    cx="10"
+                    cy="10"
+                    r="7"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeDasharray={`${percent * 0.44} 44`}
+                    strokeLinecap="round"
+                  />
+                </svg>
+                {status
+                  ? t('{{percent}}% context left', { percent: 100 - percent })
+                  : t('Context')}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="end"
+              className="w-[min(400px,calc(100vw-24px))] max-h-[70vh] overflow-y-auto p-4 space-y-4"
+            >
+              {selectedChat.spans.length > 1 && (
+                <label className="flex items-center justify-between gap-3 text-sm">
+                  <span>{t('Context for model')}</span>
+                  <select
+                    aria-label={t('Context for model')}
+                    className="h-8 max-w-[65%] rounded-md border bg-background px-2"
+                    value={spanId}
+                    disabled={busy}
+                    onChange={(e) =>
+                      setSelection({
+                        chatId: selectedChat.id,
+                        spanId: Number(e.target.value),
+                      })
+                    }
+                  >
+                    {selectedChat.spans.map((span) => (
+                      <option key={span.spanId} value={span.spanId}>
+                        {span.modelName} · {span.spanId + 1}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              {status?.supported === false && (
                 <p className="text-xs text-muted-foreground">
-                  {t('Estimated {{used}} / {{total}} tokens', {
-                    used: format(status.estimatedTokens),
-                    total: format(status.contextWindow),
-                  })}
+                  {t(
+                    'Context compaction is unavailable for image generation models.',
+                  )}
                 </p>
               )}
-              <p className="text-xs text-muted-foreground">
-                {t(
-                  'Estimates include this draft. Actual usage varies by model and attachments.',
-                )}
-              </p>
-            </div>
-            {status && (
-              <>
-                <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
-                  {[
-                    [t('System instructions'), status.systemTokens],
-                    [t('Tool definitions'), status.toolsTokens],
-                    [t('Recent conversation'), status.historyTokens],
-                    [t('Conversation summary'), status.summaryTokens],
-                    [t('Current draft'), status.draftTokens],
-                    [t('Reserved for output'), status.reservedOutputTokens],
-                  ].map(([label, value]) => (
-                    <div key={label} className="contents">
-                      <dt className="text-muted-foreground">{label}</dt>
-                      <dd className="text-right tabular-nums">
-                        {format(value as number)}
-                      </dd>
-                    </div>
-                  ))}
-                </dl>
-                <div className="space-y-3 border-t pt-3">
-                  <label className="flex items-center justify-between gap-3 text-sm">
-                    <span>{t('Automatic context compaction')}</span>
-                    <Switch
-                      aria-label={t('Automatic context compaction')}
-                      checked={status.autoCompactEnabled}
-                      disabled={busy || chatting || !status.supported}
-                      onCheckedChange={(value) =>
-                        void runAction(
-                          'settings',
-                          value,
-                          status.keepRecentTurns,
-                        )
-                      }
-                    />
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    {t(
-                      'Compacts at 80% of the input budget, with space reserved for output. Summarization uses the current model and may incur usage charges.',
-                    )}
-                  </p>
-                  <label className="flex items-center justify-between gap-3 text-sm">
-                    <span>{t('Recent messages to keep')}</span>
-                    <select
-                      className="h-8 rounded-md border bg-background px-2"
-                      aria-label={t('Recent messages to keep')}
-                      value={status.keepRecentTurns}
-                      disabled={busy || chatting}
-                      onChange={(e) =>
-                        void runAction(
-                          'settings',
-                          status.autoCompactEnabled,
-                          Number(e.target.value),
-                        )
-                      }
-                    >
-                      {[2, 4, 6, 8, 12, 20].map((value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <p className="text-xs text-muted-foreground">
-                    {t(
-                      'Each user or assistant message counts once. Tool calls and results stay together. Keeping more messages restores full history before applying the new policy.',
-                    )}
-                  </p>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm font-medium">
+                  <span>{t('Context window')}</span>
+                  <span>
+                    {percent}% {t('used')}
+                  </span>
                 </div>
-                {status.summary && (
-                  <details className="rounded-md border p-2.5 text-xs">
-                    <summary className="cursor-pointer font-medium">
-                      {t('View conversation summary')} · {status.compactedTurns}{' '}
-                      {t('messages')}
-                    </summary>
-                    {status.compactedAt && (
-                      <p className="mt-2 text-muted-foreground">
-                        {new Date(status.compactedAt).toLocaleString()}
-                      </p>
+                <div
+                  role="progressbar"
+                  aria-label={t('Context usage')}
+                  aria-valuenow={percent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  className="h-2 overflow-hidden rounded-full bg-muted"
+                >
+                  <div
+                    className={cn(
+                      'h-full rounded-full bg-primary transition-[width]',
+                      nearLimit && 'bg-amber-500',
+                      overBudget && 'bg-destructive',
                     )}
-                    {status.beforeTokens != null &&
-                      status.afterTokens != null && (
-                        <p className="mt-1 text-muted-foreground">
-                          {format(status.beforeTokens)} →{' '}
-                          {format(status.afterTokens)} tokens
-                        </p>
-                      )}
-                    <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words font-sans leading-relaxed">
-                      {status.summary}
-                    </pre>
-                  </details>
+                    style={{ width: `${percent}%` }}
+                  />
+                </div>
+                {status && (
+                  <p className="text-xs text-muted-foreground">
+                    {t('Estimated {{used}} / {{total}} tokens', {
+                      used: format(status.estimatedTokens),
+                      total: format(status.contextWindow),
+                    })}
+                  </p>
                 )}
                 <p className="text-xs text-muted-foreground">
                   {t(
-                    'Compaction summarizes older messages and attachment references. Some details may be lost. Original messages remain available in the conversation.',
+                    'Estimates include this draft. Actual usage varies by model and attachments.',
                   )}
                 </p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    size="sm"
-                    disabled={busy || chatting || !status.canCompact}
-                    onClick={() => void runAction('compact')}
-                  >
-                    <Minimize2 />
-                    {t('Compact now')}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={busy || chatting || !status.summary}
-                    onClick={() => void runAction('reset')}
-                  >
-                    <RotateCcw />
-                    {t('Restore full context')}
-                  </Button>
-                  {busy && notice === 'started' && (
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => operationRef.current?.abort()}
-                    >
-                      {t('Cancel')}
-                    </Button>
+              </div>
+              {status && (
+                <>
+                  <dl className="grid grid-cols-2 gap-x-3 gap-y-1.5 text-xs">
+                    {[
+                      [t('System instructions'), status.systemTokens],
+                      [t('Tool definitions'), status.toolsTokens],
+                      [t('Recent conversation'), status.historyTokens],
+                      [t('Conversation summary'), status.summaryTokens],
+                      [t('Current draft'), status.draftTokens],
+                      [t('Reserved for output'), status.reservedOutputTokens],
+                    ].map(([label, value]) => (
+                      <div key={label} className="contents">
+                        <dt className="text-muted-foreground">{label}</dt>
+                        <dd className="text-right tabular-nums">
+                          {format(value as number)}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                  <div className="space-y-3 border-t pt-3">
+                    <label className="flex items-center justify-between gap-3 text-sm">
+                      <span>{t('Automatic context compaction')}</span>
+                      <Switch
+                        aria-label={t('Automatic context compaction')}
+                        checked={status.autoCompactEnabled}
+                        disabled={busy || chatting || !status.supported}
+                        onCheckedChange={(value) =>
+                          void runAction(
+                            'settings',
+                            value,
+                            status.keepRecentTurns,
+                          )
+                        }
+                      />
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        'Compacts at 80% of the input budget, with space reserved for output. Summarization uses the current model and may incur usage charges.',
+                      )}
+                    </p>
+                    <label className="flex items-center justify-between gap-3 text-sm">
+                      <span>{t('Recent messages to keep')}</span>
+                      <select
+                        className="h-8 rounded-md border bg-background px-2"
+                        aria-label={t('Recent messages to keep')}
+                        value={status.keepRecentTurns}
+                        disabled={busy || chatting}
+                        onChange={(e) =>
+                          void runAction(
+                            'settings',
+                            status.autoCompactEnabled,
+                            Number(e.target.value),
+                          )
+                        }
+                      >
+                        {[2, 4, 6, 8, 12, 20].map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        'Each user or assistant message counts once. Tool calls and results stay together. Keeping more messages restores full history before applying the new policy.',
+                      )}
+                    </p>
+                  </div>
+                  {status.summary && (
+                    <details className="rounded-md border p-2.5 text-xs">
+                      <summary className="cursor-pointer font-medium">
+                        {t('View conversation summary')} ·{' '}
+                        {status.compactedTurns} {t('messages')}
+                      </summary>
+                      {status.compactedAt && (
+                        <p className="mt-2 text-muted-foreground">
+                          {new Date(status.compactedAt).toLocaleString()}
+                        </p>
+                      )}
+                      {status.beforeTokens != null &&
+                        status.afterTokens != null && (
+                          <p className="mt-1 text-muted-foreground">
+                            {format(status.beforeTokens)} →{' '}
+                            {format(status.afterTokens)} tokens
+                          </p>
+                        )}
+                      <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words font-sans leading-relaxed">
+                        {status.summary}
+                      </pre>
+                    </details>
                   )}
-                </div>
-                {!status.canCompact && !status.summary && (
                   <p className="text-xs text-muted-foreground">
                     {t(
-                      'More completed conversation is needed before older messages can be compacted.',
+                      'Compaction summarizes older messages and attachment references. Some details may be lost. Original messages remain available in the conversation.',
                     )}
                   </p>
-                )}
-              </>
-            )}
-            {error && (
-              <div role="alert" className="space-y-2 text-xs text-destructive">
-                <p>{error}</p>
-                <Button
-                  size="xs"
-                  variant="outline"
-                  disabled={busy || chatting}
-                  onClick={() => setRefresh((value) => value + 1)}
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      disabled={busy || chatting || !status.canCompact}
+                      onClick={() => void runAction('compact')}
+                    >
+                      <Minimize2 />
+                      {t('Compact now')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={busy || chatting || !status.summary}
+                      onClick={() => void runAction('reset')}
+                    >
+                      <RotateCcw />
+                      {t('Restore full context')}
+                    </Button>
+                    {busy && notice === 'started' && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => operationRef.current?.abort()}
+                      >
+                        {t('Cancel')}
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        busy ||
+                        chatting ||
+                        !status.supported ||
+                        !selectedMessages.length
+                      }
+                      onClick={() => {
+                        setPopoverOpen(false);
+                        setHandoffOpen(true);
+                      }}
+                    >
+                      <MessageSquarePlus />
+                      {t('Create conversation from summary')}
+                    </Button>
+                  </div>
+                  {!status.canCompact && !status.summary && (
+                    <p className="text-xs text-muted-foreground">
+                      {t(
+                        'More completed conversation is needed before older messages can be compacted.',
+                      )}
+                    </p>
+                  )}
+                </>
+              )}
+              {error && (
+                <div
+                  role="alert"
+                  className="space-y-2 text-xs text-destructive"
                 >
-                  {t('Retry')}
-                </Button>
-              </div>
-            )}
-          </PopoverContent>
-        </Popover>
+                  <p>{error}</p>
+                  <Button
+                    size="xs"
+                    variant="outline"
+                    disabled={busy || chatting}
+                    onClick={() => setRefresh((value) => value + 1)}
+                  >
+                    {t('Retry')}
+                  </Button>
+                </div>
+              )}
+            </PopoverContent>
+          </Popover>
+        </div>
       </div>
-    </div>
+      <ContextHandoffDialog
+        key={`${chatId}-${spanId}-${leafMessageId}`}
+        open={handoffOpen}
+        onOpenChange={setHandoffOpen}
+        onBusyChange={handleHandoffBusy}
+        chatId={selectedChat.id}
+        chatTitle={selectedChat.title}
+        spanId={spanId}
+        leafMessageId={leafMessageId}
+      />
+    </>
   );
 }

@@ -409,6 +409,14 @@ const HomeContent = () => {
     router.push('#/' + chat.id);
   };
 
+  const handleOpenCreatedChat = (data: ChatResult) => {
+    const chat = supplyChatProperty(data);
+    const nextChats = [chat, ...chatsRef.current.filter((item) => item.id !== chat.id)];
+    chatsRef.current = nextChats;
+    chatDispatch(setChats(nextChats));
+    handleSelectChat(chat);
+  };
+
   /** 结束临时对话：删除临时聊天并回到欢迎页面 */
   const handleEndTempChat = () => {
     // 兼容 tempChatIdRef 为空的情况（如页面刷新后 ref 丢失）
@@ -670,6 +678,7 @@ const HomeContent = () => {
 
         handleNewChat,
         handleCreateChat,
+        handleOpenCreatedChat,
         handleNewTempChat,
         handleEndTempChat,
         tempChat,

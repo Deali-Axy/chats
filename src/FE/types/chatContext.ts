@@ -29,3 +29,9 @@ export interface ChatContextEvent {
   stage: 'ready' | 'started' | 'completed' | 'failed';
   error?: string | null;
 }
+
+export interface ContextHandoffPreview {
+  summary: string | null;
+  sourceHash: string;
+  includesRecentMessages: boolean;
+}

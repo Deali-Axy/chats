@@ -1,7 +1,8 @@
 import { getApiUrl } from '@/utils/common';
 import { getUserSession } from '@/utils/user';
 
-import { ChatContextStatus } from '@/types/chatContext';
+import { ChatContextStatus, ContextHandoffPreview } from '@/types/chatContext';
+import { ChatResult } from '@/types/clientApis';
 
 async function request<T>(
   chatId: string,
@@ -77,4 +78,37 @@ export const updateChatContextSettings = (
   request<void>(chatId, `settings?spanId=${spanId}`, 'PUT', {
     autoCompactEnabled,
     keepRecentTurns,
+  });
+
+export const previewContextHandoff = (
+  chatId: string,
+  spanId: number,
+  leafMessageId: string | null,
+  generateSummary: boolean,
+  signal?: AbortSignal,
+) =>
+  request<ContextHandoffPreview>(
+    chatId,
+    'handoff/preview',
+    'POST',
+    { spanId, leafMessageId, generateSummary },
+    signal,
+  );
+
+export const createContextHandoff = (
+  chatId: string,
+  spanId: number,
+  leafMessageId: string | null,
+  sourceHash: string,
+  summary: string,
+  title: string,
+  language: string,
+) =>
+  request<ChatResult>(chatId, 'handoff', 'POST', {
+    spanId,
+    leafMessageId,
+    sourceHash,
+    summary,
+    title,
+    language,
   });
