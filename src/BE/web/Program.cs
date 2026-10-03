@@ -129,6 +129,7 @@ public class Program
         builder.Services.AddScoped<ChatTitleSummaryService>();
         builder.Services.AddScoped<Chats.BE.Services.ChatContext.IContextSummarizer, Chats.BE.Services.ChatContext.ContextSummarizer>();
         builder.Services.AddScoped<Chats.BE.Services.ChatContext.ChatContextService>();
+        builder.Services.AddScoped<Chats.BE.Services.ChatContext.ChatContextHandoffService>();
 
         builder.Services.Configure<CodePodConfig>(builder.Configuration.GetSection("CodePod"));
         builder.Services.Configure<RequestTraceQueueOptions>(builder.Configuration.GetSection("RequestTraceQueue"));

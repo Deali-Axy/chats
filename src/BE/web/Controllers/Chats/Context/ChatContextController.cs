@@ -1,5 +1,6 @@
 using Chats.BE.Infrastructure;
 using Chats.BE.Controllers.Chats.Chats;
+using Chats.BE.Controllers.Chats.UserChats.Dtos;
 using Chats.BE.Services;
 using Chats.BE.Services.ChatContext;
 using Chats.BE.Services.CodeInterpreter;
@@ -15,12 +16,57 @@ namespace Chats.BE.Controllers.Chats.Context;
 
 [ApiController, Authorize, Route("api/chat/{encryptedChatId}/context")]
 public sealed class ChatContextController(ChatsDB db, CurrentUser currentUser, IUrlEncryptionService encryption,
-    UserModelManager userModelManager, ChatContextService contextService, CodeInterpreterExecutor codeInterpreter) : ControllerBase
+    UserModelManager userModelManager, ChatContextService contextService, CodeInterpreterExecutor codeInterpreter,
+    ChatContextHandoffService handoffService) : ControllerBase
 {
     public sealed record ContextSettingsRequest(bool AutoCompactEnabled, [Range(2, 20)] int KeepRecentTurns);
     public sealed record ContextRequest(byte SpanId, string? LeafMessageId);
     public sealed record ContextPreviewRequest(byte SpanId, string? LeafMessageId,
         [StringLength(2000000)] string? DraftText, [Range(0, 100)] int DraftFileCount = 0);
+    public sealed record HandoffPreviewRequest(byte SpanId, string? LeafMessageId, bool GenerateSummary = false);
+    public sealed record HandoffCreateRequest(byte SpanId, string? LeafMessageId,
+        [Required, StringLength(64, MinimumLength = 64)] string SourceHash,
+        [Required, StringLength(100000)] string Summary, [Required, StringLength(50)] string Title,
+        [RegularExpression("^(zh-CN|en)$")] string Language = "zh-CN");
+
+    [HttpPost("handoff/preview")]
+    public async Task<ActionResult<ContextHandoffPreview>> HandoffPreview(string encryptedChatId, HandoffPreviewRequest request, CancellationToken cancellationToken)
+    {
+        var loaded = await LoadAsync(encryptedChatId, request.SpanId, request.LeafMessageId, cancellationToken);
+        if (loaded.Error != null) return loaded.Error;
+        try
+        {
+            return Ok(await handoffService.PreviewAsync(loaded.Session!, loaded.UserModel!, request.GenerateSummary, cancellationToken));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or ChatServiceException)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
+
+    [HttpPost("handoff")]
+    public async Task<ActionResult<ChatsResponse>> Handoff(string encryptedChatId, HandoffCreateRequest request, CancellationToken cancellationToken)
+    {
+        var loaded = await LoadAsync(encryptedChatId, request.SpanId, request.LeafMessageId, cancellationToken);
+        if (loaded.Error != null) return loaded.Error;
+        try
+        {
+            Chat chat = await handoffService.CreateAsync(loaded.Session!, loaded.UserModel!, request.SourceHash,
+                request.Summary, request.Title, "/home#/" + encryptedChatId, request.Language, cancellationToken);
+            return Created(default(string), new ChatsResponse
+            {
+                Id = encryption.EncryptChatId(chat.Id), Title = chat.Title,
+                IsTopMost = false, IsShared = false, IsTemp = false,
+                GroupId = encryption.EncryptChatGroupId(chat.ChatGroupId), Tags = [],
+                Spans = [.. chat.ChatSpans.Select(ChatSpanDto.FromDB)],
+                LeafTurnId = encryption.EncryptTurnId(chat.LeafTurnId), UpdatedAt = chat.UpdatedAt,
+            });
+        }
+        catch (InvalidOperationException ex)
+        {
+            return BadRequest(new { message = ex.Message });
+        }
+    }
 
     [HttpPost("preview")]
     public async Task<ActionResult<ChatContextStatus>> Preview(string encryptedChatId, ContextPreviewRequest request, CancellationToken cancellationToken)
