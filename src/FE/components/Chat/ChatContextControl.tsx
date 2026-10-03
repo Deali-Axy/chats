@@ -21,6 +21,13 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 
 import ContextHandoffDialog from './ContextHandoffDialog';
@@ -72,6 +79,7 @@ export default function ChatContextControl({
   }>();
   const operationRef = useRef<AbortController | null>(null);
   const generationRef = useRef(0);
+  const nestedSelectOpenRef = useRef(false);
   const chatId = selectedChat?.id;
   const selectedSpan =
     selectedChat?.spans.find(
@@ -326,29 +334,44 @@ export default function ChatContextControl({
               side="top"
               align="end"
               className="w-[min(400px,calc(100vw-24px))] max-h-[70vh] overflow-y-auto p-4 space-y-4"
+              onInteractOutside={(event) => {
+                if (nestedSelectOpenRef.current) event.preventDefault();
+              }}
             >
               {selectedChat.spans.length > 1 && (
-                <label className="flex items-center justify-between gap-3 text-sm">
-                  <span>{t('Context for model')}</span>
-                  <select
-                    aria-label={t('Context for model')}
-                    className="h-8 max-w-[65%] rounded-md border bg-background px-2"
-                    value={spanId}
+                <div className="flex items-center justify-between gap-3 text-sm">
+                  <span className="shrink-0">{t('Context for model')}</span>
+                  <Select
+                    value={String(spanId)}
                     disabled={busy}
-                    onChange={(e) =>
+                    onOpenChange={(open) => {
+                      nestedSelectOpenRef.current = open;
+                    }}
+                    onValueChange={(value) =>
                       setSelection({
                         chatId: selectedChat.id,
-                        spanId: Number(e.target.value),
+                        spanId: Number(value),
                       })
                     }
                   >
-                    {selectedChat.spans.map((span) => (
-                      <option key={span.spanId} value={span.spanId}>
-                        {span.modelName} · {span.spanId + 1}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                    <SelectTrigger
+                      aria-label={t('Context for model')}
+                      className="h-8 w-[min(14rem,65%)] py-0 shadow-none [&>button]:h-8 [&>button]:py-0"
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="z-[100]">
+                      {selectedChat.spans.map((span) => (
+                        <SelectItem
+                          key={span.spanId}
+                          value={String(span.spanId)}
+                        >
+                          {span.modelName} · {span.spanId + 1}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               )}
               {status?.supported === false && (
                 <p className="text-xs text-muted-foreground">
@@ -435,28 +458,41 @@ export default function ChatContextControl({
                         'Compacts at 80% of the input budget, with space reserved for output. Summarization uses the current model and may incur usage charges.',
                       )}
                     </p>
-                    <label className="flex items-center justify-between gap-3 text-sm">
-                      <span>{t('Recent messages to keep')}</span>
-                      <select
-                        className="h-8 rounded-md border bg-background px-2"
-                        aria-label={t('Recent messages to keep')}
-                        value={status.keepRecentTurns}
+                    <div className="flex items-center justify-between gap-3 text-sm">
+                      <span className="shrink-0">
+                        {t('Recent messages to keep')}
+                      </span>
+                      <Select
+                        value={String(status.keepRecentTurns)}
                         disabled={busy || chatting}
-                        onChange={(e) =>
+                        onOpenChange={(open) => {
+                          nestedSelectOpenRef.current = open;
+                        }}
+                        onValueChange={(value) => {
+                          const next = Number(value);
+                          if (next === status.keepRecentTurns) return;
                           void runAction(
                             'settings',
                             status.autoCompactEnabled,
-                            Number(e.target.value),
-                          )
-                        }
+                            next,
+                          );
+                        }}
                       >
-                        {[2, 4, 6, 8, 12, 20].map((value) => (
-                          <option key={value} value={value}>
-                            {value}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                        <SelectTrigger
+                          aria-label={t('Recent messages to keep')}
+                          className="h-8 w-[5rem] py-0 shadow-none [&>button]:h-8 [&>button]:py-0"
+                        >
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent align="end" className="z-[100]">
+                          {[2, 4, 6, 8, 12, 20].map((value) => (
+                            <SelectItem key={value} value={String(value)}>
+                              {value}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                     <p className="text-xs text-muted-foreground">
                       {t(
                         'Each user or assistant message counts once. Tool calls and results stay together. Keeping more messages restores full history before applying the new policy.',
