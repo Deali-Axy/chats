@@ -36,7 +36,7 @@ Upgrade notes:
 - **Model pricing**: local full-width page with search / free-only / sort
 - **Login**: Ayaka branding, carousel, invite-only copy and contact entry
 - **Empty state**: prompts for a new chat or a temporary chat
-- **Context management**: usage and remaining space in the composer, automatic summaries of older history, manual compaction, retention settings, summary inspection and full-context restoration. See the [usage guide (Chinese)](./doc/zh-CN/context-management.md).
+- **Context management**: usage and remaining space in the composer, automatic summaries of older history, manual compaction, retention settings, summary inspection, full-context restoration and new conversations seeded with editable handoff summaries. See the [usage guide (Chinese)](./doc/zh-CN/context-management.md).
 
 ### 🛠️ Developer Toolchain
 
