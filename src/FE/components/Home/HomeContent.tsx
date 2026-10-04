@@ -46,7 +46,7 @@ import {
 import { setMessages, setSelectedMessages } from '@/actions/message.actions';
 import { setModelMap, setModels } from '@/actions/model.actions';
 import { setDefaultPrompt, setPrompts } from '@/actions/prompt.actions';
-import { setChatBarWidth, setShowChatBar } from '@/actions/setting.actions';
+import { setChatBarWidth, setShowChatBar, setShowChatInput } from '@/actions/setting.actions';
 import {
   deleteChats,
   deleteTempChats,
@@ -699,6 +699,7 @@ const HomeContent = () => {
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
             <ChatErrorBoundary
               resetKey={selectedChatId}
+              onError={() => settingDispatch(setShowChatInput(true))}
               onReset={() => {
                 if (!selectedChatId) return;
                 const chat =

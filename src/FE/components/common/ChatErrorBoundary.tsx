@@ -8,6 +8,7 @@ interface Props {
   children: ReactNode;
   resetKey?: string;
   onReset?: () => void;
+  onError?: () => void;
 }
 
 interface State {
@@ -23,6 +24,7 @@ class ChatErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Chat view crashed:', error, info.componentStack);
+    this.props.onError?.();
   }
 
   componentDidUpdate(prevProps: Props) {
