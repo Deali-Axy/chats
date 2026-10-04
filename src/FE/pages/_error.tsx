@@ -1,5 +1,7 @@
 import React from 'react';
 
+import type { NextPageContext } from 'next';
+
 import useTranslation from '@/hooks/useTranslation';
 
 const Custom404 = () => {
@@ -14,9 +16,10 @@ const Custom404 = () => {
   );
 };
 
-const ErrorPage = ({ statusCode = 404 }: { statusCode?: number }) => {
+const ErrorPage = ({ statusCode }: { statusCode?: number }) => {
   const { t } = useTranslation();
-  if (statusCode === 404) {
+  const code = statusCode || 500;
+  if (code === 404) {
     return <Custom404 />;
   }
 
@@ -28,6 +31,14 @@ const ErrorPage = ({ statusCode = 404 }: { statusCode?: number }) => {
       </p>
     </div>
   );
+};
+
+ErrorPage.getInitialProps = ({ res, err }: NextPageContext) => {
+  const statusCode =
+    res?.statusCode ??
+    (err as { statusCode?: number } | null | undefined)?.statusCode ??
+    (err ? 500 : 404);
+  return { statusCode };
 };
 
 export default ErrorPage;
