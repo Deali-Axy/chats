@@ -7,6 +7,9 @@ const withPWA = require('next-pwa')({
   register: !isDev,
   skipWaiting: !isDev,
   disable: isDev,
+  // Next.js emits this build manifest but does not publish it in the static export.
+  // Precaching its missing URL would abort installation of the entire worker.
+  buildExcludes: [/dynamic-css-manifest\.json$/],
 });
 
 /** @type {import('next').NextConfig} */
