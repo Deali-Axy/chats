@@ -502,6 +502,8 @@
   "Sorry, we couldn't find the page you were trying to access.": "抱歉，我们找不到你要访问的页面。",
   "An error has occurred": "发生错误",
   "Sorry, there was an unexpected error, please try again later.": "抱歉，出现了意外错误，请稍后再试。",
+  "This conversation could not be displayed.": "这条对话无法显示。",
+  "Reload conversation": "重新加载对话",
   "Local": "本地",
   "Minio": "Minio",
   "AWS S3": "AWS S3",

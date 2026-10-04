@@ -31,6 +31,7 @@ import { IChatGroup } from '@/types/group';
 
 import Chat from '../Chat/ChatView';
 import Chatbar from '../Chatbar/Chatbar';
+import ChatErrorBoundary from '../common/ChatErrorBoundary';
 import ReleaseAnnouncementDialog from '../Poster/ReleaseAnnouncementDialog';
 
 import {
@@ -695,7 +696,20 @@ const HomeContent = () => {
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-sm">
         <div className="flex h-full w-full bg-background">
           <Chatbar />
-          <Chat />
+          <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
+            <ChatErrorBoundary
+              resetKey={selectedChatId}
+              onReset={() => {
+                if (!selectedChatId) return;
+                const chat =
+                  chatsRef.current.find((item) => item.id === selectedChatId) ??
+                  tempChat;
+                loadMessagesForChat(selectedChatId, chat?.leafMessageId);
+              }}
+            >
+              <Chat />
+            </ChatErrorBoundary>
+          </div>
         </div>
       </div>
       <ReleaseAnnouncementDialog />
