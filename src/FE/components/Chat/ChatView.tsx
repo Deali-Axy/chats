@@ -1857,10 +1857,11 @@ const ChatView = memo(() => {
     void handleSend(pendingInitialMessage);
   }, [handleSend, pendingInitialMessage, selectedChat]);
 
+  // min-h-0 keeps long messages and the input spacer from expanding this flex item beyond the viewport.
   // 如果没有选中的聊天，显示NoChat或NoModel组件
   if (!selectedChat) {
     return (
-      <div className="relative flex-1">
+      <div className="relative min-h-0 flex-1">
         <div className="flex h-full flex-col">
           <ChatHeader />
           <div
@@ -1880,7 +1881,7 @@ const ChatView = memo(() => {
 
   return (
     <div
-      className={`relative flex-1 min-w-0${
+      className={`relative min-h-0 flex-1 min-w-0${
         selectedChat.isTemp ? ' bg-amber-50/40 dark:bg-amber-950/15' : ''
       }`}
     >

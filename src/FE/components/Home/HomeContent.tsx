@@ -694,7 +694,7 @@ const HomeContent = () => {
       }}
     >
       <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-sm">
-        <div className="flex h-full w-full bg-background">
+        <div className="flex min-h-0 flex-1 w-full bg-background">
           <Chatbar />
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">
             <ChatErrorBoundary
