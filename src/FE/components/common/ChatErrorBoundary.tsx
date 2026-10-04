@@ -1,6 +1,7 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
 
 import { translate } from '@/hooks/useTranslation';
+import { reportChatDiagnostic } from '@/utils/chatDiagnostics';
 
 import { Button } from '@/components/ui/button';
 
@@ -24,6 +25,7 @@ class ChatErrorBoundary extends Component<Props, State> {
 
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.error('Chat view crashed:', error, info.componentStack);
+    reportChatDiagnostic('render', this.props.resetKey, error, info.componentStack);
     this.props.onError?.();
   }
 

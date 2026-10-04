@@ -14,6 +14,7 @@ internal static class CORS
                       .WithOrigins(frontendUrl, "http://localhost:12836")
                       .AllowAnyMethod()
                       .AllowAnyHeader()
+                      .WithExposedHeaders("X-Chat-Trace-Id")
                       .AllowCredentials()
                       .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
             });

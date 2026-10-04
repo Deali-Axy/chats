@@ -361,6 +361,7 @@ public class ChatController(
         Response.Headers.ContentType = "text/event-stream";
         Response.Headers.CacheControl = "no-store, no-cache, must-revalidate, max-age=0";
         Response.Headers.Connection = "keep-alive";
+        Response.Headers["X-Chat-Trace-Id"] = HttpContext.TraceIdentifier;
         string stopId = stopService.CreateAndCombineCancellationToken(ref cancellationToken);
         await YieldResponse(new StopIdLine(stopId));
 

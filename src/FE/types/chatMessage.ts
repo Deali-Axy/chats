@@ -60,6 +60,11 @@ interface SseResponseLineResponseMessage {
   r: IChatMessage; // Result is ChatMessage
 }
 
+interface SseResponseLineChatLeafMessageId {
+  k: SseResponseKind.ChatLeafMessageId;
+  r: string;
+}
+
 interface SseResponseLineUpdateTitle {
   k: SseResponseKind.UpdateTitle; // Kind is UpdateTitle
   r: string; // Result is a string
@@ -143,6 +148,7 @@ export type SseResponseLine =
   | SseResponseLineError
   | SseResponseLineUserMessage
   | SseResponseLineResponseMessage
+  | SseResponseLineChatLeafMessageId
   | SseResponseLineUpdateTitle
   | SseResponseLineTitleSegment
   | SseResponseLineReasoningSegment

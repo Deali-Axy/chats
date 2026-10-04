@@ -1,7 +1,8 @@
 import { getApiUrl } from '@/utils/common';
 import { getUserSession } from '@/utils/user';
+import { ChatStreamDiagnostic, reportChatDiagnostic, updateChatStreamDiagnostic } from '@/utils/chatDiagnostics';
 import { RequestContent } from '@/types/chat';
-import { SseResponseLine } from '@/types/chatMessage';
+import { SseResponseKind, SseResponseLine } from '@/types/chatMessage';
 
 export type ChatApiError = Error & {
   status?: number;
@@ -21,6 +22,10 @@ async function streamPost(path: string, body: unknown, options?: FetchOptions): 
     },
     body: JSON.stringify(body ?? {}),
     signal: options?.signal,
+  }).catch((error) => {
+    const chatId = (body as { chatId?: string } | null)?.chatId;
+    reportChatDiagnostic('stream-read', chatId, error);
+    throw error;
   });
 
   if (!res.ok) {
@@ -92,12 +97,24 @@ function postRegenerateAllAssistant(
   return streamPost('/api/chats/regenerate-all-assistant-message', body, options);
 }
 
-async function* parseSseResponse(res: Response): AsyncGenerator<SseResponseLine> {
+async function* parseSseResponse(res: Response, chatId: string): AsyncGenerator<SseResponseLine> {
+  const diagnostic: ChatStreamDiagnostic = {
+    chatId,
+    requestTraceId: res.headers.get('X-Chat-Trace-Id') ?? undefined,
+    eventCount: 0,
+  };
+  updateChatStreamDiagnostic(diagnostic);
   const data = res.body;
-  if (!data) return;
+  if (!data) {
+    reportChatDiagnostic('stream-incomplete', chatId);
+    throw new Error('The response stream ended unexpectedly. Reload this conversation to check the saved reply.');
+  }
   const reader = data.getReader();
   const decoder = new TextDecoder();
   let buffer = '';
+  let receivedLeaf = false;
+  let reportedIncomplete = false;
+  const pendingSpans = new Set<number>();
   
   try {
     while (true) {
@@ -136,19 +153,36 @@ async function* parseSseResponse(res: Response): AsyncGenerator<SseResponseLine>
         // 合并多行 data（SSE 规范：多个 data 行会用 \n 连接）
         const jsonString = dataLines.join('\n');
         
+        let obj: SseResponseLine;
         try {
-          const obj = JSON.parse(jsonString) as SseResponseLine;
-          yield obj;
-        } catch (e) {
-          console.error('Failed to parse SSE data:', jsonString, e);
+          obj = JSON.parse(jsonString) as SseResponseLine;
+          if (!obj || typeof obj.k !== 'number') throw new Error('Invalid SSE event');
+        } catch (error) {
+          reportChatDiagnostic('stream-parse', chatId, error);
+          continue;
         }
+        diagnostic.eventCount++;
+        diagnostic.lastEventKind = obj.k;
+        if (obj.k === SseResponseKind.StopId) diagnostic.stopId = obj.r;
+        if (obj.k === SseResponseKind.ChatLeafMessageId) receivedLeaf = true;
+        if ('i' in obj && obj.k !== SseResponseKind.Context) {
+          if (obj.k === SseResponseKind.ResponseMessage) pendingSpans.delete(obj.i);
+          else pendingSpans.add(obj.i);
+        }
+        updateChatStreamDiagnostic(diagnostic);
+        yield obj;
       }
     }
     
     // 流结束后，处理剩余的不完整数据
-    if (buffer.trim()) {
-      console.warn('SSE stream ended with incomplete data in buffer:', buffer);
+    if (buffer.trim() || !receivedLeaf || pendingSpans.size > 0) {
+      reportedIncomplete = true;
+      reportChatDiagnostic('stream-incomplete', chatId);
+      throw new Error('The response stream ended unexpectedly. Reload this conversation to check the saved reply.');
     }
+  } catch (error) {
+    if (!reportedIncomplete) reportChatDiagnostic('stream-read', chatId, error);
+    throw error;
   } finally {
     reader.releaseLock();
   }
@@ -159,7 +193,7 @@ export async function* streamGeneralChat(
   options?: FetchOptions,
 ): AsyncGenerator<SseResponseLine> {
   const res = await postGeneralChat(body, options);
-  yield* parseSseResponse(res);
+  yield* parseSseResponse(res, body.chatId);
 }
 
 export async function* streamRegenerateAssistant(
@@ -167,7 +201,7 @@ export async function* streamRegenerateAssistant(
   options?: FetchOptions,
 ): AsyncGenerator<SseResponseLine> {
   const res = await postRegenerateAssistant(body, options);
-  yield* parseSseResponse(res);
+  yield* parseSseResponse(res, body.chatId);
 }
 
 export async function* streamRegenerateAllAssistant(
@@ -175,5 +209,5 @@ export async function* streamRegenerateAllAssistant(
   options?: FetchOptions,
 ): AsyncGenerator<SseResponseLine> {
   const res = await postRegenerateAllAssistant(body, options);
-  yield* parseSseResponse(res);
+  yield* parseSseResponse(res, body.chatId);
 }

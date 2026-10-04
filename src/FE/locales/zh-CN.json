@@ -1,4 +1,5 @@
 {
+  "The response stream ended unexpectedly. Reload this conversation to check the saved reply.": "响应连接意外中断，请重新加载此会话查看已保存的回复。",
   "Stop Generating": "停止生成",
   "All": "全部",
   "Success": "成功",
