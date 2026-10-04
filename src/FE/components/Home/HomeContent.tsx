@@ -78,6 +78,32 @@ const HomeContent = () => {
   const router = useRouter();
   const { t } = useTranslation();
   const isMobile = useIsMobile();
+  const viewportRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    if (!viewport) return;
+    const updateViewport = () => {
+      // Keep the composer above mobile keyboards without following pinch zoom.
+      if (Math.abs(viewport.scale - 1) > 0.01) return;
+      viewportRef.current?.style.setProperty(
+        '--chat-viewport-height',
+        `${viewport.height}px`,
+      );
+      viewportRef.current?.style.setProperty(
+        '--chat-viewport-top',
+        `${viewport.offsetTop}px`,
+      );
+    };
+    updateViewport();
+    viewport.addEventListener('resize', updateViewport);
+    viewport.addEventListener('scroll', updateViewport);
+    return () => {
+      viewport.removeEventListener('resize', updateViewport);
+      viewport.removeEventListener('scroll', updateViewport);
+    };
+  }, []);
+
   const [chatState, chatDispatch] = useReducer(chatReducer, chatInitialState);
   const [messageState, messageDispatch] = useReducer(
     messageReducer,
@@ -693,7 +719,14 @@ const HomeContent = () => {
         getChatsByGroup,
       }}
     >
-      <div className="flex h-screen w-screen flex-col overflow-hidden bg-background text-sm">
+      <div
+        ref={viewportRef}
+        className="fixed inset-x-0 flex h-dvh w-full flex-col overflow-hidden bg-background text-sm"
+        style={{
+          height: 'var(--chat-viewport-height, 100dvh)',
+          top: 'var(--chat-viewport-top, 0px)',
+        }}
+      >
         <div className="flex min-h-0 flex-1 w-full bg-background">
           <Chatbar />
           <div className="relative flex min-h-0 min-w-0 flex-1 flex-col">

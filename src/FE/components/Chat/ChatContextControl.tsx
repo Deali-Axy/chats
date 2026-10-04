@@ -274,7 +274,7 @@ export default function ChatContextControl({
 
   return (
     <>
-      <div className="border-t border-border/40 px-3 py-1.5 text-xs">
+      <div className="shrink-0 border-t border-border/40 px-3 py-1.5 text-xs">
         <div className="flex items-center justify-between gap-2">
           <div
             role="status"

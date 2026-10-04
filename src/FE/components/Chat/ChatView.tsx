@@ -136,7 +136,6 @@ const ChatView = memo(() => {
   const [responseMessageMinHeight, setResponseMessageMinHeight] = useState<
     string | undefined
   >(undefined);
-  const [chatInputInsetPx, setChatInputInsetPx] = useState<number>(0);
   const [contextEvents, setContextEvents] = useState<Partial<Record<number, ChatContextEvent>>>({});
   const responseMessageSpacerPx = useMemo(() => {
     if (!responseMessageMinHeight) return 0;
@@ -148,18 +147,6 @@ const ChatView = memo(() => {
   useEffect(() => {
     responseMessageSpacerPxRef.current = responseMessageSpacerPx;
   }, [responseMessageSpacerPx]);
-
-  const chatInputInsetPxRef = useRef<number>(0);
-  useEffect(() => {
-    chatInputInsetPxRef.current = chatInputInsetPx;
-  }, [chatInputInsetPx]);
-
-  const handleChatInputHeightChange = useCallback((height: number) => {
-    setChatInputInsetPx((prev) => {
-      if (Math.abs(prev - height) <= 1) return prev;
-      return height;
-    });
-  }, []);
 
   useEffect(() => {
     autoScrollDisabledRef.current = autoScrollTemporarilyDisabled;
@@ -263,7 +250,7 @@ const ChatView = memo(() => {
       const bottomTolerance = 30;
       const effectiveScrollHeight = Math.max(
         0,
-        scrollHeight - responseMessageSpacerPx - chatInputInsetPx,
+        scrollHeight - responseMessageSpacerPx,
       );
 
       if (scrollTop + clientHeight < effectiveScrollHeight - bottomTolerance) {
@@ -276,7 +263,7 @@ const ChatView = memo(() => {
         }
       }
     }
-  }, [responseMessageSpacerPx, chatInputInsetPx]);
+  }, [responseMessageSpacerPx]);
 
   useEffect(() => {
     if (!selectedChat) return;
@@ -302,7 +289,6 @@ const ChatView = memo(() => {
   }, [
     autoScrollEnabled,
     responseMessageSpacerPx,
-    chatInputInsetPx,
     selectedChat,
     throttledScrollDown,
   ]);
@@ -1857,7 +1843,7 @@ const ChatView = memo(() => {
     void handleSend(pendingInitialMessage);
   }, [handleSend, pendingInitialMessage, selectedChat]);
 
-  // min-h-0 keeps long messages and the input spacer from expanding this flex item beyond the viewport.
+  // Messages scroll in the space left by the header and composer.
   // 如果没有选中的聊天，显示NoChat或NoModel组件
   if (!selectedChat) {
     return (
@@ -1917,13 +1903,6 @@ const ChatView = memo(() => {
                   onRegenerateAllAssistant={handleRegenerateAllAssistant}
                 />
 
-                <div
-                  style={{
-                    height: chatInputInsetPx
-                      ? `${chatInputInsetPx}px`
-                      : undefined,
-                  }}
-                />
                 <div ref={messagesEndRef} />
               </>
             )}
@@ -1942,7 +1921,6 @@ const ChatView = memo(() => {
               handleSend(message, lastMessage?.id);
             }}
             onChangePrompt={handleChangePrompt}
-            onHeightChange={handleChatInputHeightChange}
           />
         )}
       </div>

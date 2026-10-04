@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
 } from 'react';
@@ -68,7 +69,7 @@ const TEXTAREA_PADDING_Y = 16; // py-2 (8px * 2)
 const TEXTAREA_MIN_ROWS = 2.5;
 const TEXTAREA_MAX_ROWS = 10;
 const TEXTAREA_MIN_HEIGHT =
-  TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS + TEXTAREA_PADDING_Y; // 40px
+  TEXTAREA_LINE_HEIGHT * TEXTAREA_MIN_ROWS + TEXTAREA_PADDING_Y; // 76px
 const TEXTAREA_MAX_HEIGHT =
   TEXTAREA_LINE_HEIGHT * TEXTAREA_MAX_ROWS + TEXTAREA_PADDING_Y; // 256px
 const PROMPT_TRIGGER_PATTERN = /\/([^\s/]*)$/;
@@ -77,11 +78,10 @@ const PENDING_LIBRARY_FILE_KEY = 'ayaka.pendingLibraryFile';
 interface Props {
   onSend: (message: Message) => void;
   onChangePrompt: (prompt: Prompt) => void;
-  onHeightChange?: (height: number) => void;
   contextEvents?: Partial<Record<number, ChatContextEvent>>;
 }
 
-const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Props) => {
+const ChatInput = ({ onSend, onChangePrompt, contextEvents }: Props) => {
   const { t } = useTranslation();
 
   const {
@@ -94,7 +94,6 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const promptListRef = useRef<HTMLUListElement | null>(null);
   const inputContainerRef = useRef<HTMLDivElement>(null);
-  const rootContainerRef = useRef<HTMLDivElement>(null);
   const prevChatStatusRef = useRef<ChatStatus>(
     selectedChat?.status || ChatStatus.None,
   );
@@ -124,9 +123,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
   const [promptInputValue, setPromptInputValue] = useState('');
   const [isFullWriting, setIsFullWriting] = useState(false);
   const [isCollapsedByChat, setIsCollapsedByChat] = useState(false);
-  const [textareaHeight, setTextareaHeight] = useState<number | 'full'>(
-    TEXTAREA_MIN_HEIGHT,
-  );
+  const [textareaHeight, setTextareaHeight] = useState(TEXTAREA_MIN_HEIGHT);
   const [showFloatingControls, setShowFloatingControls] = useState(false);
   // 动画状态：
   // 'idle' - 无动画
@@ -173,16 +170,24 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
   }, []);
 
   // 非全屏模式下，根据内容更新高度
-  useEffect(() => {
+  useLayoutEffect(() => {
     if (isFullWriting) return;
     setTextareaHeight(getContentHeight());
-    if (textareaRef.current) {
-      textareaRef.current.style.overflow =
-        textareaRef.current.scrollHeight > TEXTAREA_MAX_HEIGHT
-          ? 'auto'
-          : 'hidden';
-    }
-  }, [contentText, contentFiles, isFullWriting, getContentHeight]);
+  }, [contentText, isFullWriting, renderExpanded, getContentHeight]);
+
+  // Recalculate wrapping after the viewport or sidebar changes width.
+  useEffect(() => {
+    const el = textareaRef.current;
+    if (!el || isFullWriting) return;
+    let lastWidth = el.clientWidth;
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth === lastWidth) return;
+      lastWidth = el.clientWidth;
+      setTextareaHeight(getContentHeight());
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isFullWriting, renderExpanded, getContentHeight]);
 
   // 监听聊天状态变化，实现自动收起/展开抽屉
   useEffect(() => {
@@ -198,6 +203,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
     ) {
       // 会话上下文开始：预期结束时自动展开，除非期间被用户手动修改
       setIsCollapsedByChat(true);
+      setIsFullWriting(false);
       // 自动收起输入框
       if (showChatInput) {
         settingDispatch(setShowChatInput(false));
@@ -261,34 +267,6 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
       if (rafId) cancelAnimationFrame(rafId);
     };
   }, [showChatInput]);
-
-  useEffect(() => {
-    if (!onHeightChange) return;
-    const el = rootContainerRef.current;
-    if (!el) return;
-
-    let lastHeight = -1;
-
-    const emit = () => {
-      const nextHeight = Math.max(
-        0,
-        Math.round(el.getBoundingClientRect().height),
-      );
-      if (Math.abs(nextHeight - lastHeight) <= 1) return;
-      lastHeight = nextHeight;
-      onHeightChange(nextHeight);
-    };
-
-    emit();
-
-    const resizeObserver = new ResizeObserver(() => emit());
-    resizeObserver.observe(el);
-
-    return () => {
-      resizeObserver.disconnect();
-      onHeightChange(0);
-    };
-  }, [onHeightChange]);
 
   // 如果没有选中的聊天，不渲染ChatInput
   if (!selectedChat) {
@@ -408,19 +386,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
   };
 
   const handleFullWriting = (value: boolean) => {
-    if (value) {
-      setIsFullWriting(true);
-      setTextareaHeight('full');
-    } else if (isFullWriting && textareaRef.current) {
-      // 只有从全屏退出时才执行动画逻辑
-      const fullHeight = textareaRef.current.offsetHeight;
-      const targetHeight = getContentHeight();
-      setTextareaHeight(fullHeight);
-      setIsFullWriting(false);
-      requestAnimationFrame(() => {
-        setTextareaHeight(targetHeight);
-      });
-    }
+    setIsFullWriting(value);
   };
 
   const handleInitModal = (index?: number) => {
@@ -485,6 +451,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
   const handleToggleVisibility = () => {
     // 用户手动切换时，重置因聊天而收起的标记
     setIsCollapsedByChat(false);
+    setIsFullWriting(false);
     settingDispatch(setShowChatInput(!showChatInput));
   };
 
@@ -519,9 +486,11 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
 
   return (
     <div
-      ref={rootContainerRef}
       className={cn(
-        'absolute bottom-0 left-0 w-full z-20 pointer-events-none min-h-[48px]',
+        'flex min-h-12 w-full flex-col z-20 pointer-events-none pb-[env(safe-area-inset-bottom)]',
+        isFullWriting
+          ? 'absolute inset-0 h-full bg-background'
+          : 'relative max-h-[60%] shrink-0',
         showPromptList && filteredPrompts.length > 0
           ? 'overflow-visible'
           : 'overflow-hidden',
@@ -532,7 +501,10 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
         <div
           ref={inputContainerRef}
           onKeyDown={handleContainerKeyDown}
-          className="w-full border-transparent bg-background pointer-events-auto transition-transform ease-out pd-0 md:pb-2"
+          className={cn(
+            'flex min-h-0 w-full flex-col border-transparent bg-background pointer-events-auto transition-transform ease-out md:pb-2',
+            isFullWriting && 'flex-1',
+          )}
           style={{
             transform: inputTransform,
             transitionDuration: `${ANIMATION_DURATION_MS}ms`,
@@ -540,11 +512,12 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
         >
           <div
             className={cn(
-              'stretch flex flex-row rounded-md mx-auto w-full md:max-w-4xl xl:max-w-5xl',
+              'flex min-h-0 flex-col rounded-md mx-auto w-full md:max-w-4xl xl:max-w-5xl',
+              isFullWriting && 'flex-1',
             )}
           >
             <div
-              className="relative flex w-full flex-grow flex-col rounded-md border border-border/60 bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:bg-neutral-950 dark:border-border/40 dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]"
+              className="relative flex min-h-0 w-full flex-1 flex-col rounded-md border border-border/60 bg-card shadow-[0_0_10px_rgba(0,0,0,0.10)] dark:bg-neutral-950 dark:border-border/40 dark:shadow-[0_0_15px_rgba(0,0,0,0.10)]"
               onMouseEnter={() => {
                 if (!isMobileDevice) {
                   setShowFloatingControls(true);
@@ -587,6 +560,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
                       size="xs"
                       className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
                       onClick={handleToggleVisibility}
+                      aria-label={t('Collapse input')}
                     >
                       <IconArrowCompactDown
                         size={14}
@@ -604,6 +578,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
                         size="xs"
                         className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
                         onClick={() => handleFullWriting(false)}
+                        aria-label={t('Exit fullscreen writing (Ctrl + F)')}
                       >
                         <IconArrowsDiagonalMinimize size={14} />
                       </Button>
@@ -618,6 +593,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
                         size="xs"
                         className="h-6 w-6 p-0 bg-muted/60 hover:bg-muted"
                         onClick={() => handleFullWriting(true)}
+                        aria-label={t('Enter fullscreen writing (Ctrl + F)')}
                       >
                         <IconArrowsDiagonal size={14} />
                       </Button>
@@ -627,15 +603,15 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
                   />
                 )}
               </div>
-              {/* 非全屏模式下的文件预览 */}
-              {!isFullWriting && contentFiles.length > 0 && (
-                <div className="flex flex-row px-3 py-2 gap-2 border-b border-border/40">
+              {contentFiles.length > 0 && (
+                <div className="flex min-h-0 max-h-24 flex-row overflow-auto overscroll-contain px-3 py-2 gap-2 border-b border-border/40">
                   {contentFiles.map((file, index) => (
                     <FilePreview
                       key={index}
                       file={file}
                       maxWidth={80}
                       maxHeight={80}
+                      className="shrink-0"
                       showDelete={true}
                       onDelete={() => {
                         setContentFiles((prev) =>
@@ -647,19 +623,21 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
                 </div>
               )}
               {/* Textarea容器 */}
-              <div className="relative w-full">
+              <div
+                className={cn(
+                  'relative flex min-h-0 w-full flex-col',
+                  isFullWriting && 'flex-1',
+                )}
+              >
                 <Textarea
                   ref={textareaRef}
                   className={cn(
-                    'm-0 w-full resize-none border-none outline-none rounded-md bg-transparent leading-6 min-h-0',
+                    'm-0 min-h-0 w-full resize-none overflow-y-auto overscroll-contain border-none outline-none rounded-md bg-transparent leading-6',
                     `transition-[height] ease-out`,
-                    isFullWriting && 'overflow-auto',
+                    isFullWriting && 'flex-1',
                   )}
                   style={{
-                    height:
-                      textareaHeight === 'full'
-                        ? 'calc(100vh - 108px)'
-                        : `${textareaHeight}px`,
+                    height: isFullWriting ? '100%' : `${textareaHeight}px`,
                     transitionDuration: `${ANIMATION_DURATION_MS}ms`,
                   }}
                   placeholder={
@@ -672,26 +650,6 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
                   onChange={handleChange}
                   onKeyDown={handleKeyDown}
                 />
-
-                {/* 全屏模式下的文件展示 */}
-                {isFullWriting && contentFiles.length > 0 && (
-                  <div className="flex flex-row px-3 pb-2 gap-2">
-                    {contentFiles.map((file, index) => (
-                      <FilePreview
-                        key={index}
-                        file={file}
-                        maxWidth={80}
-                        maxHeight={80}
-                        showDelete={true}
-                        onDelete={() => {
-                          setContentFiles((prev) =>
-                            prev.filter((f) => f !== file),
-                          );
-                        }}
-                      />
-                    ))}
-                  </div>
-                )}
               </div>
 
               {/* 底部工具行 - 智能搜索/Agent控制 + 发送按钮 */}
@@ -701,7 +659,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
                 events={contextEvents}
                 onBusyChange={setContextBusy}
               />
-              <div className="flex items-center gap-1 sm:gap-2 px-1 sm:px-2 py-2 border-t border-border/40">
+              <div className="flex shrink-0 items-center gap-1 sm:gap-2 px-1 sm:px-2 py-2 border-t border-border/40">
                 {/* 左侧: 智能搜索 + Agent 代码执行控制 */}
                 <div className="flex min-w-0 flex-1 flex-nowrap items-center gap-1 sm:gap-2 overflow-hidden">
                   {showUploadMenu && (
@@ -899,6 +857,7 @@ const ChatInput = ({ onSend, onChangePrompt, onHeightChange, contextEvents }: Pr
                 size="xs"
                 className="p-1 m-0.5 sm:m-1 text-neutral-800 bg-transparent hover:bg-muted"
                 onClick={handleToggleVisibility}
+                aria-label={t('Expand input')}
               >
                 <IconArrowCompactDown
                   size={20}

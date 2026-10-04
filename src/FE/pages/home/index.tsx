@@ -12,7 +12,7 @@ const Home = () => {
         <meta name="description" content="" />
         <meta
           name="viewport"
-          content="height=device-height ,width=device-width, initial-scale=1, user-scalable=no"
+          content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content"
         />
         <link rel="icon" href="/favicon.ico" />
       </Head>

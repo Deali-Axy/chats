@@ -65,7 +65,7 @@ const ChatHeader = () => {
 
   return (
     <>
-      <header className="sticky left-0 top-0 z-10 w-full border-b border-border/60 bg-background/80 backdrop-blur-xl">
+      <header className="sticky left-0 top-0 z-10 w-full shrink-0 border-b border-border/60 bg-background/80 backdrop-blur-xl">
         <div className="flex h-14 select-none items-center justify-between px-3 sm:px-5">
           <div className="flex min-w-0 items-center gap-2">
             <Button
