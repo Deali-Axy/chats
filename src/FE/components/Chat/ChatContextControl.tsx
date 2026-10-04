@@ -245,13 +245,21 @@ export default function ChatContextControl({
   const percent = status
     ? Math.min(
         100,
-        Math.round((status.estimatedTokens / status.contextWindow) * 100),
+        Math.round(
+          ((status.estimatedTokens || 0) /
+            Math.max(status.contextWindow || 1, 1)) *
+            100,
+        ),
       )
     : 0;
   const nearLimit =
     status && status.estimatedTokens >= status.autoCompactThreshold;
   const overBudget = status && status.estimatedTokens > status.inputBudget;
-  const format = (value: number) => value.toLocaleString();
+  const format = (value: number) =>
+    (typeof value === 'number' && Number.isFinite(value)
+      ? value
+      : 0
+    ).toLocaleString();
   const noticeText = compacting
     ? t('Compacting earlier conversation…')
     : error
@@ -463,7 +471,11 @@ export default function ChatContextControl({
                         {t('Recent messages to keep')}
                       </span>
                       <Select
-                        value={String(status.keepRecentTurns)}
+                        value={
+                          [2, 4, 6, 8, 12, 20].includes(status.keepRecentTurns)
+                            ? String(status.keepRecentTurns)
+                            : undefined
+                        }
                         disabled={busy || chatting}
                         onOpenChange={(open) => {
                           nestedSelectOpenRef.current = open;

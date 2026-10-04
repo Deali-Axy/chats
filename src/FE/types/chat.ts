@@ -46,6 +46,17 @@ export function getFileUrl(file: FileDef | string): string {
   return `${getApiUrl()}/api/file/private/${fileId}?token=${getUserSession()}`;
 }
 
+export function isImageFile(
+  file: FileDef | string | null | undefined,
+): file is FileDef {
+  return (
+    !!file &&
+    typeof file !== 'string' &&
+    typeof file.contentType === 'string' &&
+    file.contentType.startsWith('image/')
+  );
+}
+
 export type ResponseContent =
   | ReasoningContent
   | TextContent

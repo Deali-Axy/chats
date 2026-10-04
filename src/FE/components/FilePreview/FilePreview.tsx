@@ -26,54 +26,55 @@ interface FilePreviewProps {
 }
 
 // 判断是否为图片类型
-const isImageType = (contentType: string): boolean => {
-  return contentType.startsWith('image/');
+const isImageType = (contentType?: string | null): boolean => {
+  return !!contentType?.startsWith('image/');
 };
 
 // 判断是否为视频类型
-const isVideoType = (contentType: string): boolean => {
-  return contentType.startsWith('video/');
+const isVideoType = (contentType?: string | null): boolean => {
+  return !!contentType?.startsWith('video/');
 };
 
 // 判断是否为音频类型
-const isAudioType = (contentType: string): boolean => {
-  return contentType.startsWith('audio/');
+const isAudioType = (contentType?: string | null): boolean => {
+  return !!contentType?.startsWith('audio/');
 };
 
 // 根据 contentType 和 fileName 获取对应的文件图标
-const getFileIcon = (contentType: string, fileName: string | null) => {
+const getFileIcon = (contentType: string | null | undefined, fileName: string | null) => {
+  const type = contentType ?? '';
   // PDF
-  if (contentType.includes('pdf') || fileName?.toLowerCase().endsWith('.pdf')) {
+  if (type.includes('pdf') || fileName?.toLowerCase().endsWith('.pdf')) {
     return IconFilePdf;
   }
   
   // Word
-  if (contentType.includes('word') || contentType.includes('document') || 
+  if (type.includes('word') || type.includes('document') || 
       fileName?.toLowerCase().match(/\.(doc|docx)$/)) {
     return IconFileWord;
   }
   
   // Excel
-  if (contentType.includes('excel') || contentType.includes('spreadsheet') ||
+  if (type.includes('excel') || type.includes('spreadsheet') ||
       fileName?.toLowerCase().match(/\.(xls|xlsx|csv)$/)) {
     return IconFileExcel;
   }
   
   // PowerPoint
-  if (contentType.includes('powerpoint') || contentType.includes('presentation') ||
+  if (type.includes('powerpoint') || type.includes('presentation') ||
       fileName?.toLowerCase().match(/\.(ppt|pptx)$/)) {
     return IconFilePpt;
   }
   
   // Zip/压缩文件
-  if (contentType.includes('zip') || contentType.includes('compressed') ||
-      contentType.includes('rar') || contentType.includes('7z') ||
+  if (type.includes('zip') || type.includes('compressed') ||
+      type.includes('rar') || type.includes('7z') ||
       fileName?.toLowerCase().match(/\.(zip|rar|7z|tar|gz)$/)) {
     return IconFileZip;
   }
   
   // 文本文件
-  if (contentType.includes('text') || 
+  if (type.includes('text') || 
       fileName?.toLowerCase().match(/\.(txt|md|json|xml|csv)$/)) {
     return IconFileText;
   }

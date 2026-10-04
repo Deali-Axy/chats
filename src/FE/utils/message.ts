@@ -11,6 +11,8 @@ import {
   ResponseMessageTempId,
   UserMessageTempId,
   getMessageContents,
+  getMessageSiblingIds,
+  normalizeChatMessage,
 } from '@/types/chatMessage';
 
 export function findLastLeafId(
@@ -59,7 +61,10 @@ export function findSelectedMessageByLeafId(
   leafId: string,
 ): ChatMessageNode[][] {
   const messageMap = new Map<string, ChatMessageNode>();
-  messages.forEach((m) => messageMap.set(m.id, m));
+  messages.forEach((m) => {
+    if (!m?.id) return;
+    messageMap.set(m.id, normalizeChatMessage(m));
+  });
 
   const path: ChatMessageNode[][] = [];
   let currentMessage = messageMap.get(leafId);
@@ -71,11 +76,13 @@ export function findSelectedMessageByLeafId(
     let prevUserMessage: ChatMessageNode | null = null;
 
     if (currentMessage.role === ChatRole.User) {
-      const siblingIds = currentMessage.siblingIds.length > 0
-        ? currentMessage.siblingIds
+      const currentSiblingIds = getMessageSiblingIds(currentMessage);
+      const siblingIds = currentSiblingIds.length > 0
+        ? currentSiblingIds
         : messages
           .filter((m) => m.parentId === parentId && m.role === ChatRole.User)
-          .map((x) => x.id);
+          .map((x) => x.id)
+          .filter(Boolean);
 
       const currentOutputMessage: ChatMessageNode = {
         ...currentMessage,
@@ -84,9 +91,9 @@ export function findSelectedMessageByLeafId(
       prevUserMessage = currentOutputMessage;
       path.unshift([currentOutputMessage]);
     } else if (currentMessage.role === ChatRole.Assistant) {
-      const assistantSiblings = messages.filter(
-        (m) => m.parentId === parentId && m.role === ChatRole.Assistant,
-      );
+      const assistantSiblings = messages
+        .filter((m) => m.parentId === parentId && m.role === ChatRole.Assistant)
+        .map((m) => messageMap.get(m.id) ?? normalizeChatMessage(m));
       const groupedSiblings = groupBy(assistantSiblings, 'spanId');
 
       const group: ChatMessageNode[] = [];
@@ -103,16 +110,19 @@ export function findSelectedMessageByLeafId(
         const selectedSource = selectedByCurrentMessage
           ?? selectedByChildMessage
           ?? siblingGroup[siblingGroup.length - 1];
-        const siblingIds = selectedSource?.siblingIds.length > 0
-          ? selectedSource.siblingIds
-          : siblingGroup.find((x) => x.siblingIds.length > 0)?.siblingIds
+        if (!selectedSource) return;
+        const selectedSiblingIds = getMessageSiblingIds(selectedSource);
+        const siblingIds = selectedSiblingIds.length > 0
+          ? selectedSiblingIds
+          : siblingGroup.find((x) => getMessageSiblingIds(x).length > 0)
+              ?.siblingIds
             ?? siblingGroup.map((x) => x.id);
         const messageIsError = !!getMessageContents(selectedSource).find(
           (c) => c.$type === MessageContentType.error,
         );
         const isActive = !!selectedByCurrentMessage || !!selectedByChildMessage;
         const selectedMessage: ChatMessageNode = {
-          ...selectedSource,
+          ...normalizeChatMessage(selectedSource),
           siblingIds,
           isActive,
           status: messageIsError

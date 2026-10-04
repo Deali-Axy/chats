@@ -181,19 +181,50 @@ export interface IChatMessage {
   createdAt?: string;
 }
 
+const EMPTY_STEPS: IStep[] = [];
+const EMPTY_SIBLING_IDS: string[] = [];
+
+export function getMessageSteps(
+  message: IChatMessage | null | undefined,
+): IStep[] {
+  return Array.isArray(message?.steps) ? message.steps : EMPTY_STEPS;
+}
+
+export function getMessageSiblingIds(
+  message: IChatMessage | null | undefined,
+): string[] {
+  return Array.isArray(message?.siblingIds) ? message.siblingIds : EMPTY_SIBLING_IDS;
+}
+
+export function normalizeChatMessage(message: IChatMessage): IChatMessage {
+  return {
+    ...message,
+    siblingIds: getMessageSiblingIds(message),
+    steps: getMessageSteps(message).map((step) => ({
+      id: step?.id ?? '',
+      contents: Array.isArray(step?.contents) ? step.contents : [],
+      edited: !!step?.edited,
+      createdAt: step?.createdAt ?? '',
+    })),
+  };
+}
+
 /// Helper function to get all contents from a message's steps
-export function getMessageContents(message: IChatMessage): ResponseContent[] {
-  return message.steps.flatMap((step) => step.contents);
+export function getMessageContents(
+  message: IChatMessage | null | undefined,
+): ResponseContent[] {
+  return getMessageSteps(message).flatMap((step) => step?.contents ?? []);
 }
 
 /// Helper function to check if all steps in the message are edited
 export function isAllStepsEdited(message: IChatMessage): boolean {
-  return message.steps.length > 0 && message.steps.every((step) => step.edited);
+  const steps = getMessageSteps(message);
+  return steps.length > 0 && steps.every((step) => step.edited);
 }
 
 /// Helper function to check if any step in the message is edited (kept for compatibility)
 export function isMessageEdited(message: IChatMessage): boolean {
-  return message.steps.some((step) => step.edited);
+  return getMessageSteps(message).some((step) => step.edited);
 }
 
 export interface IStepGenerateInfo {

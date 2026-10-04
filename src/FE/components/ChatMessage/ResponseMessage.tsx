@@ -17,8 +17,14 @@ import {
   ToolCallContent,
   ToolResponseContent,
   getFileUrl,
+  isImageFile,
 } from '@/types/chat';
-import { IChatMessage, IStep, getMessageContents } from '@/types/chatMessage';
+import {
+  IChatMessage,
+  IStep,
+  getMessageContents,
+  getMessageSteps,
+} from '@/types/chatMessage';
 
 import FilePreview from '@/components/FilePreview/FilePreview';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
@@ -128,8 +134,9 @@ const ResponseMessage = (props: Props) => {
   useMathCopy();
 
   const { id: messageId, status: messageStatus } = message;
-  const content = useMemo(() => getMessageContents(message), [message.steps]);
-  const showPerStepActions = message.steps.length > 1;
+  const steps = getMessageSteps(message);
+  const content = useMemo(() => getMessageContents(message), [steps]);
+  const showPerStepActions = steps.length > 1;
   const [isTyping, setIsTyping] = useState<boolean>(false);
   const [editId, setEditId] = useState(EMPTY_ID);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -295,8 +302,7 @@ const ResponseMessage = (props: Props) => {
 
   useEffect(() => {
     setMessageContent(structuredClone(content));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [message.steps]);
+  }, [content]);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -327,17 +333,17 @@ const ResponseMessage = (props: Props) => {
       string,
       { stepIndex: number; step: IStep; isLastInStep: boolean }
     >();
-    message.steps.forEach((step, stepIndex) => {
-      step.contents.forEach((c, contentIndex) => {
+    steps.forEach((step, stepIndex) => {
+      (step.contents ?? []).forEach((c, contentIndex) => {
         map.set(c.i, {
           stepIndex,
           step,
-          isLastInStep: contentIndex === step.contents.length - 1,
+          isLastInStep: contentIndex === (step.contents ?? []).length - 1,
         });
       });
     });
     return map;
-  }, [message.steps]);
+  }, [steps]);
 
   // 将连续的图片内容分组
   type GroupedItem = {
@@ -428,8 +434,7 @@ const ResponseMessage = (props: Props) => {
                 } else if (c.$type === MessageContentType.tempFileId) {
                   // 临时文件显示加载效果
                   const imageUrl = getFileUrl(c.c as FileDef);
-                  const fileDef = c.c as FileDef;
-                  const isImage = fileDef.contentType.startsWith('image/');
+                  const isImage = isImageFile(c.c);
 
                   if (isImage) {
                     return (
@@ -484,7 +489,7 @@ const ResponseMessage = (props: Props) => {
                         className="relative"
                       >
                         <FilePreview
-                          file={fileDef}
+                          file={c.c as FileDef}
                           onImageClick={handleImageClick}
                           imageGallery={previewGalleryImages}
                           className="opacity-60 animate-pulse"

@@ -11,6 +11,7 @@ import {
   MessageContentType,
   ResponseContent,
   getFileUrl,
+  isImageFile,
 } from '@/types/chat';
 import { IChatMessage, MessageDisplayType, ReactionMessageType, getMessageContents } from '@/types/chatMessage';
 
@@ -53,7 +54,7 @@ const collectMessageImageUrls = (message: IChatMessage): string[] => {
       (content): content is ResponseContent & { c: FileDef } =>
         (content.$type === MessageContentType.fileId ||
           content.$type === MessageContentType.tempFileId) &&
-        (content.c as FileDef).contentType.startsWith('image/'),
+        isImageFile(content.c),
     )
     .map((content) => getFileUrl(content.c));
 };

@@ -49,6 +49,8 @@ import {
   ResponseMessageTempId,
   SseResponseKind,
   SseResponseLine,
+  getMessageSiblingIds,
+  normalizeChatMessage,
 } from '@/types/chatMessage';
 import { ChatSpanDto } from '@/types/clientApis';
 
@@ -516,8 +518,8 @@ const ChatView = memo(() => {
 
   // Helper to get the last step's contents (for streaming, we append to last step)
   const getLastStepContents = (msg: IChatMessage): ResponseContent[] => {
-    if (msg.steps.length === 0) return [];
-    return msg.steps[msg.steps.length - 1].contents;
+    if (!msg.steps?.length) return [];
+    return msg.steps[msg.steps.length - 1]?.contents ?? [];
   };
 
   // Helper to update the last step's contents
@@ -525,7 +527,7 @@ const ChatView = memo(() => {
     msg: IChatMessage,
     newContents: ResponseContent[],
   ): IChatMessage => {
-    if (msg.steps.length === 0) {
+    if (!msg.steps?.length) {
       return {
         ...msg,
         steps: [
@@ -559,7 +561,7 @@ const ChatView = memo(() => {
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
         // Replace the last step with the actual step data from server, and add a new empty step
-        if (x.steps.length > 0) {
+        if (x.steps?.length > 0) {
           const newSteps = [...x.steps];
           newSteps[newSteps.length - 1] = stepData;
           // Add a new empty step for upcoming content
@@ -624,7 +626,7 @@ const ChatView = memo(() => {
         if (status === ChatSpanStatus.None) {
           updatedMessage = {
             ...updatedMessage,
-            siblingIds: [...x.siblingIds, messageId],
+            siblingIds: [...(x.siblingIds ?? []), messageId],
             id: finalMessageId!,
           };
         }
@@ -1059,7 +1061,10 @@ const ChatView = memo(() => {
     );
     selectedMessageList[index] = selectedMessageList[index].map((m) => {
       if (m.spanId === spanId) {
-        responseMessages.siblingIds = [responseMessages.id, ...m.siblingIds];
+        responseMessages.siblingIds = [
+          responseMessages.id,
+          ...(m.siblingIds ?? []),
+        ];
         return responseMessages;
       }
       return m;
@@ -1250,7 +1255,7 @@ const ChatView = memo(() => {
               ChatSpanStatus.Failed,
             );
           } else if (value.k === SseResponseKind.UserMessage) {
-            messageList.push(value.r);
+            messageList.push(normalizeChatMessage(value.r));
           } else if (value.k === SseResponseKind.ResponseMessage) {
             const { r: msg, i: spanId } = value;
             const msgId = `${ResponseMessageTempId}-${spanId}`;
@@ -1265,7 +1270,7 @@ const ChatView = memo(() => {
               spanId,
               msg,
             );
-            messageList.push(msg);
+            messageList.push(normalizeChatMessage(msg));
           } else if (value.k === SseResponseKind.StartResponse) {
             // StartResponse only carries response timing metadata.
           } else if (value.k === SseResponseKind.FileGenerating) {
@@ -1356,6 +1361,13 @@ const ChatView = memo(() => {
       } finally {
         finishReasoningForAllSpans();
         compactingSpans.forEach((spanId) => toast.dismiss(`context-${selectedChat.id}-${spanId}`));
+      }
+
+      if (messageList.length === 0) {
+        changeSelectedChatStatus(ChatStatus.None);
+        autoScrollDisabledRef.current = false;
+        setAutoScrollTemporarilyDisabled(false);
+        return;
       }
 
       const leafMessageId = messageList[messageList.length - 1].id;
@@ -1552,8 +1564,8 @@ const ChatView = memo(() => {
     });
     if (isCopy) {
       msgs.map((m) => {
-        if (copyMsg.siblingIds.includes(m.id)) {
-          m.siblingIds = copyMsg.siblingIds;
+        if (getMessageSiblingIds(copyMsg).includes(m.id)) {
+          m.siblingIds = getMessageSiblingIds(copyMsg);
         }
         return m;
       });
@@ -1592,15 +1604,22 @@ const ChatView = memo(() => {
     });
     const existing = messages.find((message) => message.id === messageId);
     const updatedWithMetadata = existing
-      ? { ...existing, ...updated, siblingIds: existing.siblingIds }
-      : updated;
+      ? {
+          ...existing,
+          ...updated,
+          siblingIds: getMessageSiblingIds(existing),
+        }
+      : normalizeChatMessage(updated);
     const msgs = messages.map((message) =>
       message.id === messageId ? updatedWithMetadata : message,
     );
     const selectedMsgs = selectedMessages.map((group) =>
       group.map((message) =>
         message.id === messageId
-          ? { ...updatedWithMetadata, siblingIds: message.siblingIds }
+          ? {
+              ...updatedWithMetadata,
+              siblingIds: getMessageSiblingIds(message),
+            }
           : message,
       ),
     );
@@ -1625,9 +1644,10 @@ const ChatView = memo(() => {
     if (!deletedMessage) return;
 
     // 删除逻辑按照新的要求
-    if (deletedMessage.siblingIds.length > 1) {
+    const deletedSiblingIds = getMessageSiblingIds(deletedMessage);
+    if (deletedSiblingIds.length > 1) {
       // 如果有同级消息，选择其他同级消息
-      const siblingIds = deletedMessage.siblingIds.filter(
+      const siblingIds = deletedSiblingIds.filter(
         (id) => id !== deletedMessage!.id,
       );
       nextMsgId = siblingIds[siblingIds.length - 1];

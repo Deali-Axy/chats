@@ -6,7 +6,13 @@ import useTranslation from '@/hooks/useTranslation';
 import { AdminModelDto } from '@/types/adminApis';
 import { ChatSpanDto } from '@/types/clientApis';
 import { ChatStatus, IChat, MessageContentType } from '@/types/chat';
-import { IChatMessage, ReactionMessageType, getMessageContents, isAllStepsEdited } from '@/types/chatMessage';
+import {
+  IChatMessage,
+  ReactionMessageType,
+  getMessageContents,
+  getMessageSiblingIds,
+  isAllStepsEdited,
+} from '@/types/chatMessage';
 
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
@@ -67,12 +73,12 @@ const ResponseMessageActions = (props: Props) => {
 
   const {
     id: messageId,
-    siblingIds,
     modelId,
     modelName,
     parentId,
     status: messageStatus,
   } = message;
+  const siblingIds = getMessageSiblingIds(message);
   const currentMessageIndex = siblingIds.findIndex((x) => x === messageId);
 
   const chatting = isChatting(chatStatus);

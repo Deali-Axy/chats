@@ -11,7 +11,11 @@ import {
   MessageContentType,
   ResponseContent,
 } from '@/types/chat';
-import { IChatMessage, getMessageContents } from '@/types/chatMessage';
+import {
+  IChatMessage,
+  getMessageContents,
+  getMessageSiblingIds,
+} from '@/types/chatMessage';
 
 import { Button } from '@/components/ui/button';
 import ImagePreview from '@/components/ImagePreview/ImagePreview';
@@ -50,7 +54,8 @@ const UserMessage = (props: Props) => {
     onRegenerateAllAssistant,
   } = props;
   const [isEditing, setIsEditing] = useState<boolean>(false);
-  const { id: messageId, siblingIds, parentId } = message;
+  const { id: messageId, parentId } = message;
+  const siblingIds = getMessageSiblingIds(message);
   const content = getMessageContents(message);
   const fileContents = useMemo(
     () => content.filter((item) => item.$type === MessageContentType.fileId),
