@@ -9,7 +9,8 @@
     "start": "next start",
     "www": "cross-env API_URL= next build --webpack && node scripts/deploy-to-wwwroot.mjs",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "test:chat-error": "node --test --experimental-strip-types utils/chatError.test.ts"
   },
   "dependencies": {
     "@zumer/snapdom": "^2.24.7",

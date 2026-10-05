@@ -83,6 +83,12 @@ tasks:
     cmds:
       - dotnet test src/BE/tests/Chats.BE.UnitTest/Chats.BE.UnitTest.csproj
 
+  test:fe:chat-error:
+    desc: 运行聊天错误解析的 node --test
+    dir: '{{.FE_DIR}}'
+    cmds:
+      - pnpm run test:chat-error
+
   # --- EF Core migrations (SQLite only) ---
 
   tools:restore:
