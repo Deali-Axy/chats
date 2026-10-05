@@ -7,6 +7,7 @@ import useTranslation from '@/hooks/useTranslation';
 import { isChatting } from '@/utils/chats';
 import { copyTextToClipboard } from '@/utils/clipboard';
 
+import { AdminModelDto } from '@/types/adminApis';
 import {
   ChatSpanStatus,
   ChatStatus,
@@ -110,7 +111,13 @@ interface Props {
   readonly?: boolean;
   chatId?: string;
   chatShareId?: string;
+  isAdminView?: boolean;
   groupImageUrls?: string[];
+  models?: AdminModelDto[];
+  isSpanDeleted?: boolean;
+  onRetry?: () => void;
+  onChangeModel?: (model: AdminModelDto) => void;
+  onCompactContext?: () => void | Promise<void>;
   onEditResponseMessage?: (
     messageId: string,
     content: ResponseContent,
@@ -125,7 +132,13 @@ const ResponseMessage = (props: Props) => {
     readonly,
     chatId,
     chatShareId,
+    isAdminView,
     groupImageUrls,
+    models,
+    isSpanDeleted,
+    onRetry,
+    onChangeModel,
+    onCompactContext,
     onEditResponseMessage,
   } = props;
   const { t } = useTranslation();
@@ -704,7 +717,19 @@ const ResponseMessage = (props: Props) => {
         } else if (c.$type === MessageContentType.error) {
           return (
             message.status === ChatSpanStatus.Failed && (
-              <ChatError key={'error-' + index} error={c.c} />
+              <ChatError
+                key={'error-' + index}
+                error={c.c}
+                readonly={readonly}
+                disabled={isChatting(chatStatus)}
+                isAdminView={isAdminView}
+                chatShareId={chatShareId}
+                models={models}
+                isSpanDeleted={isSpanDeleted}
+                onRetry={onRetry}
+                onChangeModel={onChangeModel}
+                onCompactContext={onCompactContext}
+              />
             )
           );
         } else {

@@ -214,6 +214,7 @@ export const ChatMessage: FC<Props> = memo(
                                   readonly={readonly}
                                   chatId={selectedChat.id}
                                   chatShareId={chatShareId}
+                                  isAdminView={isAdminView}
                                   groupImageUrls={responseGroupImageUrls}
                                   onEditResponseMessage={onEditResponseMessage}
                                 />

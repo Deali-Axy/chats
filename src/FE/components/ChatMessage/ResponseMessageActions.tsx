@@ -13,6 +13,11 @@ import {
   getMessageSiblingIds,
   isAllStepsEdited,
 } from '@/types/chatMessage';
+import {
+  ChatErrorTranslate,
+  formatChatErrorCopyText,
+  parseChatError,
+} from '@/utils/chatError';
 
 import CopyAction from './CopyAction';
 import DeleteAction from './DeleteAction';
@@ -25,7 +30,10 @@ import Tips from '@/components/Tips/Tips';
 import { Button } from '@/components/ui/button';
 import { downloadResponsePng } from '@/utils/downloadResponsePng';
 
-const getCopyableMessageText = (message: IChatMessage): string => {
+const getCopyableMessageText = (
+  message: IChatMessage,
+  t: ChatErrorTranslate,
+): string => {
   const contents = getMessageContents(message);
   const textContent = contents
     .filter((content) => content.$type === MessageContentType.text)
@@ -33,7 +41,7 @@ const getCopyableMessageText = (message: IChatMessage): string => {
     .join('');
   const errorContent = contents
     .filter((content) => content.$type === MessageContentType.error)
-    .map((content) => content.c)
+    .map((content) => formatChatErrorCopyText(parseChatError(content.c), t))
     .join('\n');
 
   return [textContent, errorContent].filter(Boolean).join('\n\n');
@@ -142,7 +150,7 @@ const ResponseMessageActions = (props: Props) => {
       />
       <div className="flex gap-0 items-center">
         <CopyAction
-          text={getCopyableMessageText(message)}
+          text={getCopyableMessageText(message, t)}
         />
 
         <Tips

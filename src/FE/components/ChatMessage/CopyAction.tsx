@@ -13,10 +13,11 @@ interface Props {
   triggerClassName?: string;
   text?: string;
   content?: string;
+  tips?: string;
   hidden?: boolean;
 }
 const CopyAction = (props: Props) => {
-  const { text, triggerClassName, content, hidden = false } = props;
+  const { text, triggerClassName, content, tips, hidden = false } = props;
   const { t } = useTranslation();
   const [messagedCopied, setMessageCopied] = useState(false);
 
@@ -54,7 +55,7 @@ const CopyAction = (props: Props) => {
               </Button>
             }
             side="bottom"
-            content={t('Copy')!}
+            content={tips || t('Copy')!}
           />
         )}
       </>

@@ -73,6 +73,14 @@ import {
   streamRegenerateAssistant,
 } from '@/apis/chatApi';
 import {
+  STREAM_ENDED_KEY,
+  applyEndStep,
+  applyErrorEvent,
+  applyNetworkFailure,
+  applyResponseMessage,
+  hasErrorContent,
+} from '@/utils/chatErrorSse';
+import {
   deleteMessage,
   getChatMessageSubtree,
   patchUserMessageEdit,
@@ -498,9 +506,49 @@ const ChatView = memo(() => {
     suppressAutoScrollRef.current = false;
   }, [changeSelectedChatStatus]);
 
-  const handleChatError = useCallback(() => {
-    changeSelectedChatStatus(ChatStatus.Failed);
-  }, [changeSelectedChatStatus]);
+  const errorTextFromUnknown = (error: unknown): string => {
+    const err = error as ChatApiError;
+    const msg = err?.message || (typeof error === 'string' ? error : '');
+    return msg.trim() || STREAM_ENDED_KEY;
+  };
+
+  const handleChatError = useCallback(
+    (error?: unknown, selectedMsgs?: IChatMessage[][]) => {
+      changeSelectedChatStatus(ChatStatus.Failed);
+      const text = errorTextFromUnknown(error);
+      const msgs = selectedMsgs ?? selectedMessages;
+      if (!msgs.length) {
+        toast.error(t(text) || text);
+        return;
+      }
+      const lastIndex = msgs.length - 1;
+      const lastGroup = msgs[lastIndex];
+      let wrote = false;
+      const updated = lastGroup.map((msg) => {
+        if (msg.role !== ChatRole.Assistant) return msg;
+        const isTemp =
+          typeof msg.id === 'string' &&
+          msg.id.startsWith(ResponseMessageTempId);
+        const live =
+          isTemp ||
+          msg.status === ChatSpanStatus.Pending ||
+          msg.status === ChatSpanStatus.Chatting ||
+          msg.status === ChatSpanStatus.Reasoning ||
+          msg.status === ChatSpanStatus.Failed;
+        if (!live) return msg;
+        wrote = true;
+        return applyNetworkFailure(msg, text);
+      });
+      if (!wrote) {
+        toast.error(t(text) || text);
+        return;
+      }
+      const next = [...msgs];
+      next[lastIndex] = updated;
+      messageDispatch(setSelectedMessages(next));
+    },
+    [changeSelectedChatStatus, messageDispatch, selectedMessages, t],
+  );
 
   // Helper to get the last step's contents (for streaming, we append to last step)
   const getLastStepContents = (msg: IChatMessage): ResponseContent[] => {
@@ -537,37 +585,30 @@ const ChatView = memo(() => {
   // Helper to add a new step to a message (used when EndStep is received)
 
   // Handle EndStep event: finalize current step and start a new one
+  const mapLastGroupMessage = (
+    selectedMsgs: IChatMessage[][],
+    messageId: string,
+    updater: (message: IChatMessage) => IChatMessage,
+  ): IChatMessage[][] => {
+    const lastMessageGroupIndex = selectedMsgs.length - 1;
+    const messageList = selectedMsgs[lastMessageGroupIndex];
+    const updatedMessageList = messageList.map((x) =>
+      x.id === messageId ? updater(x) : x,
+    );
+    const newSelectedMsgs = [...selectedMsgs];
+    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
+    messageDispatch(setSelectedMessages(newSelectedMsgs));
+    return newSelectedMsgs;
+  };
+
   const changeSelectedResponseEndStep = (
     selectedMsgs: IChatMessage[][],
     messageId: string,
     stepData: IStep,
   ): IChatMessage[][] => {
-    const lastMessageGroupIndex = selectedMsgs.length - 1;
-    const messageList = selectedMsgs[lastMessageGroupIndex];
-    const updatedMessageList = messageList.map((x) => {
-      if (x.id === messageId) {
-        // Replace the last step with the actual step data from server, and add a new empty step
-        if (x.steps?.length > 0) {
-          const newSteps = [...x.steps];
-          newSteps[newSteps.length - 1] = stepData;
-          // Add a new empty step for upcoming content
-          newSteps.push({
-            id: '',
-            contents: [],
-            edited: false,
-            createdAt: new Date().toISOString(),
-          });
-          return { ...x, steps: newSteps };
-        }
-        return x;
-      }
-      return x;
-    });
-
-    const newSelectedMsgs = [...selectedMsgs];
-    newSelectedMsgs[lastMessageGroupIndex] = updatedMessageList;
-    messageDispatch(setSelectedMessages(newSelectedMsgs));
-    return newSelectedMsgs;
+    return mapLastGroupMessage(selectedMsgs, messageId, (message) =>
+      applyEndStep(message, stepData),
+    );
   };
 
   const changeSelectedResponseMessage = (
@@ -581,6 +622,9 @@ const ChatView = memo(() => {
     const messageList = selectedMsgs[lastMessageGroupIndex];
     const updatedMessageList = messageList.map((x) => {
       if (x.id === messageId) {
+        if (status === ChatSpanStatus.Failed) {
+          return applyErrorEvent(x, text);
+        }
         const currentContents = getLastStepContents(x);
         const lastContentIndex = currentContents.length - 1;
         let newContent = [...currentContents];
@@ -597,10 +641,6 @@ const ChatView = memo(() => {
           } as TextContent;
         } else {
           newContent.push({ i: '', $type: MessageContentType.text, c: text });
-        }
-
-        if (status === ChatSpanStatus.Failed) {
-          newContent.push({ i: '', $type: MessageContentType.error, c: text });
         }
 
         let updatedMessage = withUpdatedLastStepContents(x, newContent);
@@ -1075,10 +1115,7 @@ const ChatView = memo(() => {
       const stream = streamRegenerateAssistant(chatBody);
       await handleChatMessage(stream, selectedMessageList);
     } catch (e: any) {
-      handleChatError();
-      const err = e as ChatApiError;
-      const msg = err?.message || (typeof e === 'string' ? e : '');
-      toast.error(t(msg) || msg);
+      handleChatError(e, selectedMessageList);
     }
   };
 
@@ -1121,10 +1158,7 @@ const ChatView = memo(() => {
       const stream = streamRegenerateAllAssistant(chatBody);
       await handleChatMessage(stream, selectedMessageList);
     } catch (e: any) {
-      handleChatError();
-      const err = e as ChatApiError;
-      const msg = err?.message || (typeof e === 'string' ? e : '');
-      toast.error(t(msg) || msg);
+      handleChatError(e, selectedMessageList);
     }
   };
 
@@ -1164,10 +1198,7 @@ const ChatView = memo(() => {
       const stream = streamGeneralChat(chatBody);
       await handleChatMessage(stream, selectedMessageList);
     } catch (e: any) {
-      handleChatError();
-      const err = e as ChatApiError;
-      const msg = err?.message || (typeof e === 'string' ? e : '');
-      toast.error(t(msg) || msg);
+      handleChatError(e, selectedMessageList);
     }
   };
 
@@ -1234,28 +1265,43 @@ const ChatView = memo(() => {
           } else if (value.k === SseResponseKind.Error) {
             const { r: msg, i: spanId } = value;
             const msgId = `${ResponseMessageTempId}-${spanId}`;
-            selectedMessageList = changeSelectedResponseMessage(
+            selectedMessageList = mapLastGroupMessage(
               selectedMessageList,
               msgId,
-              msg,
-              ChatSpanStatus.Failed,
+              (message) => applyErrorEvent(message, msg),
             );
           } else if (value.k === SseResponseKind.UserMessage) {
             messageList.push(normalizeChatMessage(value.r));
           } else if (value.k === SseResponseKind.ResponseMessage) {
             const { r: msg, i: spanId } = value;
             const msgId = `${ResponseMessageTempId}-${spanId}`;
-            selectedMessageList = changeSelectedResponseMessage(
-              selectedMessageList,
-              msgId,
-              '',
-              ChatSpanStatus.None,
-            );
-            selectedMessageList = changeSelectedResponseMessageInfo(
-              selectedMessageList,
-              spanId,
-              msg,
-            );
+            const lastGroup =
+              selectedMessageList[selectedMessageList.length - 1] ?? [];
+            const temp = lastGroup.find((message) => message.id === msgId);
+            if (
+              temp &&
+              (temp.status === ChatSpanStatus.Failed ||
+                hasErrorContent(temp) ||
+                hasErrorContent(msg))
+            ) {
+              selectedMessageList = mapLastGroupMessage(
+                selectedMessageList,
+                msgId,
+                (message) => applyResponseMessage(message, msg),
+              );
+            } else {
+              selectedMessageList = changeSelectedResponseMessage(
+                selectedMessageList,
+                msgId,
+                '',
+                ChatSpanStatus.None,
+              );
+              selectedMessageList = changeSelectedResponseMessageInfo(
+                selectedMessageList,
+                spanId,
+                msg,
+              );
+            }
             messageList.push(normalizeChatMessage(msg));
           } else if (value.k === SseResponseKind.StartResponse) {
             // StartResponse only carries response timing metadata.
@@ -1805,10 +1851,7 @@ const ChatView = memo(() => {
         const stream = streamGeneralChat(chatBody);
         await handleChatMessage(stream, selectedMessageList);
       } catch (e: any) {
-        handleChatError();
-        const err = e as ChatApiError;
-        const msg = err?.message || (typeof e === 'string' ? e : '');
-        toast.error(t(msg) || msg);
+        handleChatError(e, selectedMessageList);
       }
     },
     [

@@ -5,6 +5,7 @@ import useTranslation from '@/hooks/useTranslation';
 
 import { ChatRole, MessageContentType } from '@/types/chat';
 import { IChatMessage, getMessageContents } from '@/types/chatMessage';
+import { parseChatError } from '@/utils/chatError';
 
 import { IconArrowDown, IconArrowUp } from '@/components/Icons';
 import { Button } from '@/components/ui/button';
@@ -29,7 +30,10 @@ const getPreviewText = (content: string): string => {
   return normalized.slice(0, 100) + (normalized.length > 100 ? '...' : '');
 };
 
-const getMessagePlainText = (message: IChatMessage): string => {
+const getMessagePlainText = (
+  message: IChatMessage,
+  t: (key: string) => string,
+): string => {
   const contents = getMessageContents(message);
   const parts: string[] = [];
 
@@ -37,8 +41,10 @@ const getMessagePlainText = (message: IChatMessage): string => {
     switch (content.$type) {
       case MessageContentType.text:
       case MessageContentType.reasoning:
-      case MessageContentType.error:
         parts.push(content.c);
+        break;
+      case MessageContentType.error:
+        parts.push(t(parseChatError(content.c).titleKey));
         break;
       case MessageContentType.toolCall:
         parts.push(`${content.n} ${content.p}`.trim());
@@ -89,8 +95,8 @@ const ChatMiniMap = memo(({ messages, containerRef }: ChatMiniMapProps) => {
         }
         const content =
           message.role === ChatRole.Assistant
-            ? getFirstTextContent(message)
-            : getMessagePlainText(message);
+            ? getFirstTextContent(message) || getMessagePlainText(message, t)
+            : getMessagePlainText(message, t);
         list.push({
           id: message.id,
           role: message.role,
@@ -100,7 +106,7 @@ const ChatMiniMap = memo(({ messages, containerRef }: ChatMiniMapProps) => {
       });
     });
     return list;
-  }, [messages]);
+  }, [messages, t]);
 
   const updateOffsets = useCallback(() => {
     const container = containerRef.current;
