@@ -49,6 +49,7 @@ import {
   ResponseMessageTempId,
   SseResponseKind,
   SseResponseLine,
+  UserMessageTempId,
   getMessageSiblingIds,
   normalizeChatMessage,
 } from '@/types/chatMessage';
@@ -72,6 +73,7 @@ import {
   streamRegenerateAllAssistant,
   streamRegenerateAssistant,
 } from '@/apis/chatApi';
+import { compactChatContext } from '@/apis/chatContextApi';
 import {
   STREAM_ENDED_KEY,
   applyEndStep,
@@ -1066,6 +1068,32 @@ const ChatView = memo(() => {
     return newSelectedMsgs;
   };
 
+  const handleCompactContext = async (spanId: number) => {
+    if (!selectedChat) return;
+    const lastGroup = selectedMessages[selectedMessages.length - 1];
+    const activeLeaf = lastGroup?.find((message) => message.isActive)?.id;
+    const leafMessageId =
+      activeLeaf &&
+      !activeLeaf.startsWith(ResponseMessageTempId) &&
+      !activeLeaf.startsWith(UserMessageTempId)
+        ? activeLeaf
+        : selectedChat.leafMessageId ?? null;
+    try {
+      await compactChatContext(selectedChat.id, spanId, leafMessageId);
+      toast.success(
+        t('Context compacted. Original messages are still available.'),
+      );
+    } catch (reason) {
+      toast.error(
+        t(
+          reason instanceof Error
+            ? reason.message
+            : 'Context operation failed',
+        ),
+      );
+    }
+  };
+
   const handleRegenerate = async (
     spanId: number,
     messageId: string,
@@ -1938,6 +1966,7 @@ const ChatView = memo(() => {
                   onChangeChatLeafMessageId={handleChangeChatLeafMessageId}
                   onEditAndSendMessage={handleEditAndSendMessage}
                   onRegenerate={handleRegenerate}
+                  onCompactContext={handleCompactContext}
                   onReactionMessage={handleReactionMessage}
                   onEditResponseMessage={handleUpdateResponseMessage}
                   onEditUserMessage={handleUpdateUserMessage}

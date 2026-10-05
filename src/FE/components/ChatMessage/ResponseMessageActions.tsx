@@ -47,6 +47,26 @@ const getCopyableMessageText = (
   return [textContent, errorContent].filter(Boolean).join('\n\n');
 };
 
+export function getRegenerateModel(
+  selectedChat: IChat,
+  models: AdminModelDto[],
+  message: IChatMessage,
+): { modelId: number; modelName?: string; isSpanDeleted: boolean } {
+  const { spanId, modelId, modelName } = message;
+  const span = selectedChat?.spans?.find(
+    (item: ChatSpanDto) => item.spanId === spanId,
+  );
+  if (!span) {
+    return { modelId, modelName, isSpanDeleted: true };
+  }
+  const matched = models.find((item) => item.modelId === span.modelId);
+  return {
+    modelId: span.modelId,
+    modelName: span.modelName || matched?.name || modelName,
+    isSpanDeleted: false,
+  };
+}
+
 interface Props {
   models: AdminModelDto[];
   message: IChatMessage;
@@ -81,7 +101,6 @@ const ResponseMessageActions = (props: Props) => {
 
   const {
     id: messageId,
-    modelId,
     modelName,
     parentId,
     status: messageStatus,
@@ -93,25 +112,13 @@ const ResponseMessageActions = (props: Props) => {
   const messageReceiving = isChatting(messageStatus);
   const [isDownloading, setIsDownloading] = useState(false);
 
-  // 根据"当前位置对应的 span（顶部设置）"确定重新生成所用模型；
-  // 若无法对应（例如 span 被删），则禁用重新生成按钮。
-  const { spanId } = message;
-  const spans = selectedChat?.spans;
-  const spanModel = useMemo(() => {
-    if (!spans) return null;
-    const s = spans.find((x: ChatSpanDto) => x.spanId === spanId);
-    if (!s) return null;
-    const m = models.find((mm) => mm.modelId === s.modelId);
-    return {
-      modelId: s.modelId,
-      modelName: s.modelName || m?.name || modelName,
-    } as { modelId: number; modelName?: string };
-  }, [spanId, spans, models, modelName]);
-
-  // 如果对应的 span 被删除了，则禁用重新生成功能
-  const isSpanDeleted = !spanModel;
-  const regenerateModelId = spanModel?.modelId ?? modelId;
-  const regenerateModelName = spanModel?.modelName ?? modelName;
+  const spanModel = useMemo(
+    () => getRegenerateModel(selectedChat, models, message),
+    [selectedChat, models, message],
+  );
+  const isSpanDeleted = spanModel.isSpanDeleted;
+  const regenerateModelId = spanModel.modelId;
+  const regenerateModelName = spanModel.modelName ?? modelName;
 
   const handleReactionMessage = (type: ReactionMessageType) => {
     onReactionMessage && onReactionMessage(type, messageId);

@@ -17,7 +17,9 @@ import { IChatMessage, MessageDisplayType, ReactionMessageType, getMessageConten
 
 import ChatMessageHeader from './ChatMessageHeader';
 import ResponseMessage from './ResponseMessage';
-import ResponseMessageActions from './ResponseMessageActions';
+import ResponseMessageActions, {
+  getRegenerateModel,
+} from './ResponseMessageActions';
 import UserMessage from './UserMessage';
 
 import { cn } from '@/lib/utils';
@@ -36,6 +38,7 @@ export interface Props {
   onChangeChatLeafMessageId?: (messageId: string) => void;
   onEditAndSendMessage?: (editedMessage: Message, parentId?: string) => void;
   onRegenerate?: (spanId: number, messageId: string, modelId: number) => void;
+  onCompactContext?: (spanId: number) => void | Promise<void>;
   onReactionMessage?: (type: ReactionMessageType, messageId: string) => void;
   onEditResponseMessage?: (
     messageId: string,
@@ -96,6 +99,7 @@ export const ChatMessage: FC<Props> = memo(
     onChangeChatLeafMessageId,
     onEditAndSendMessage,
     onRegenerate,
+    onCompactContext,
     onReactionMessage,
     onEditResponseMessage,
     onEditUserMessage,
@@ -182,7 +186,13 @@ export const ChatMessage: FC<Props> = memo(
                     data-response-content="true"
                     data-response-group-index={groupIndex}
                   >
-                    {messages.map((message, index) => (
+                    {messages.map((message, index) => {
+                      const regen = getRegenerateModel(
+                        selectedChat,
+                        models,
+                        message,
+                      );
+                      return (
                       <div key={`message-${message.id}`} data-message-id={message.id} data-message-role={message.role}>
                         {message.role === ChatRole.Assistant && (
                           <div>
@@ -216,6 +226,33 @@ export const ChatMessage: FC<Props> = memo(
                                   chatShareId={chatShareId}
                                   isAdminView={isAdminView}
                                   groupImageUrls={responseGroupImageUrls}
+                                  models={models}
+                                  isSpanDeleted={regen.isSpanDeleted}
+                                  onRetry={
+                                    onRegenerate && message.parentId
+                                      ? () =>
+                                          onRegenerate(
+                                            message.spanId!,
+                                            message.parentId!,
+                                            regen.modelId,
+                                          )
+                                      : undefined
+                                  }
+                                  onChangeModel={
+                                    onRegenerate && message.parentId
+                                      ? (model) =>
+                                          onRegenerate(
+                                            message.spanId!,
+                                            message.parentId!,
+                                            model.modelId,
+                                          )
+                                      : undefined
+                                  }
+                                  onCompactContext={
+                                    onCompactContext && message.spanId != null
+                                      ? () => onCompactContext(message.spanId!)
+                                      : undefined
+                                  }
                                   onEditResponseMessage={onEditResponseMessage}
                                 />
                               </div>
@@ -244,7 +281,8 @@ export const ChatMessage: FC<Props> = memo(
                           </div>
                         )}
                       </div>
-                    ))}
+                    );
+                    })}
                   </div>
                   {shouldRenderResponseSpacer && (
                     <div
