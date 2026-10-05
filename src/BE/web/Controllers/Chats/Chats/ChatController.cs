@@ -1028,14 +1028,14 @@ public class ChatController(
             switch (runResult.Exception)
             {
                 case RawChatServiceException rawEx:
-                    errorText = rawEx.Body;
+                    errorText = ChatErrorEnvelope.FromRaw(rawEx.StatusCode, rawEx.Body);
                     logger.LogError(rawEx, "Upstream error: {StatusCode}", rawEx.StatusCode);
                     break;
                 case ChatServiceException cse:
                     errorText = cse.Message;
                     break;
                 case AggregateException e when (e.InnerException is TaskCanceledException):
-                    errorText = e.InnerException.ToString();
+                    errorText = "Conversation cancelled";
                     break;
                 case TaskCanceledException:
                     errorText = "Conversation cancelled";
