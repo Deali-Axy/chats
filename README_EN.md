@@ -96,6 +96,8 @@ task dev
 - Frontend: `http://localhost:12836`
 - Default account: `chats` / `RESET!!!` (change immediately)
 - SQLite file: `src/BE/web/AppData/chats.db` (created and seeded if missing)
+- Login: `JwtValidPeriod` defaults to one day. When `JwtSecretKey` is unset, the key is saved in `AppData/jwt-secret.key`. Persist the entire `AppData` directory or configure a fixed key to keep sessions valid across restarts.
+- Drafts: text is saved automatically per user and conversation in this browser's localStorage, survives refresh, closing the page and logout, and is cleared after the server confirms the message was saved. Attachments are not saved as drafts.
 
 Without Task:
 

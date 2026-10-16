@@ -96,6 +96,8 @@ task dev
 - 前端：`http://localhost:12836`
 - 默认账号：`chats` / `RESET!!!`（请立刻改密）
 - SQLite 文件：`src/BE/web/AppData/chats.db`（不存在则自动创建并 seed）
+- 登录：`JwtValidPeriod` 默认 1 天；未设置 `JwtSecretKey` 时自动保存到 `AppData/jwt-secret.key`，部署时需持久化整个 `AppData` 目录，或配置固定密钥，避免重启后登录失效。
+- 输入草稿：文字按用户和对话自动保存到当前浏览器的 localStorage，刷新、关闭页面或退出登录后可恢复，服务端确认消息已保存后清除；附件不会保存到草稿。
 
 没有 Task 时：
 
