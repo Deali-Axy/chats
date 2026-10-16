@@ -142,7 +142,7 @@ const ChatView = memo(() => {
   const pendingScrollBehaviorRef = useRef<ScrollBehavior>('smooth');
   const suppressAutoScrollRef = useRef<boolean>(false);
   const [pendingInitialMessage, setPendingInitialMessage] =
-    useState<Message | null>(null);
+    useState<{ message: Message; onAccepted: () => void } | null>(null);
   const [responseMessageMinHeight, setResponseMessageMinHeight] = useState<
     string | undefined
   >(undefined);
@@ -1234,6 +1234,7 @@ const ChatView = memo(() => {
     async (
       stream: AsyncIterable<SseResponseLine>,
       selectedMessageList: IChatMessage[][],
+      onUserMessage?: () => void,
     ) => {
       if (!selectedChat) return;
       let messageList = [...messages];
@@ -1300,6 +1301,7 @@ const ChatView = memo(() => {
             );
           } else if (value.k === SseResponseKind.UserMessage) {
             messageList.push(normalizeChatMessage(value.r));
+            onUserMessage?.();
           } else if (value.k === SseResponseKind.ResponseMessage) {
             const { r: msg, i: spanId } = value;
             const msgId = `${ResponseMessageTempId}-${spanId}`;
@@ -1834,7 +1836,7 @@ const ChatView = memo(() => {
   };
 
   const handleSend = useCallback(
-    async (message: Message, messageId?: string) => {
+    async (message: Message, messageId?: string, onAccepted?: () => void) => {
       if (!selectedChat) return;
       if (!checkSelectChatModelIsExist(selectedChat.spans)) return;
 
@@ -1877,7 +1879,7 @@ const ChatView = memo(() => {
 
       try {
         const stream = streamGeneralChat(chatBody);
-        await handleChatMessage(stream, selectedMessageList);
+        await handleChatMessage(stream, selectedMessageList, onAccepted);
       } catch (e: any) {
         handleChatError(e, selectedMessageList);
       }
@@ -1895,8 +1897,8 @@ const ChatView = memo(() => {
   );
 
   const handleStartConversation = useCallback(
-    async (message: Message, modelId: number) => {
-      setPendingInitialMessage(message);
+    async (message: Message, modelId: number, onAccepted: () => void) => {
+      setPendingInitialMessage({ message, onAccepted });
       try {
         await handleCreateChat(null, modelId);
       } catch (error) {
@@ -1911,7 +1913,11 @@ const ChatView = memo(() => {
     if (!selectedChat || !pendingInitialMessage) return;
 
     setPendingInitialMessage(null);
-    void handleSend(pendingInitialMessage);
+    void handleSend(
+      pendingInitialMessage.message,
+      undefined,
+      pendingInitialMessage.onAccepted,
+    );
   }, [handleSend, pendingInitialMessage, selectedChat]);
 
   // Messages scroll in the space left by the header and composer.
@@ -1987,10 +1993,11 @@ const ChatView = memo(() => {
 
         {hasModel() && (
           <ChatInput
+            key={selectedChat.id}
             contextEvents={contextEvents}
-            onSend={(message) => {
+            onSend={(message, onAccepted) => {
               const lastMessage = getSelectedMessagesLastActiveMessage();
-              handleSend(message, lastMessage?.id);
+              void handleSend(message, lastMessage?.id, onAccepted);
             }}
             onChangePrompt={handleChangePrompt}
           />

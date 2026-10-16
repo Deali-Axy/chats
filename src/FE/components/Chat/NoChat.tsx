@@ -1,6 +1,7 @@
 import { KeyboardEvent, useContext, useEffect, useMemo, useState } from 'react';
 
 import useTranslation from '@/hooks/useTranslation';
+import { useChatDraft } from '@/hooks/useChatDraft';
 
 import { ChatRole, Message, MessageContentType } from '@/types/chat';
 
@@ -19,14 +20,15 @@ import HomeContext from '@/contexts/home.context';
 const NoChat = ({
   onSend,
 }: {
-  onSend: (message: Message, modelId: number) => void;
+  onSend: (message: Message, modelId: number, onAccepted: () => void) => Promise<void>;
 }) => {
   const { t } = useTranslation();
   const {
     state: { chats, models },
   } = useContext(HomeContext);
-  const [content, setContent] = useState('');
+  const [content, setContent] = useChatDraft(null);
   const [isTyping, setIsTyping] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const preferredModelId = useMemo(
     () =>
       chats.find((chat) => chat.spans[0]?.modelId)?.spans[0]?.modelId ??
@@ -43,21 +45,28 @@ const NoChat = ({
 
   const selectedModel = models.find((model) => model.modelId === modelId);
 
-  const handleSend = () => {
-    if (!content.trim()) return;
+  const handleSend = async () => {
+    if (!content.trim() || isSending) return;
 
     if (!selectedModel) return;
 
-    onSend(
-      {
-        role: ChatRole.User,
-        content: [
-          { i: '', $type: MessageContentType.text as const, c: content },
-        ],
-      },
-      selectedModel.modelId,
-    );
-    setContent('');
+    setIsSending(true);
+    try {
+      await onSend(
+        {
+          role: ChatRole.User,
+          content: [
+            { i: '', $type: MessageContentType.text as const, c: content },
+          ],
+        },
+        selectedModel.modelId,
+        () => setContent((current) => current === content ? '' : current),
+      );
+    } catch {
+      // The API displays the error; keep the draft available for another attempt.
+    } finally {
+      setIsSending(false);
+    }
   };
 
   const { handleKeyDown } = useSendKeyHandler(handleSend, isTyping);
@@ -113,7 +122,7 @@ const NoChat = ({
                 aria-label={t('Send') || 'Send'}
                 title={t('Send') || 'Send'}
                 onClick={handleSend}
-                disabled={!content.trim() || !selectedModel}
+                disabled={!content.trim() || !selectedModel || isSending}
                 className="h-11 w-11 shrink-0 rounded-full bg-foreground text-background shadow-sm transition-all hover:-translate-y-0.5 hover:bg-foreground/85 hover:shadow-md active:translate-y-0 disabled:bg-muted disabled:text-muted-foreground disabled:shadow-none dark:bg-foreground dark:text-background"
               >
                 <IconSendPlane stroke="currentColor" strokeWidth={2} />

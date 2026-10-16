@@ -9,6 +9,7 @@ import {
 } from 'react';
 import toast from 'react-hot-toast';
 
+import { useChatDraft } from '@/hooks/useChatDraft';
 import { useSendMode } from '@/hooks/useSendMode';
 import useTranslation from '@/hooks/useTranslation';
 
@@ -76,7 +77,7 @@ const PROMPT_TRIGGER_PATTERN = /\/([^\s/]*)$/;
 const PENDING_LIBRARY_FILE_KEY = 'ayaka.pendingLibraryFile';
 
 interface Props {
-  onSend: (message: Message) => void;
+  onSend: (message: Message, onAccepted: () => void) => void;
   onChangePrompt: (prompt: Prompt) => void;
   contextEvents?: Partial<Record<number, ChatContextEvent>>;
 }
@@ -97,7 +98,7 @@ const ChatInput = ({ onSend, onChangePrompt, contextEvents }: Props) => {
   const prevChatStatusRef = useRef<ChatStatus>(
     selectedChat?.status || ChatStatus.None,
   );
-  const [contentText, setContentText] = useState('');
+  const [contentText, setContentText] = useChatDraft(selectedChat?.id ?? null);
   const [contextBusy, setContextBusy] = useState(false);
   const [contentFiles, setContentFiles] = useState<FileDef[]>([]);
 
@@ -308,16 +309,22 @@ const ChatInput = ({ onSend, onChangePrompt, contextEvents }: Props) => {
       $type: MessageContentType.fileId as const,
       c: f, // 传递整个 FileDef 对象
     }));
-    onSend({
-      role: ChatRole.User,
-      content: [
-        ...fileContents,
-        { i: '', $type: MessageContentType.text as const, c: contentText },
-      ],
-    });
-    setContentText('');
-    setContentFiles([]);
-    setTextareaHeight(TEXTAREA_MIN_HEIGHT);
+    onSend(
+      {
+        role: ChatRole.User,
+        content: [
+          ...fileContents,
+          { i: '', $type: MessageContentType.text as const, c: contentText },
+        ],
+      },
+      () => {
+        // A 401 or a rejected request must leave the draft intact. Preserve later edits, too.
+        setContentText((current) => current === contentText ? '' : current);
+        setContentFiles((current) =>
+          current.filter((file) => !contentFiles.some((sent) => sent.id === file.id)),
+        );
+      },
+    );
 
     if (window.innerWidth < 640 && textareaRef && textareaRef.current) {
       textareaRef.current.blur();
